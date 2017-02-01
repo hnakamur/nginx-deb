@@ -96,7 +96,7 @@ ngx_http_v2_get_indexed_header(ngx_http_v2_connection_t *h2c, ngx_uint_t index,
 
     if (index == 0) {
         ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
-                      "client sent invalid hpack table index 0");
+                      "peer sent invalid hpack table index 0");
         return NGX_ERROR;
     }
 
@@ -165,7 +165,7 @@ ngx_http_v2_get_indexed_header(ngx_http_v2_connection_t *h2c, ngx_uint_t index,
     }
 
     ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
-                  "client sent out of bound hpack table index: %ui", index);
+                  "peer sent out of bound hpack table index: %ui", index);
 
     return NGX_ERROR;
 }
@@ -326,7 +326,7 @@ ngx_http_v2_table_size(ngx_http_v2_connection_t *h2c, size_t size)
 
     if (size > NGX_HTTP_V2_TABLE_SIZE) {
         ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
-                      "client sent invalid table size update: %uz", size);
+                      "peer sent invalid table size update: %uz", size);
 
         return NGX_ERROR;
     }
