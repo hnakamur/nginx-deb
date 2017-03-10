@@ -113,6 +113,7 @@ typedef struct {
 struct ngx_http_v2_connection_s {
     ngx_connection_t                *connection;
     ngx_http_connection_t           *http_connection;
+    ngx_http_conf_ctx_t             *conf_ctx;
 
     ngx_uint_t                       processing;
 

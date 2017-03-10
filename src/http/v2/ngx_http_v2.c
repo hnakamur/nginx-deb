@@ -239,6 +239,7 @@ ngx_http_v2_init(ngx_event_t *rev)
 
     h2c->connection = c;
     h2c->http_connection = hc;
+    h2c->conf_ctx = hc->conf_ctx;
 
     h2c->send_window = NGX_HTTP_V2_DEFAULT_WINDOW;
     h2c->recv_window = NGX_HTTP_V2_MAX_WINDOW;
@@ -247,7 +248,7 @@ ngx_http_v2_init(ngx_event_t *rev)
 
     h2c->frame_size = NGX_HTTP_V2_DEFAULT_FRAME_SIZE;
 
-    h2scf = ngx_http_get_module_srv_conf(hc->conf_ctx, ngx_http_v2_module);
+    h2scf = ngx_http_get_module_srv_conf(h2c->conf_ctx, ngx_http_v2_module);
 
     h2c->pool = ngx_create_pool(h2scf->pool_size, h2c->connection->log);
     if (h2c->pool == NULL) {
@@ -349,8 +350,7 @@ ngx_http_v2_read_handler(ngx_event_t *rev)
         return;
     }
 
-    h2mcf = ngx_http_get_module_main_conf(h2c->http_connection->conf_ctx,
-                                          ngx_http_v2_module);
+    h2mcf = ngx_http_get_module_main_conf(h2c->conf_ctx, ngx_http_v2_module);
 
     available = h2mcf->recv_buffer_size - 2 * NGX_HTTP_V2_STATE_BUFFER_SIZE;
 
@@ -511,8 +511,7 @@ ngx_http_v2_send_output_queue(ngx_http_v2_connection_t *h2c)
         goto error;
     }
 
-    clcf = ngx_http_get_module_loc_conf(h2c->http_connection->conf_ctx,
-                                        ngx_http_core_module);
+    clcf = ngx_http_get_module_loc_conf(h2c->conf_ctx, ngx_http_core_module);
 
     if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
         goto error;
@@ -624,8 +623,7 @@ ngx_http_v2_handle_connection(ngx_http_v2_connection_t *h2c)
         return;
     }
 
-    h2scf = ngx_http_get_module_srv_conf(h2c->http_connection->conf_ctx,
-                                         ngx_http_v2_module);
+    h2scf = ngx_http_get_module_srv_conf(h2c->conf_ctx, ngx_http_v2_module);
     if (h2c->state.incomplete) {
         ngx_add_timer(c->read, h2scf->recv_timeout);
         return;
@@ -1086,8 +1084,7 @@ ngx_http_v2_state_headers(ngx_http_v2_connection_t *h2c, u_char *pos,
         goto rst_stream;
     }
 
-    h2scf = ngx_http_get_module_srv_conf(h2c->http_connection->conf_ctx,
-                                         ngx_http_v2_module);
+    h2scf = ngx_http_get_module_srv_conf(h2c->conf_ctx, ngx_http_v2_module);
 
     h2c->state.header_limit = h2scf->max_header_size;
 
@@ -1319,8 +1316,7 @@ ngx_http_v2_state_field_len(ngx_http_v2_connection_t *h2c, u_char *pos,
                    "http2 hpack %s string length: %i",
                    huff ? "encoded" : "raw", len);
 
-    h2scf = ngx_http_get_module_srv_conf(h2c->http_connection->conf_ctx,
-                                         ngx_http_v2_module);
+    h2scf = ngx_http_get_module_srv_conf(h2c->conf_ctx, ngx_http_v2_module);
 
     if ((size_t) len > h2scf->max_field_size) {
         ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -2590,8 +2586,7 @@ ngx_http_v2_send_settings(ngx_http_v2_connection_t *h2c)
 
     buf->last = ngx_http_v2_write_sid(buf->last, 0);
 
-    h2scf = ngx_http_get_module_srv_conf(h2c->http_connection->conf_ctx,
-                                         ngx_http_v2_module);
+    h2scf = ngx_http_get_module_srv_conf(h2c->conf_ctx, ngx_http_v2_module);
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, h2c->connection->log, 0,
                    "http2 send SETTINGS param MAX_CONCURRENT_STREAMS:%ui",
@@ -2953,8 +2948,7 @@ ngx_http_v2_get_node_by_id(ngx_http_v2_connection_t *h2c, ngx_uint_t sid,
     ngx_http_v2_node_t      *node;
     ngx_http_v2_srv_conf_t  *h2scf;
 
-    h2scf = ngx_http_get_module_srv_conf(h2c->http_connection->conf_ctx,
-                                         ngx_http_v2_module);
+    h2scf = ngx_http_get_module_srv_conf(h2c->conf_ctx, ngx_http_v2_module);
 
     index = ngx_http_v2_index(h2scf, sid);
 
@@ -2998,8 +2992,7 @@ ngx_http_v2_get_closed_node(ngx_http_v2_connection_t *h2c)
     ngx_http_v2_node_t      *node, **next, *n, *parent, *child;
     ngx_http_v2_srv_conf_t  *h2scf;
 
-    h2scf = ngx_http_get_module_srv_conf(h2c->http_connection->conf_ctx,
-                                         ngx_http_v2_module);
+    h2scf = ngx_http_get_module_srv_conf(h2c->conf_ctx, ngx_http_v2_module);
 
     h2c->closed_nodes--;
 
@@ -4287,8 +4280,7 @@ ngx_http_v2_idle_handler(ngx_event_t *rev)
     c->destroyed = 0;
     ngx_reusable_connection(c, 0);
 
-    h2scf = ngx_http_get_module_srv_conf(h2c->http_connection->conf_ctx,
-                                         ngx_http_v2_module);
+    h2scf = ngx_http_get_module_srv_conf(h2c->conf_ctx, ngx_http_v2_module);
 
     h2c->pool = ngx_create_pool(h2scf->pool_size, h2c->connection->log);
     if (h2c->pool == NULL) {
@@ -4337,8 +4329,7 @@ ngx_http_v2_finalize_connection(ngx_http_v2_connection_t *h2c,
 
     h2c->last_out = NULL;
 
-    h2scf = ngx_http_get_module_srv_conf(h2c->http_connection->conf_ctx,
-                                         ngx_http_v2_module);
+    h2scf = ngx_http_get_module_srv_conf(h2c->conf_ctx, ngx_http_v2_module);
 
     size = ngx_http_v2_index_size(h2scf);
 
@@ -4393,8 +4384,7 @@ ngx_http_v2_adjust_windows(ngx_http_v2_connection_t *h2c, ssize_t delta)
     ngx_http_v2_stream_t    *stream;
     ngx_http_v2_srv_conf_t  *h2scf;
 
-    h2scf = ngx_http_get_module_srv_conf(h2c->http_connection->conf_ctx,
-                                         ngx_http_v2_module);
+    h2scf = ngx_http_get_module_srv_conf(h2c->conf_ctx, ngx_http_v2_module);
 
     size = ngx_http_v2_index_size(h2scf);
 
