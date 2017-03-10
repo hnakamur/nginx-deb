@@ -57,6 +57,8 @@
 static void ngx_http_v2_read_handler(ngx_event_t *rev);
 static void ngx_http_v2_write_handler(ngx_event_t *wev);
 static void ngx_http_v2_handle_connection(ngx_http_v2_connection_t *h2c);
+static ngx_inline void ngx_http_v2_handle_event(ngx_http_v2_connection_t *h2c,
+    ngx_event_t *ev);
 
 static u_char *ngx_http_v2_state_proxy_protocol(ngx_http_v2_connection_t *h2c,
     u_char *pos, u_char *end);
@@ -652,6 +654,13 @@ ngx_http_v2_handle_connection(ngx_http_v2_connection_t *h2c)
     }
 
     ngx_add_timer(c->read, h2scf->idle_timeout);
+}
+
+
+static ngx_inline void
+ngx_http_v2_handle_event(ngx_http_v2_connection_t *h2c, ngx_event_t *ev)
+{
+    ev->handler(ev);
 }
 
 
@@ -1853,7 +1862,6 @@ ngx_http_v2_state_rst_stream(ngx_http_v2_connection_t *h2c, u_char *pos,
     u_char *end)
 {
     ngx_uint_t             status;
-    ngx_event_t           *ev;
     ngx_connection_t      *fc;
     ngx_http_v2_node_t    *node;
     ngx_http_v2_stream_t  *stream;
@@ -1923,8 +1931,7 @@ ngx_http_v2_state_rst_stream(ngx_http_v2_connection_t *h2c, u_char *pos,
         break;
     }
 
-    ev = fc->read;
-    ev->handler(ev);
+    ngx_http_v2_handle_event(h2c, fc->read);
 
     return ngx_http_v2_state_complete(h2c, pos, end);
 }
@@ -2299,7 +2306,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
             wev->ready = 1;
 
             if (!wev->delayed) {
-                wev->handler(wev);
+                ngx_http_v2_handle_event(h2c, wev);
             }
         }
 
@@ -2334,7 +2341,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
         wev->ready = 1;
 
         if (!wev->delayed) {
-            wev->handler(wev);
+            ngx_http_v2_handle_event(h2c, wev);
 
             if (h2c->send_window == 0) {
                 break;
@@ -4028,7 +4035,6 @@ static ngx_int_t
 ngx_http_v2_terminate_stream(ngx_http_v2_connection_t *h2c,
     ngx_http_v2_stream_t *stream, ngx_uint_t status)
 {
-    ngx_event_t       *rev;
     ngx_connection_t  *fc;
 
     if (stream->rst_sent) {
@@ -4047,8 +4053,7 @@ ngx_http_v2_terminate_stream(ngx_http_v2_connection_t *h2c,
     fc = stream->fake_connection;
     fc->error = 1;
 
-    rev = fc->read;
-    rev->handler(rev);
+    ngx_http_v2_handle_event(h2c, fc->read);
 
     return NGX_OK;
 }
@@ -4360,7 +4365,7 @@ ngx_http_v2_finalize_connection(ngx_http_v2_connection_t *h2c,
             }
 
             ev->eof = 1;
-            ev->handler(ev);
+            ngx_http_v2_handle_event(h2c, ev);
         }
     }
 
@@ -4425,7 +4430,7 @@ ngx_http_v2_adjust_windows(ngx_http_v2_connection_t *h2c, ssize_t delta)
                 wev->ready = 1;
 
                 if (!wev->delayed) {
-                    wev->handler(wev);
+                    ngx_http_v2_handle_event(h2c, wev);
                 }
             }
         }
