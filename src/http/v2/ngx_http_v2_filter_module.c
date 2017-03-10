@@ -173,7 +173,7 @@ ngx_http_v2_header_filter(ngx_http_request_t *r)
         return NGX_OK;
     }
 
-    fc = r->connection;
+    fc = r->stream->fake_connection;
 
     if (fc->error) {
         return NGX_ERROR;
@@ -896,7 +896,7 @@ ngx_http_v2_create_headers_frame(ngx_http_request_t *r, u_char *pos,
         cl->next = NULL;
         frame->last = cl;
 
-        ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+        ngx_log_debug3(NGX_LOG_DEBUG_HTTP, stream->fake_connection->log, 0,
                        "http2:%ui create HEADERS frame %p: len:%uz",
                        stream->node->id, frame, frame->length);
 
@@ -1175,7 +1175,7 @@ ngx_http_v2_filter_get_data_frame(ngx_http_v2_stream_t *stream,
 
     flags = last->buf->last_buf ? NGX_HTTP_V2_END_STREAM_FLAG : 0;
 
-    ngx_log_debug4(NGX_LOG_DEBUG_HTTP, stream->request->connection->log, 0,
+    ngx_log_debug4(NGX_LOG_DEBUG_HTTP, stream->fake_connection->log, 0,
                    "http2:%ui create DATA frame %p: len:%uz flags:%ui",
                    stream->node->id, frame, len, (ngx_uint_t) flags);
 
@@ -1457,11 +1457,8 @@ static ngx_inline void
 ngx_http_v2_handle_frame(ngx_http_v2_stream_t *stream,
     ngx_http_v2_out_frame_t *frame)
 {
-    ngx_http_request_t  *r;
-
-    r = stream->request;
-
-    r->connection->sent += NGX_HTTP_V2_FRAME_HEADER_SIZE + frame->length;
+    stream->fake_connection->sent += NGX_HTTP_V2_FRAME_HEADER_SIZE
+                                     + frame->length;
 
     if (frame->fin) {
         stream->out_closed = 1;
@@ -1485,7 +1482,7 @@ ngx_http_v2_handle_stream(ngx_http_v2_connection_t *h2c,
         return;
     }
 
-    fc = stream->request->connection;
+    fc = stream->fake_connection;
 
     if (!fc->error && stream->exhausted) {
         return;
@@ -1561,7 +1558,7 @@ ngx_http_v2_filter_cleanup(void *data)
 
             stream->waiting = 0;
 
-            wev = stream->request->connection->write;
+            wev = stream->fake_connection->write;
 
             wev->active = 0;
             wev->ready = 1;

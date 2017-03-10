@@ -1900,7 +1900,7 @@ ngx_http_v2_state_rst_stream(ngx_http_v2_connection_t *h2c, u_char *pos,
     stream->in_closed = 1;
     stream->out_closed = 1;
 
-    fc = stream->request->connection;
+    fc = stream->fake_connection;
     fc->error = 1;
 
     switch (status) {
@@ -2293,7 +2293,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
         if (stream->exhausted) {
             stream->exhausted = 0;
 
-            wev = stream->request->connection->write;
+            wev = stream->fake_connection->write;
 
             wev->active = 0;
             wev->ready = 1;
@@ -2328,7 +2328,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
 
         stream->waiting = 0;
 
-        wev = stream->request->connection->write;
+        wev = stream->fake_connection->write;
 
         wev->active = 0;
         wev->ready = 1;
@@ -2444,17 +2444,18 @@ static u_char *
 ngx_http_v2_state_headers_save(ngx_http_v2_connection_t *h2c, u_char *pos,
     u_char *end, ngx_http_v2_handler_pt handler)
 {
-    ngx_event_t               *rev;
-    ngx_http_request_t        *r;
+    ngx_connection_t          *fc;
+    ngx_http_v2_stream_t      *stream;
     ngx_http_core_srv_conf_t  *cscf;
 
     if (h2c->state.stream) {
-        r = h2c->state.stream->request;
-        rev = r->connection->read;
+        stream = h2c->state.stream;
+        fc = stream->fake_connection;
 
-        if (!rev->timer_set) {
-            cscf = ngx_http_get_module_srv_conf(r, ngx_http_core_module);
-            ngx_add_timer(rev, cscf->client_header_timeout);
+        if (!fc->read->timer_set) {
+            cscf = ngx_http_get_module_srv_conf(stream->request,
+                                                ngx_http_core_module);
+            ngx_add_timer(fc->read, cscf->client_header_timeout);
         }
     }
 
@@ -2928,6 +2929,7 @@ ngx_http_v2_create_stream(ngx_http_v2_connection_t *h2c)
 
     stream->request = r;
     stream->connection = h2c;
+    stream->fake_connection = fc;
 
     h2scf = ngx_http_get_module_srv_conf(r, ngx_http_v2_module);
 
@@ -3712,7 +3714,7 @@ ngx_http_v2_read_request_body(ngx_http_request_t *r)
     }
 
     if (!buf) {
-        ngx_add_timer(r->connection->read, clcf->client_body_timeout);
+        ngx_add_timer(stream->fake_connection->read, clcf->client_body_timeout);
     }
 
     r->read_event_handler = ngx_http_v2_read_client_request_body_handler;
@@ -3732,7 +3734,7 @@ ngx_http_v2_process_request_body(ngx_http_request_t *r, u_char *pos,
     ngx_http_request_body_t   *rb;
     ngx_http_core_loc_conf_t  *clcf;
 
-    fc = r->connection;
+    fc = r->stream->fake_connection;
     rb = r->request_body;
     buf = rb->buf;
 
@@ -3903,7 +3905,7 @@ ngx_http_v2_read_client_request_body_handler(ngx_http_request_t *r)
 {
     ngx_connection_t  *fc;
 
-    fc = r->connection;
+    fc = r->stream->fake_connection;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, fc->log, 0,
                    "http2 read client request body handler");
@@ -3942,7 +3944,7 @@ ngx_http_v2_read_unbuffered_request_body(ngx_http_request_t *r)
     ngx_http_core_loc_conf_t  *clcf;
 
     stream = r->stream;
-    fc = r->connection;
+    fc = stream->fake_connection;
 
     if (fc->read->timedout) {
         if (stream->recv_window) {
@@ -4042,7 +4044,7 @@ ngx_http_v2_terminate_stream(ngx_http_v2_connection_t *h2c,
     stream->rst_sent = 1;
     stream->skip_data = 1;
 
-    fc = stream->request->connection;
+    fc = stream->fake_connection;
     fc->error = 1;
 
     rev = fc->read;
@@ -4068,7 +4070,7 @@ ngx_http_v2_close_stream(ngx_http_v2_stream_t *stream, ngx_int_t rc)
                    "http2 close stream %ui, queued %ui, processing %ui",
                    node->id, stream->queued, h2c->processing);
 
-    fc = stream->request->connection;
+    fc = stream->fake_connection;
 
     if (stream->queued) {
         fc->write->handler = ngx_http_v2_close_stream_handler;
@@ -4302,7 +4304,6 @@ ngx_http_v2_finalize_connection(ngx_http_v2_connection_t *h2c,
     ngx_uint_t               i, size;
     ngx_event_t             *ev;
     ngx_connection_t        *c, *fc;
-    ngx_http_request_t      *r;
     ngx_http_v2_node_t      *node;
     ngx_http_v2_stream_t    *stream;
     ngx_http_v2_srv_conf_t  *h2scf;
@@ -4344,9 +4345,7 @@ ngx_http_v2_finalize_connection(ngx_http_v2_connection_t *h2c,
 
             stream->waiting = 0;
 
-            r = stream->request;
-            fc = r->connection;
-
+            fc = stream->fake_connection;
             fc->error = 1;
 
             if (stream->queued) {
@@ -4420,7 +4419,7 @@ ngx_http_v2_adjust_windows(ngx_http_v2_connection_t *h2c, ssize_t delta)
             if (stream->send_window > 0 && stream->exhausted) {
                 stream->exhausted = 0;
 
-                wev = stream->request->connection->write;
+                wev = stream->fake_connection->write;
 
                 wev->active = 0;
                 wev->ready = 1;

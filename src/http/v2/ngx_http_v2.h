@@ -165,6 +165,8 @@ struct ngx_http_v2_node_s {
 
 
 struct ngx_http_v2_stream_s {
+    ngx_connection_t                *fake_connection;
+
     ngx_http_request_t              *request;
     ngx_http_v2_connection_t        *connection;
     ngx_http_v2_node_t              *node;
