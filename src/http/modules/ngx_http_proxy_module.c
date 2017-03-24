@@ -630,6 +630,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
       offsetof(ngx_http_proxy_loc_conf_t, upstream.ignore_headers),
       &ngx_http_upstream_ignore_headers_masks },
 
+    { ngx_string("proxy_pass_trailers"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_proxy_loc_conf_t, upstream.pass_trailers),
+      NULL },
+
     { ngx_string("proxy_http_version"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_enum_slot,
@@ -3483,6 +3490,8 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->upstream.hide_headers = NGX_CONF_UNSET_PTR;
     conf->upstream.pass_headers = NGX_CONF_UNSET_PTR;
 
+    conf->upstream.pass_trailers = NGX_CONF_UNSET;
+
     conf->upstream.intercept_errors = NGX_CONF_UNSET;
 
 #if (NGX_HTTP_SSL)
@@ -3494,11 +3503,11 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
     conf->ssl_passwords = NGX_CONF_UNSET_PTR;
 #endif
 
-    /* "proxy_cyclic_temp_file" is disabled */
+    /* the hardcoded values */
     conf->upstream.cyclic_temp_file = 0;
+    conf->upstream.change_buffering = 1;
 
     conf->redirect = NGX_CONF_UNSET;
-    conf->upstream.change_buffering = 1;
 
     conf->cookie_domains = NGX_CONF_UNSET_PTR;
     conf->cookie_paths = NGX_CONF_UNSET_PTR;
@@ -3798,6 +3807,9 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->upstream.pass_request_body,
                               prev->upstream.pass_request_body, 1);
 
+    ngx_conf_merge_value(conf->upstream.pass_trailers,
+                              prev->upstream.pass_trailers, 0);
+
     ngx_conf_merge_value(conf->upstream.intercept_errors,
                               prev->upstream.intercept_errors, 0);
 
@@ -4016,6 +4028,28 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_HTTP_CACHE)
         prev->headers_cache = conf->headers_cache;
 #endif
+    }
+
+    if (conf->upstream.pass_trailers) {
+
+        if (conf->http_version != NGX_HTTP_VERSION_20) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "\"proxy_pass_trailers\" requires "
+                               "\"proxy_http_version 2.0\"");
+            return NGX_CONF_ERROR;
+        }
+
+#if (NGX_HTTP_CACHE)
+
+        if (conf->upstream.cache) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "\"proxy_pass_trailers\" doesn't work with "
+                               "\"proxy_cache\"");
+            return NGX_CONF_ERROR;
+        }
+
+#endif
+
     }
 
     return NGX_CONF_OK;

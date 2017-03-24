@@ -174,6 +174,7 @@ typedef struct {
     ngx_flag_t                       request_buffering;
     ngx_flag_t                       pass_request_headers;
     ngx_flag_t                       pass_request_body;
+    ngx_flag_t                       pass_trailers;
 
     ngx_flag_t                       ignore_client_abort;
     ngx_flag_t                       intercept_errors;
@@ -251,6 +252,7 @@ typedef struct {
 
 typedef struct {
     ngx_list_t                       headers;
+    ngx_list_t                       trailers;
 
     ngx_uint_t                       status_n;
     ngx_str_t                        status_line;
