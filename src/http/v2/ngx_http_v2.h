@@ -13,6 +13,28 @@
 #include <ngx_http.h>
 
 
+#define ngx_http_v2_indexed(i)           (128 + (i))
+#define ngx_http_v2_inc_indexed(i)       (64 + (i))
+
+
+// :authority
+#define NGX_HTTP_V2_AUTHORITY_INDEX      1
+
+// :method
+#define NGX_HTTP_V2_METHOD_INDEX         2
+#define NGX_HTTP_V2_METHOD_GET_INDEX     2
+#define NGX_HTTP_V2_METHOD_POST_INDEX    3
+
+// :path
+#define NGX_HTTP_V2_PATH_INDEX           4
+#define NGX_HTTP_V2_PATH_ROOT_INDEX      4
+
+// :scheme
+#define NGX_HTTP_V2_SCHEME_INDEX         6
+#define NGX_HTTP_V2_SCHEME_HTTP_INDEX    6
+#define NGX_HTTP_V2_SCHEME_HTTPS_INDEX   7
+
+
 #define NGX_HTTP_V2_ALPN_ADVERTISE       "\x02h2"
 #define NGX_HTTP_V2_NPN_ADVERTISE        NGX_HTTP_V2_ALPN_ADVERTISE
 
@@ -325,6 +347,9 @@ void ngx_http_v2_finalize_connection(ngx_http_v2_connection_t *h2c,
     ngx_uint_t status);
 
 
+u_char *ngx_http_v2_string_encode(u_char *dst, u_char *src, size_t len,
+    u_char *tmp, ngx_uint_t lower);
+
 ngx_http_v2_out_frame_t *ngx_http_v2_create_headers_frame(
     ngx_http_v2_stream_t *stream, u_char *pos, u_char *end, ngx_uint_t fin);
 
@@ -414,5 +439,12 @@ size_t ngx_http_v2_huff_encode(u_char *src, size_t len, u_char *dst,
     ngx_http_v2_write_uint32_aligned(p, (l) << 8 | (t))
 
 #define ngx_http_v2_write_sid  ngx_http_v2_write_uint32
+
+
+#define ngx_http_v2_write_name(dst, src, len, tmp)                            \
+    ngx_http_v2_string_encode(dst, src, len, tmp, 1)
+#define ngx_http_v2_write_value(dst, src, len, tmp)                           \
+    ngx_http_v2_string_encode(dst, src, len, tmp, 0)
+
 
 #endif /* _NGX_HTTP_V2_H_INCLUDED_ */

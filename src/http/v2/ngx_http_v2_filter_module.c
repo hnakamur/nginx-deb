@@ -22,14 +22,6 @@
 #define ngx_http_v2_literal_size(h)                                           \
     (ngx_http_v2_integer_octets(sizeof(h) - 1) + sizeof(h) - 1)
 
-#define ngx_http_v2_indexed(i)      (128 + (i))
-#define ngx_http_v2_inc_indexed(i)  (64 + (i))
-
-#define ngx_http_v2_write_name(dst, src, len, tmp)                            \
-    ngx_http_v2_string_encode(dst, src, len, tmp, 1)
-#define ngx_http_v2_write_value(dst, src, len, tmp)                           \
-    ngx_http_v2_string_encode(dst, src, len, tmp, 0)
-
 #define NGX_HTTP_V2_ENCODE_RAW            0
 #define NGX_HTTP_V2_ENCODE_HUFF           0x80
 
@@ -53,8 +45,6 @@
 #define NGX_HTTP_V2_NO_TRAILERS           (ngx_http_v2_out_frame_t *) -1
 
 
-static u_char *ngx_http_v2_string_encode(u_char *dst, u_char *src, size_t len,
-    u_char *tmp, ngx_uint_t lower);
 static u_char *ngx_http_v2_write_int(u_char *pos, ngx_uint_t prefix,
     ngx_uint_t value);
 static ngx_http_v2_out_frame_t *ngx_http_v2_create_trailers_frame(
@@ -740,7 +730,7 @@ ngx_http_v2_create_trailers_frame(ngx_http_request_t *r)
 }
 
 
-static u_char *
+u_char *
 ngx_http_v2_string_encode(u_char *dst, u_char *src, size_t len, u_char *tmp,
     ngx_uint_t lower)
 {
