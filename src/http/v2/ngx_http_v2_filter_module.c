@@ -57,13 +57,8 @@ static u_char *ngx_http_v2_string_encode(u_char *dst, u_char *src, size_t len,
     u_char *tmp, ngx_uint_t lower);
 static u_char *ngx_http_v2_write_int(u_char *pos, ngx_uint_t prefix,
     ngx_uint_t value);
-static ngx_http_v2_out_frame_t *ngx_http_v2_create_headers_frame(
-    ngx_http_request_t *r, u_char *pos, u_char *end, ngx_uint_t fin);
 static ngx_http_v2_out_frame_t *ngx_http_v2_create_trailers_frame(
     ngx_http_request_t *r);
-
-static ngx_chain_t *ngx_http_v2_send_chain(ngx_connection_t *fc,
-    ngx_chain_t *in, off_t limit);
 
 static ngx_chain_t *ngx_http_v2_filter_get_shadow(
     ngx_http_v2_stream_t *stream, ngx_buf_t *buf, off_t offset, off_t size);
@@ -76,9 +71,6 @@ static ngx_inline ngx_int_t ngx_http_v2_flow_control(
 static void ngx_http_v2_waiting_queue(ngx_http_v2_connection_t *h2c,
     ngx_http_v2_stream_t *stream);
 
-static ngx_inline ngx_int_t ngx_http_v2_filter_send(
-    ngx_connection_t *fc, ngx_http_v2_stream_t *stream);
-
 static ngx_int_t ngx_http_v2_headers_frame_handler(
     ngx_http_v2_connection_t *h2c, ngx_http_v2_out_frame_t *frame);
 static ngx_int_t ngx_http_v2_data_frame_handler(
@@ -87,8 +79,6 @@ static ngx_inline void ngx_http_v2_handle_frame(
     ngx_http_v2_stream_t *stream, ngx_http_v2_out_frame_t *frame);
 static ngx_inline void ngx_http_v2_handle_stream(
     ngx_http_v2_connection_t *h2c, ngx_http_v2_stream_t *stream);
-
-static void ngx_http_v2_filter_cleanup(void *data);
 
 static ngx_int_t ngx_http_v2_filter_init(ngx_conf_t *cf);
 
@@ -616,7 +606,8 @@ ngx_http_v2_header_filter(ngx_http_request_t *r)
                                       header[i].value.len, tmp);
     }
 
-    frame = ngx_http_v2_create_headers_frame(r, start, pos, r->header_only);
+    frame = ngx_http_v2_create_headers_frame(r->stream, start, pos,
+                                             r->header_only);
     if (frame == NULL) {
         return NGX_ERROR;
     }
@@ -632,9 +623,6 @@ ngx_http_v2_header_filter(ngx_http_request_t *r)
 
     cln->handler = ngx_http_v2_filter_cleanup;
     cln->data = r->stream;
-
-    fc->send_chain = ngx_http_v2_send_chain;
-    fc->need_last_buf = 1;
 
     return ngx_http_v2_filter_send(fc, r->stream);
 }
@@ -748,7 +736,7 @@ ngx_http_v2_create_trailers_frame(ngx_http_request_t *r)
                                       header[i].value.len, tmp);
     }
 
-    return ngx_http_v2_create_headers_frame(r, start, pos, 1);
+    return ngx_http_v2_create_headers_frame(r->stream, start, pos, 1);
 }
 
 
@@ -800,18 +788,18 @@ ngx_http_v2_write_int(u_char *pos, ngx_uint_t prefix, ngx_uint_t value)
 }
 
 
-static ngx_http_v2_out_frame_t *
-ngx_http_v2_create_headers_frame(ngx_http_request_t *r, u_char *pos,
+ngx_http_v2_out_frame_t *
+ngx_http_v2_create_headers_frame(ngx_http_v2_stream_t *stream, u_char *pos,
     u_char *end, ngx_uint_t fin)
 {
     u_char                    type, flags;
     size_t                    rest, frame_size;
     ngx_buf_t                *b;
     ngx_chain_t              *cl, **ll;
-    ngx_http_v2_stream_t     *stream;
+    ngx_http_request_t       *r;
     ngx_http_v2_out_frame_t  *frame;
 
-    stream = r->stream;
+    r = stream->request;
     rest = end - pos;
 
     frame = ngx_palloc(r->pool, sizeof(ngx_http_v2_out_frame_t));
@@ -905,7 +893,7 @@ ngx_http_v2_create_headers_frame(ngx_http_request_t *r, u_char *pos,
 }
 
 
-static ngx_chain_t *
+ngx_chain_t *
 ngx_http_v2_send_chain(ngx_connection_t *fc, ngx_chain_t *in, off_t limit)
 {
     off_t                      size, offset;
@@ -918,7 +906,7 @@ ngx_http_v2_send_chain(ngx_connection_t *fc, ngx_chain_t *in, off_t limit)
     ngx_http_v2_connection_t  *h2c;
 
     r = fc->data;
-    stream = r->stream;
+    stream = (fc == r->connection) ? r->stream : r->upstream->stream;
 
 #if (NGX_SUPPRESS_WARN)
     size = 0;
@@ -1052,7 +1040,7 @@ ngx_http_v2_send_chain(ngx_connection_t *fc, ngx_chain_t *in, off_t limit)
             size -= rest;
         }
 
-        if (cl->buf->last_buf) {
+        if (cl->buf->last_buf && r->expect_trailers && stream == r->stream) {
             trailers = ngx_http_v2_create_trailers_frame(r);
             if (trailers == NULL) {
                 return NGX_CHAIN_ERROR;
@@ -1227,7 +1215,7 @@ ngx_http_v2_filter_get_data_frame(ngx_http_v2_stream_t *stream,
 }
 
 
-static ngx_inline ngx_int_t
+ngx_int_t
 ngx_http_v2_filter_send(ngx_connection_t *fc, ngx_http_v2_stream_t *stream)
 {
     stream->blocked = 1;
@@ -1349,8 +1337,10 @@ ngx_http_v2_headers_frame_handler(ngx_http_v2_connection_t *h2c,
                    "http2:%ui HEADERS frame %p was sent",
                    stream->node->id, frame);
 
-    stream->request->header_size += NGX_HTTP_V2_FRAME_HEADER_SIZE
-                                    + frame->length;
+    if (h2c->server) {
+        stream->request->header_size += NGX_HTTP_V2_FRAME_HEADER_SIZE
+                                        + frame->length;
+    }
 
     ngx_http_v2_handle_frame(stream, frame);
 
@@ -1443,7 +1433,9 @@ done:
                    "http2:%ui DATA frame %p was sent",
                    stream->node->id, frame);
 
-    stream->request->header_size += NGX_HTTP_V2_FRAME_HEADER_SIZE;
+    if (h2c->server) {
+        stream->request->header_size += NGX_HTTP_V2_FRAME_HEADER_SIZE;
+    }
 
     ngx_http_v2_handle_frame(stream, frame);
 
@@ -1501,7 +1493,7 @@ ngx_http_v2_handle_stream(ngx_http_v2_connection_t *h2c,
 }
 
 
-static void
+void
 ngx_http_v2_filter_cleanup(void *data)
 {
     ngx_http_v2_stream_t *stream = data;

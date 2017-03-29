@@ -362,7 +362,8 @@ ngx_http_v2_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_size_value(conf->max_header_size, prev->max_header_size,
                               16384);
 
-    ngx_conf_merge_size_value(conf->preread_size, prev->preread_size, 65536);
+    ngx_conf_merge_size_value(conf->preread_size, prev->preread_size,
+                              NGX_HTTP_V2_PREREAD_WINDOW);
 
     ngx_conf_merge_uint_value(conf->streams_index_mask,
                               prev->streams_index_mask, 32 - 1);

@@ -175,6 +175,10 @@ struct ngx_connection_s {
     unsigned            close:1;
     unsigned            shared:1;
 
+#if (NGX_HTTP_V2 || NGX_COMPAT)
+    unsigned            http2:1;
+#endif
+
     unsigned            sendfile:1;
     unsigned            sndlowat:1;
     unsigned            tcp_nodelay:2;   /* ngx_connection_tcp_nodelay_e */

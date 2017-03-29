@@ -323,6 +323,10 @@ struct ngx_http_upstream_s {
     ngx_output_chain_ctx_t           output;
     ngx_chain_writer_ctx_t           writer;
 
+#if (NGX_HTTP_V2)
+    ngx_http_v2_stream_t            *stream;
+#endif
+
     ngx_http_upstream_conf_t        *conf;
     ngx_http_upstream_srv_conf_t    *upstream;
 #if (NGX_HTTP_CACHE)
@@ -389,6 +393,10 @@ struct ngx_http_upstream_s {
     unsigned                         request_sent:1;
     unsigned                         request_body_sent:1;
     unsigned                         header_sent:1;
+
+#if (NGX_HTTP_V2)
+    unsigned                         http2:1;
+#endif
 };
 
 
