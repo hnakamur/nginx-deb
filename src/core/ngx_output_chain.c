@@ -658,6 +658,7 @@ ngx_chain_writer(void *data, ngx_chain_t *in)
     ngx_chain_writer_ctx_t *ctx = data;
 
     off_t              size;
+    ngx_uint_t         last;
     ngx_chain_t       *cl, *ln, *chain;
     ngx_connection_t  *c;
 
@@ -689,9 +690,10 @@ ngx_chain_writer(void *data, ngx_chain_t *in)
 
         size += ngx_buf_size(in->buf);
 
-        ngx_log_debug2(NGX_LOG_DEBUG_CORE, c->log, 0,
-                       "chain writer buf fl:%d s:%uO",
-                       in->buf->flush, ngx_buf_size(in->buf));
+        ngx_log_debug3(NGX_LOG_DEBUG_CORE, c->log, 0,
+                       "chain writer buf fl:%d l:%d s:%uO",
+                       in->buf->flush, in->buf->last_buf,
+                       ngx_buf_size(in->buf));
 
         cl = ngx_alloc_chain_link(ctx->pool);
         if (cl == NULL) {
@@ -706,6 +708,8 @@ ngx_chain_writer(void *data, ngx_chain_t *in)
 
     ngx_log_debug1(NGX_LOG_DEBUG_CORE, c->log, 0,
                    "chain writer in: %p", ctx->out);
+
+    last = 0;
 
     for (cl = ctx->out; cl; cl = cl->next) {
 
@@ -732,9 +736,16 @@ ngx_chain_writer(void *data, ngx_chain_t *in)
 #endif
 
         size += ngx_buf_size(cl->buf);
+
+        if (cl->buf->last_buf) {
+            last = 1;
+        }
     }
 
-    if (size == 0 && !c->buffered) {
+    if (size == 0
+        && !c->buffered
+        && !(last && c->need_last_buf))
+    {
         return NGX_OK;
     }
 
