@@ -132,6 +132,14 @@ static ngx_int_t ngx_http_proxy_reinit_request(ngx_http_request_t *r);
 static ngx_int_t ngx_http_proxy_body_output_filter(void *data, ngx_chain_t *in);
 static ngx_int_t ngx_http_proxy_process_status_line(ngx_http_request_t *r);
 static ngx_int_t ngx_http_proxy_process_header(ngx_http_request_t *r);
+static ngx_int_t ngx_http_proxy_process_trailer(ngx_http_request_t *r,
+    ngx_buf_t *buf);
+#if (NGX_HTTP_V2 && NGX_HTTP_CACHE)
+static ngx_int_t ngx_http_proxy_serialize_headers(ngx_http_request_t *r,
+    ngx_http_upstream_t *u);
+static ngx_chain_t *ngx_http_proxy_serialize_trailers(ngx_http_request_t *r,
+    ngx_http_upstream_t *u);
+#endif
 static ngx_int_t ngx_http_proxy_input_filter_init(void *data);
 static ngx_int_t ngx_http_proxy_copy_filter(ngx_event_pipe_t *p,
     ngx_buf_t *buf);
@@ -917,6 +925,7 @@ ngx_http_proxy_handler(ngx_http_request_t *r)
     u->create_request = ngx_http_proxy_create_request;
     u->reinit_request = ngx_http_proxy_reinit_request;
     u->process_header = ngx_http_proxy_process_status_line;
+    u->process_trailer = ngx_http_proxy_process_trailer;
     u->abort_request = ngx_http_proxy_abort_request;
     u->finalize_request = ngx_http_proxy_finalize_request;
     r->state = 0;
@@ -929,6 +938,14 @@ ngx_http_proxy_handler(ngx_http_request_t *r)
         u->create_request = ngx_http_proxy_create_v2_request;
         u->output.output_filter = ngx_http_v2_upstream_output_filter;
         u->output.filter_ctx = r;
+
+#if (NGX_HTTP_CACHE)
+
+        u->serialize_headers = ngx_http_proxy_serialize_headers;
+        u->serialize_trailers = ngx_http_proxy_serialize_trailers;
+
+#endif
+
     }
 
 #endif
@@ -2482,6 +2499,227 @@ ngx_http_proxy_process_header(ngx_http_request_t *r)
 
 
 static ngx_int_t
+ngx_http_proxy_process_trailer(ngx_http_request_t *r, ngx_buf_t *buf)
+{
+    ngx_int_t         rc;
+    ngx_table_elt_t  *h;
+
+    for ( ;; ) {
+
+        rc = ngx_http_parse_header_line(r, buf, 1);
+
+        if (rc == NGX_OK) {
+            h = ngx_list_push(&r->upstream->headers_in.trailers);
+            if (h == NULL) {
+                return NGX_ERROR;
+            }
+
+            h->hash = r->header_hash;
+
+            h->key.len = r->header_name_end - r->header_name_start;
+            h->value.len = r->header_end - r->header_start;
+
+            h->key.data = ngx_pnalloc(r->pool,
+                               h->key.len + 1 + h->value.len + 1 + h->key.len);
+            if (h->key.data == NULL) {
+                return NGX_ERROR;
+            }
+
+            h->value.data = h->key.data + h->key.len + 1;
+            h->lowcase_key = h->key.data + h->key.len + 1 + h->value.len + 1;
+
+            ngx_memcpy(h->key.data, r->header_name_start, h->key.len);
+            h->key.data[h->key.len] = '\0';
+            ngx_memcpy(h->value.data, r->header_start, h->value.len);
+            h->value.data[h->value.len] = '\0';
+
+            if (h->key.len == r->lowcase_index) {
+                ngx_memcpy(h->lowcase_key, r->lowcase_header, h->key.len);
+
+            } else {
+                ngx_strlow(h->lowcase_key, h->key.data, h->key.len);
+            }
+
+            ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                           "http proxy trailer: \"%V: %V\"",
+                           &h->key, &h->value);
+
+            continue;
+        }
+
+        if (rc == NGX_HTTP_PARSE_HEADER_DONE) {
+            ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                           "http proxy trailer done");
+
+            return NGX_OK;
+        }
+
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "upstream sent invalid trailer");
+
+        return NGX_HTTP_UPSTREAM_INVALID_HEADER;
+    }
+}
+
+
+#if (NGX_HTTP_V2 && NGX_HTTP_CACHE)
+
+static ngx_int_t
+ngx_http_proxy_serialize_headers(ngx_http_request_t *r, ngx_http_upstream_t *u)
+{
+    size_t            len;
+    ngx_buf_t        *b;
+    ngx_uint_t        i;
+    ngx_list_part_t  *part;
+    ngx_table_elt_t  *header;
+
+    len = sizeof("HTTP/1.1 " CRLF) - 1 + u->headers_in.status_line.len
+          + sizeof(CRLF) - 1;
+
+    part = &u->headers_in.headers.part;
+    header = part->elts;
+
+    for (i = 0; /* void */; i++) {
+
+        if (i >= part->nelts) {
+            if (part->next == NULL) {
+                break;
+            }
+
+            part = part->next;
+            header = part->elts;
+            i = 0;
+        }
+
+        len += header[i].key.len + sizeof(": ") - 1
+               + header[i].value.len + sizeof(CRLF) - 1;
+    }
+
+    b = &u->buffer;
+
+    if (len > (size_t) (b->end - b->last)) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "upstream sent headers too big to serialize for cache, "
+                      "need:%uz available:%uz", len, b->end - b->last);
+
+        return NGX_ERROR;
+    }
+
+    b->last = ngx_copy(b->last, "HTTP/1.1 ", sizeof("HTTP/1.1 ") - 1);
+    b->last = ngx_copy(b->last, u->headers_in.status_line.data,
+                       u->headers_in.status_line.len);
+    *b->last++ = CR; *b->last++ = LF;
+
+    part = &u->headers_in.headers.part;
+    header = part->elts;
+
+    for (i = 0; /* void */; i++) {
+
+        if (i >= part->nelts) {
+            if (part->next == NULL) {
+                break;
+            }
+
+            part = part->next;
+            header = part->elts;
+            i = 0;
+        }
+
+        b->last = ngx_copy(b->last, header[i].key.data, header[i].key.len);
+        *b->last++ = ':'; *b->last++ = ' ';
+
+        b->last = ngx_copy(b->last, header[i].value.data, header[i].value.len);
+        *b->last++ = CR; *b->last++ = LF;
+    }
+
+    *b->last++ = CR; *b->last++ = LF;
+    b->pos = b->last;
+
+    return NGX_OK;
+}
+
+
+static ngx_chain_t *
+ngx_http_proxy_serialize_trailers(ngx_http_request_t *r, ngx_http_upstream_t *u)
+{
+    size_t            len;
+    ngx_buf_t        *b;
+    ngx_uint_t        i;
+    ngx_chain_t      *cl;
+    ngx_list_part_t  *part;
+    ngx_table_elt_t  *header;
+
+    len = 0;
+
+    part = &u->headers_in.trailers.part;
+    header = part->elts;
+
+    for (i = 0; /* void */; i++) {
+
+        if (i >= part->nelts) {
+            if (part->next == NULL) {
+                break;
+            }
+
+            part = part->next;
+            header = part->elts;
+            i = 0;
+        }
+
+        len += header[i].key.len + sizeof(": ") - 1
+               + header[i].value.len + sizeof(CRLF) - 1;
+    }
+
+    if (len == 0) {
+        return NULL;
+    }
+
+    len += sizeof(CRLF) - 1;
+
+    b = ngx_create_temp_buf(r->pool, len);
+    if (b == NULL) {
+        return NGX_CHAIN_ERROR;
+    }
+
+    *b->last++ = CR; *b->last++ = LF;
+
+    part = &u->headers_in.trailers.part;
+    header = part->elts;
+
+    for (i = 0; /* void */; i++) {
+
+        if (i >= part->nelts) {
+            if (part->next == NULL) {
+                break;
+            }
+
+            part = part->next;
+            header = part->elts;
+            i = 0;
+        }
+
+        b->last = ngx_copy(b->last, header[i].key.data, header[i].key.len);
+        *b->last++ = ':'; *b->last++ = ' ';
+
+        b->last = ngx_copy(b->last, header[i].value.data, header[i].value.len);
+        *b->last++ = CR; *b->last++ = LF;
+    }
+
+    cl = ngx_alloc_chain_link(r->pool);
+    if (cl == NULL) {
+        return NGX_CHAIN_ERROR;
+    }
+
+    cl->buf = b;
+    cl->next = NULL;
+
+    return cl;
+}
+
+#endif
+
+
+static ngx_int_t
 ngx_http_proxy_input_filter_init(void *data)
 {
     ngx_http_request_t    *r = data;
@@ -3995,18 +4233,6 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #if (NGX_HTTP_CACHE)
 
     if (conf->upstream.cache) {
-
-#if (NGX_HTTP_V2)
-
-        if (conf->http_version == NGX_HTTP_VERSION_20) {
-            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                               "\"proxy_cache\" doesn't work with "
-                               "\"proxy_http_version 2.0\"");
-            return NGX_CONF_ERROR;
-        }
-
-#endif
-
         rc = ngx_http_proxy_init_headers(cf, conf, &conf->headers_cache,
                                          ngx_http_proxy_cache_headers);
         if (rc != NGX_OK) {
@@ -4030,26 +4256,13 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #endif
     }
 
-    if (conf->upstream.pass_trailers) {
-
-        if (conf->http_version != NGX_HTTP_VERSION_20) {
-            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                               "\"proxy_pass_trailers\" requires "
-                               "\"proxy_http_version 2.0\"");
-            return NGX_CONF_ERROR;
-        }
-
-#if (NGX_HTTP_CACHE)
-
-        if (conf->upstream.cache) {
-            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                               "\"proxy_pass_trailers\" doesn't work with "
-                               "\"proxy_cache\"");
-            return NGX_CONF_ERROR;
-        }
-
-#endif
-
+    if (conf->upstream.pass_trailers
+        && conf->http_version != NGX_HTTP_VERSION_20)
+    {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "\"proxy_pass_trailers\" requires "
+                           "\"proxy_http_version 2.0\"");
+        return NGX_CONF_ERROR;
     }
 
     return NGX_CONF_OK;

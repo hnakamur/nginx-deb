@@ -58,6 +58,10 @@ static ngx_int_t ngx_http_upstream_process_headers(ngx_http_request_t *r,
     ngx_http_upstream_t *u);
 static ngx_int_t ngx_http_upstream_process_trailers(ngx_http_request_t *r,
     ngx_http_upstream_t *u);
+#if (NGX_HTTP_V2 && NGX_HTTP_CACHE)
+static ngx_int_t ngx_http_upstream_serialize_trailers(ngx_http_request_t *r,
+    ngx_http_upstream_t *u);
+#endif
 static void ngx_http_upstream_process_body_in_memory(ngx_http_request_t *r,
     ngx_http_upstream_t *u);
 static void ngx_http_upstream_send_response(ngx_http_request_t *r,
@@ -1037,6 +1041,7 @@ static ngx_int_t
 ngx_http_upstream_cache_send(ngx_http_request_t *r, ngx_http_upstream_t *u)
 {
     ngx_int_t          rc;
+    ngx_buf_t         *trailers;
     ngx_http_cache_t  *c;
 
     r->cached = 1;
@@ -1076,6 +1081,24 @@ ngx_http_upstream_cache_send(ngx_http_request_t *r, ngx_http_upstream_t *u)
 
         if (ngx_http_upstream_process_headers(r, u) != NGX_OK) {
             return NGX_DONE;
+        }
+
+        if (c->body_length != -1 && u->conf->pass_trailers) {
+
+            trailers = ngx_http_cache_get_trailers(r, c);
+            if (trailers == NULL) {
+                return NGX_ERROR;
+            }
+
+            if (u->process_trailer(r, trailers) != NGX_OK) {
+                return NGX_ERROR;
+            }
+
+            r->expect_trailers = 1;
+
+            if (ngx_http_upstream_process_trailers(r, u) != NGX_OK) {
+                return NGX_ERROR;
+            }
         }
 
         return ngx_http_cache_send(r);
@@ -2970,6 +2993,49 @@ ngx_http_upstream_process_trailers(ngx_http_request_t *r,
 }
 
 
+#if (NGX_HTTP_V2 && NGX_HTTP_CACHE)
+
+static ngx_int_t
+ngx_http_upstream_serialize_trailers(ngx_http_request_t *r,
+    ngx_http_upstream_t *u)
+{
+    off_t         body_len;
+    ngx_chain_t  *cl;
+
+    if (u->serialize_trailers == NULL) {
+        return NGX_OK;
+    }
+
+    cl = u->serialize_trailers(r, u);
+
+    if (cl == NGX_CHAIN_ERROR) {
+        return NGX_ERROR;
+    }
+
+    if (cl == NULL) {
+        return NGX_OK;
+    }
+
+    body_len = u->pipe->temp_file->offset - (off_t) r->cache->body_start;
+
+    if (ngx_write_chain_to_temp_file(u->pipe->temp_file, cl) == NGX_ERROR) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_write_file(&u->pipe->temp_file->file,
+                       (u_char *) &body_len, sizeof(off_t),
+                       offsetof(ngx_http_file_cache_header_t, body_length))
+        != sizeof(off_t))
+    {
+        return NGX_ERROR;
+    }
+
+    return NGX_OK;
+}
+
+#endif
+
+
 static void
 ngx_http_upstream_process_body_in_memory(ngx_http_request_t *r,
     ngx_http_upstream_t *u)
@@ -3216,9 +3282,16 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
             }
         }
 
+        if (valid && u->serialize_headers) {
+            if (u->serialize_headers(r, u) != NGX_OK) {
+                valid = 0;
+            }
+        }
+
         if (valid) {
             r->cache->date = now;
             r->cache->body_start = (u_short) (u->buffer.pos - u->buffer.start);
+            r->cache->body_length = -1;
 
             if (u->headers_in.status_n == NGX_HTTP_OK
                 || u->headers_in.status_n == NGX_HTTP_PARTIAL_CONTENT)
@@ -4122,6 +4195,13 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
         if (u->cacheable) {
 
             if (p->upstream_done) {
+
+                if (ngx_http_upstream_serialize_trailers(r, u) != NGX_OK) {
+                    ngx_http_upstream_finalize_request(r, u,
+                                               NGX_HTTP_INTERNAL_SERVER_ERROR);
+                    return;
+                }
+
                 ngx_http_file_cache_update(r, p->temp_file);
 
             } else if (p->upstream_eof) {
@@ -4133,6 +4213,12 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
                         || u->headers_in.content_length_n
                            == tf->offset - (off_t) r->cache->body_start))
                 {
+                    if (ngx_http_upstream_serialize_trailers(r, u) != NGX_OK) {
+                        ngx_http_upstream_finalize_request(r, u,
+                                               NGX_HTTP_INTERNAL_SERVER_ERROR);
+                        return;
+                    }
+
                     ngx_http_file_cache_update(r, tf);
 
                 } else {

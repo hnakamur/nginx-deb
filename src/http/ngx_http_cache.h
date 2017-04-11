@@ -27,7 +27,7 @@
 #define NGX_HTTP_CACHE_ETAG_LEN      128
 #define NGX_HTTP_CACHE_VARY_LEN      128
 
-#define NGX_HTTP_CACHE_VERSION       5
+#define NGX_HTTP_CACHE_VERSION       6
 
 
 typedef struct {
@@ -82,6 +82,7 @@ struct ngx_http_cache_s {
 
     size_t                           header_start;
     size_t                           body_start;
+    off_t                            body_length;
     off_t                            length;
     off_t                            fs_size;
 
@@ -130,6 +131,7 @@ typedef struct {
     time_t                           error_sec;
     time_t                           last_modified;
     time_t                           date;
+    off_t                            body_length;
     uint32_t                         crc32;
     u_short                          valid_msec;
     u_short                          header_start;
@@ -192,6 +194,8 @@ ngx_int_t ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf);
 void ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf);
 void ngx_http_file_cache_update_header(ngx_http_request_t *r);
 ngx_int_t ngx_http_cache_send(ngx_http_request_t *);
+ngx_buf_t *ngx_http_cache_get_trailers(ngx_http_request_t *r,
+    ngx_http_cache_t *c);
 void ngx_http_file_cache_free(ngx_http_cache_t *c, ngx_temp_file_t *tf);
 time_t ngx_http_file_cache_valid(ngx_array_t *cache_valid, ngx_uint_t status);
 

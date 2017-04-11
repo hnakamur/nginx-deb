@@ -605,6 +605,7 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
     c->error_sec = h->error_sec;
     c->last_modified = h->last_modified;
     c->date = h->date;
+    c->body_length = h->body_length;
     c->valid_msec = h->valid_msec;
     c->body_start = h->body_start;
     c->etag.len = h->etag_len;
@@ -1260,6 +1261,7 @@ ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf)
     h->error_sec = c->error_sec;
     h->last_modified = c->last_modified;
     h->date = c->date;
+    h->body_length = c->body_length;
     h->crc32 = c->crc32;
     h->valid_msec = (u_short) c->valid_msec;
     h->header_start = (u_short) c->header_start;
@@ -1500,6 +1502,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
 
     if (h.version != NGX_HTTP_CACHE_VERSION
         || h.last_modified != c->last_modified
+        || (h.body_length != -1 && h.body_length != c->body_length)
         || h.crc32 != c->crc32
         || (size_t) h.header_start != c->header_start
         || (size_t) h.body_start != c->body_start)
@@ -1523,6 +1526,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
     h.error_sec = c->error_sec;
     h.last_modified = c->last_modified;
     h.date = c->date;
+    h.body_length = c->body_length;
     h.crc32 = c->crc32;
     h.valid_msec = (u_short) c->valid_msec;
     h.header_start = (u_short) c->header_start;
@@ -1561,6 +1565,7 @@ done:
 ngx_int_t
 ngx_http_cache_send(ngx_http_request_t *r)
 {
+    off_t              body_len;
     ngx_int_t          rc;
     ngx_buf_t         *b;
     ngx_chain_t        out;
@@ -1571,7 +1576,14 @@ ngx_http_cache_send(ngx_http_request_t *r)
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "http file cache send: %s", c->file.name.data);
 
-    if (r != r->main && c->length - c->body_start == 0) {
+    if (c->body_length != -1) {
+        body_len = c->body_length;
+
+    } else {
+        body_len = c->length - c->body_start;
+    }
+
+    if (r != r->main && body_len == 0) {
         return ngx_http_send_header(r);
     }
 
@@ -1594,9 +1606,9 @@ ngx_http_cache_send(ngx_http_request_t *r)
     }
 
     b->file_pos = c->body_start;
-    b->file_last = c->length;
+    b->file_last = c->body_start + body_len;
 
-    b->in_file = (c->length - c->body_start) ? 1: 0;
+    b->in_file = body_len ? 1 : 0;
     b->last_buf = (r == r->main) ? 1: 0;
     b->last_in_chain = 1;
 
@@ -1608,6 +1620,42 @@ ngx_http_cache_send(ngx_http_request_t *r)
     out.next = NULL;
 
     return ngx_http_output_filter(r, &out);
+}
+
+
+ngx_buf_t *
+ngx_http_cache_get_trailers(ngx_http_request_t *r, ngx_http_cache_t *c)
+{
+    off_t       offset;
+    size_t      len;
+    ssize_t     n;
+    ngx_buf_t  *b;
+
+    offset = c->body_start + c->body_length + sizeof(CRLF) - 1;
+    len = c->length - offset;
+
+    b = ngx_create_temp_buf(r->pool, len + sizeof(CRLF) - 1);
+    if (b == NULL) {
+        return NULL;
+    }
+
+    n = ngx_read_file(&c->file, b->pos, len, offset);
+
+    if (n == NGX_ERROR) {
+        return NULL;
+    }
+
+    if ((size_t) n != len) {
+        ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,
+                      ngx_read_file_n " read only %z of %z from \"%s\"",
+                      n, len, c->file.name.data);
+        return NULL;
+    }
+
+    b->last += n;
+    *b->last++ = CR; *b->last++ = LF;
+
+    return b;
 }
 
 

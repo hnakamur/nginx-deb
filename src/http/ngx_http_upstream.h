@@ -359,6 +359,12 @@ struct ngx_http_upstream_s {
     ngx_int_t                      (*create_request)(ngx_http_request_t *r);
     ngx_int_t                      (*reinit_request)(ngx_http_request_t *r);
     ngx_int_t                      (*process_header)(ngx_http_request_t *r);
+    ngx_int_t                      (*process_trailer)(ngx_http_request_t *r,
+                                         ngx_buf_t *buf);
+    ngx_int_t                      (*serialize_headers)(ngx_http_request_t *r,
+                                         ngx_http_upstream_t *u);
+    ngx_chain_t                   *(*serialize_trailers)(ngx_http_request_t *r,
+                                         ngx_http_upstream_t *u);
     void                           (*abort_request)(ngx_http_request_t *r);
     void                           (*finalize_request)(ngx_http_request_t *r,
                                          ngx_int_t rc);
