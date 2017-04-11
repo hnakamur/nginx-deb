@@ -27,6 +27,7 @@ typedef struct {
 
     ngx_queue_t                        queue;
     ngx_connection_t                  *connection;
+    void                              *data;
 
     socklen_t                          socklen;
     ngx_sockaddr_t                     sockaddr;
@@ -254,6 +255,7 @@ found:
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, pc->log, 0,
                    "get keepalive peer: using connection %p", c);
 
+    c->data = item->data;
     c->idle = 0;
     c->sent = 0;
     c->log = pc->log;
@@ -336,6 +338,7 @@ ngx_http_upstream_free_keepalive_peer(ngx_peer_connection_t *pc, void *data,
     ngx_queue_insert_head(&kp->conf->cache, q);
 
     item->connection = c;
+    item->data = c->data;
 
     pc->connection = NULL;
 
