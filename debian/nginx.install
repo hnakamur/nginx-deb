@@ -10,3 +10,4 @@ html/index.html				usr/share/nginx/html
 html/50x.html				usr/share/nginx/html
 debian/build-nginx/objs/nginx		usr/sbin
 debian/build-nginx-debug/objs/nginx-debug	usr/sbin
+objs/ngx_mail_module.so			usr/lib/nginx/modules

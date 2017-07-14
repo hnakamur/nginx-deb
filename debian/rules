@@ -72,7 +72,7 @@ config.status.nginx: config.env.nginx
 		--with-http_stub_status_module \
 		--with-http_sub_module \
 		--with-http_v2_module \
-		--with-mail \
+		--with-mail=dynamic \
 		--with-mail_ssl_module \
 		--with-stream \
 		--with-stream_realip_module \
@@ -119,7 +119,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--with-http_stub_status_module \
 		--with-http_sub_module \
 		--with-http_v2_module \
-		--with-mail \
+		--with-mail=dynamic \
 		--with-mail_ssl_module \
 		--with-stream \
 		--with-stream_realip_module \
