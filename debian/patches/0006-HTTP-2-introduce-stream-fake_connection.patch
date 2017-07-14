@@ -1,15 +1,21 @@
 From: Piotr Sikora <piotrsikora@google.com>
-Date: 1489111358 -0800
+Date: Thu, 9 Mar 2017 18:02:38 -0800
 Subject: HTTP/2: introduce stream->fake_connection.
 
 No functional changes.
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+---
+ src/http/v2/ngx_http_v2.c               | 41 ++++++++++++++++-----------------
+ src/http/v2/ngx_http_v2.h               |  2 ++
+ src/http/v2/ngx_http_v2_filter_module.c | 17 ++++++--------
+ 3 files changed, 29 insertions(+), 31 deletions(-)
 
-diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
+diff --git a/src/http/v2/ngx_http_v2.c b/src/http/v2/ngx_http_v2.c
+index ccc6596..f9ee2d6 100644
 --- a/src/http/v2/ngx_http_v2.c
 +++ b/src/http/v2/ngx_http_v2.c
-@@ -1900,7 +1900,7 @@ ngx_http_v2_state_rst_stream(ngx_http_v2
+@@ -1900,7 +1900,7 @@ ngx_http_v2_state_rst_stream(ngx_http_v2_connection_t *h2c, u_char *pos,
      stream->in_closed = 1;
      stream->out_closed = 1;
  
@@ -18,7 +24,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
      fc->error = 1;
  
      switch (status) {
-@@ -2293,7 +2293,7 @@ ngx_http_v2_state_window_update(ngx_http
+@@ -2293,7 +2293,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
          if (stream->exhausted) {
              stream->exhausted = 0;
  
@@ -27,7 +33,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
  
              wev->active = 0;
              wev->ready = 1;
-@@ -2328,7 +2328,7 @@ ngx_http_v2_state_window_update(ngx_http
+@@ -2328,7 +2328,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
  
          stream->waiting = 0;
  
@@ -49,13 +55,12 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
      if (h2c->state.stream) {
 -        r = h2c->state.stream->request;
 -        rev = r->connection->read;
--
++        stream = h2c->state.stream;
++        fc = stream->fake_connection;
+ 
 -        if (!rev->timer_set) {
 -            cscf = ngx_http_get_module_srv_conf(r, ngx_http_core_module);
 -            ngx_add_timer(rev, cscf->client_header_timeout);
-+        stream = h2c->state.stream;
-+        fc = stream->fake_connection;
-+
 +        if (!fc->read->timer_set) {
 +            cscf = ngx_http_get_module_srv_conf(stream->request,
 +                                                ngx_http_core_module);
@@ -63,7 +68,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
          }
      }
  
-@@ -2928,6 +2929,7 @@ ngx_http_v2_create_stream(ngx_http_v2_co
+@@ -2928,6 +2929,7 @@ ngx_http_v2_create_stream(ngx_http_v2_connection_t *h2c)
  
      stream->request = r;
      stream->connection = h2c;
@@ -71,7 +76,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
  
      h2scf = ngx_http_get_module_srv_conf(r, ngx_http_v2_module);
  
-@@ -3712,7 +3714,7 @@ ngx_http_v2_read_request_body(ngx_http_r
+@@ -3712,7 +3714,7 @@ ngx_http_v2_read_request_body(ngx_http_request_t *r)
      }
  
      if (!buf) {
@@ -80,7 +85,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
      }
  
      r->read_event_handler = ngx_http_v2_read_client_request_body_handler;
-@@ -3732,7 +3734,7 @@ ngx_http_v2_process_request_body(ngx_htt
+@@ -3732,7 +3734,7 @@ ngx_http_v2_process_request_body(ngx_http_request_t *r, u_char *pos,
      ngx_http_request_body_t   *rb;
      ngx_http_core_loc_conf_t  *clcf;
  
@@ -89,7 +94,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
      rb = r->request_body;
      buf = rb->buf;
  
-@@ -3903,7 +3905,7 @@ ngx_http_v2_read_client_request_body_han
+@@ -3903,7 +3905,7 @@ ngx_http_v2_read_client_request_body_handler(ngx_http_request_t *r)
  {
      ngx_connection_t  *fc;
  
@@ -98,7 +103,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
  
      ngx_log_debug0(NGX_LOG_DEBUG_HTTP, fc->log, 0,
                     "http2 read client request body handler");
-@@ -3942,7 +3944,7 @@ ngx_http_v2_read_unbuffered_request_body
+@@ -3942,7 +3944,7 @@ ngx_http_v2_read_unbuffered_request_body(ngx_http_request_t *r)
      ngx_http_core_loc_conf_t  *clcf;
  
      stream = r->stream;
@@ -107,7 +112,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
  
      if (fc->read->timedout) {
          if (stream->recv_window) {
-@@ -4042,7 +4044,7 @@ ngx_http_v2_terminate_stream(ngx_http_v2
+@@ -4042,7 +4044,7 @@ ngx_http_v2_terminate_stream(ngx_http_v2_connection_t *h2c,
      stream->rst_sent = 1;
      stream->skip_data = 1;
  
@@ -116,7 +121,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
      fc->error = 1;
  
      rev = fc->read;
-@@ -4068,7 +4070,7 @@ ngx_http_v2_close_stream(ngx_http_v2_str
+@@ -4068,7 +4070,7 @@ ngx_http_v2_close_stream(ngx_http_v2_stream_t *stream, ngx_int_t rc)
                     "http2 close stream %ui, queued %ui, processing %ui",
                     node->id, stream->queued, h2c->processing);
  
@@ -125,7 +130,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
  
      if (stream->queued) {
          fc->write->handler = ngx_http_v2_close_stream_handler;
-@@ -4302,7 +4304,6 @@ ngx_http_v2_finalize_connection(ngx_http
+@@ -4302,7 +4304,6 @@ ngx_http_v2_finalize_connection(ngx_http_v2_connection_t *h2c,
      ngx_uint_t               i, size;
      ngx_event_t             *ev;
      ngx_connection_t        *c, *fc;
@@ -133,7 +138,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
      ngx_http_v2_node_t      *node;
      ngx_http_v2_stream_t    *stream;
      ngx_http_v2_srv_conf_t  *h2scf;
-@@ -4344,9 +4345,7 @@ ngx_http_v2_finalize_connection(ngx_http
+@@ -4344,9 +4345,7 @@ ngx_http_v2_finalize_connection(ngx_http_v2_connection_t *h2c,
  
              stream->waiting = 0;
  
@@ -144,7 +149,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
              fc->error = 1;
  
              if (stream->queued) {
-@@ -4420,7 +4419,7 @@ ngx_http_v2_adjust_windows(ngx_http_v2_c
+@@ -4420,7 +4419,7 @@ ngx_http_v2_adjust_windows(ngx_http_v2_connection_t *h2c, ssize_t delta)
              if (stream->send_window > 0 && stream->exhausted) {
                  stream->exhausted = 0;
  
@@ -153,7 +158,8 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.c
  
                  wev->active = 0;
                  wev->ready = 1;
-diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.h
+diff --git a/src/http/v2/ngx_http_v2.h b/src/http/v2/ngx_http_v2.h
+index 78f8fe8..7b41893 100644
 --- a/src/http/v2/ngx_http_v2.h
 +++ b/src/http/v2/ngx_http_v2.h
 @@ -165,6 +165,8 @@ struct ngx_http_v2_node_s {
@@ -165,10 +171,11 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2.h
      ngx_http_request_t              *request;
      ngx_http_v2_connection_t        *connection;
      ngx_http_v2_node_t              *node;
-diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2_filter_module.c
+diff --git a/src/http/v2/ngx_http_v2_filter_module.c b/src/http/v2/ngx_http_v2_filter_module.c
+index 8621e7a..cc52b10 100644
 --- a/src/http/v2/ngx_http_v2_filter_module.c
 +++ b/src/http/v2/ngx_http_v2_filter_module.c
-@@ -173,7 +173,7 @@ ngx_http_v2_header_filter(ngx_http_reque
+@@ -173,7 +173,7 @@ ngx_http_v2_header_filter(ngx_http_request_t *r)
          return NGX_OK;
      }
  
@@ -177,7 +184,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2_filter_module.c
  
      if (fc->error) {
          return NGX_ERROR;
-@@ -896,7 +896,7 @@ ngx_http_v2_create_headers_frame(ngx_htt
+@@ -896,7 +896,7 @@ ngx_http_v2_create_headers_frame(ngx_http_request_t *r, u_char *pos,
          cl->next = NULL;
          frame->last = cl;
  
@@ -186,7 +193,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2_filter_module.c
                         "http2:%ui create HEADERS frame %p: len:%uz",
                         stream->node->id, frame, frame->length);
  
-@@ -1175,7 +1175,7 @@ ngx_http_v2_filter_get_data_frame(ngx_ht
+@@ -1175,7 +1175,7 @@ ngx_http_v2_filter_get_data_frame(ngx_http_v2_stream_t *stream,
  
      flags = last->buf->last_buf ? NGX_HTTP_V2_END_STREAM_FLAG : 0;
  
@@ -209,7 +216,7 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2_filter_module.c
  
      if (frame->fin) {
          stream->out_closed = 1;
-@@ -1485,7 +1482,7 @@ ngx_http_v2_handle_stream(ngx_http_v2_co
+@@ -1485,7 +1482,7 @@ ngx_http_v2_handle_stream(ngx_http_v2_connection_t *h2c,
          return;
      }
  
@@ -227,4 +234,3 @@ diff -r 24b0f9f4ebfa -r 64d12a65309e src/http/v2/ngx_http_v2_filter_module.c
  
              wev->active = 0;
              wev->ready = 1;
-

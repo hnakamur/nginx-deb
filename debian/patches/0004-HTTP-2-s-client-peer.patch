@@ -1,15 +1,20 @@
 From: Piotr Sikora <piotrsikora@google.com>
-Date: 1485917964 -0800
+Date: Tue, 31 Jan 2017 18:59:24 -0800
 Subject: HTTP/2: s/client/peer/.
 
 No functional changes.
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+---
+ src/http/v2/ngx_http_v2.c       | 106 ++++++++++++++++++++--------------------
+ src/http/v2/ngx_http_v2_table.c |   6 +--
+ 2 files changed, 56 insertions(+), 56 deletions(-)
 
-diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
+diff --git a/src/http/v2/ngx_http_v2.c b/src/http/v2/ngx_http_v2.c
+index 9e4ed1f..b3de935 100644
 --- a/src/http/v2/ngx_http_v2.c
 +++ b/src/http/v2/ngx_http_v2.c
-@@ -316,7 +316,7 @@ ngx_http_v2_read_handler(ngx_event_t *re
+@@ -316,7 +316,7 @@ ngx_http_v2_read_handler(ngx_event_t *rev)
      h2c = c->data;
  
      if (rev->timedout) {
@@ -18,7 +23,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
          ngx_http_v2_finalize_connection(h2c, NGX_HTTP_V2_PROTOCOL_ERROR);
          return;
      }
-@@ -368,7 +368,7 @@ ngx_http_v2_read_handler(ngx_event_t *re
+@@ -368,7 +368,7 @@ ngx_http_v2_read_handler(ngx_event_t *rev)
  
          if (n == 0 && (h2c->state.incomplete || h2c->processing)) {
              ngx_log_error(NGX_LOG_INFO, c->log, 0,
@@ -27,7 +32,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
          }
  
          if (n == 0 || n == NGX_ERROR) {
-@@ -774,7 +774,7 @@ ngx_http_v2_state_data(ngx_http_v2_conne
+@@ -774,7 +774,7 @@ ngx_http_v2_state_data(ngx_http_v2_connection_t *h2c, u_char *pos, u_char *end)
  
          if (h2c->state.length == 0) {
              ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -36,7 +41,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                            "with incorrect length: 0");
  
              return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
-@@ -789,7 +789,7 @@ ngx_http_v2_state_data(ngx_http_v2_conne
+@@ -789,7 +789,7 @@ ngx_http_v2_state_data(ngx_http_v2_connection_t *h2c, u_char *pos, u_char *end)
  
          if (h2c->state.padding >= size) {
              ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -45,7 +50,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                            "with incorrect length: %uz, padding: %uz",
                            size, h2c->state.padding);
  
-@@ -805,7 +805,7 @@ ngx_http_v2_state_data(ngx_http_v2_conne
+@@ -805,7 +805,7 @@ ngx_http_v2_state_data(ngx_http_v2_connection_t *h2c, u_char *pos, u_char *end)
  
      if (size > h2c->recv_window) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -54,7 +59,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        "received DATA frame length %uz, available window %uz",
                        size, h2c->recv_window);
  
-@@ -840,7 +840,7 @@ ngx_http_v2_state_data(ngx_http_v2_conne
+@@ -840,7 +840,7 @@ ngx_http_v2_state_data(ngx_http_v2_connection_t *h2c, u_char *pos, u_char *end)
  
      if (size > stream->recv_window) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -63,7 +68,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        "received DATA frame length %uz, available window %uz",
                        node->id, size, stream->recv_window);
  
-@@ -874,7 +874,7 @@ ngx_http_v2_state_data(ngx_http_v2_conne
+@@ -874,7 +874,7 @@ ngx_http_v2_state_data(ngx_http_v2_connection_t *h2c, u_char *pos, u_char *end)
  
      if (stream->in_closed) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -72,7 +77,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        node->id);
  
          if (ngx_http_v2_terminate_stream(h2c, stream,
-@@ -1002,7 +1002,7 @@ ngx_http_v2_state_headers(ngx_http_v2_co
+@@ -1002,7 +1002,7 @@ ngx_http_v2_state_headers(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.length < size) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -81,7 +86,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        h2c->state.length);
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
-@@ -1010,7 +1010,7 @@ ngx_http_v2_state_headers(ngx_http_v2_co
+@@ -1010,7 +1010,7 @@ ngx_http_v2_state_headers(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.length == size) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -90,7 +95,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
      }
-@@ -1033,7 +1033,7 @@ ngx_http_v2_state_headers(ngx_http_v2_co
+@@ -1033,7 +1033,7 @@ ngx_http_v2_state_headers(ngx_http_v2_connection_t *h2c, u_char *pos,
  
          if (h2c->state.padding > h2c->state.length) {
              ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -99,7 +104,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                            "with incorrect length: %uz, padding: %uz",
                            h2c->state.length, h2c->state.padding);
  
-@@ -1064,8 +1064,8 @@ ngx_http_v2_state_headers(ngx_http_v2_co
+@@ -1064,8 +1064,8 @@ ngx_http_v2_state_headers(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.sid % 2 == 0 || h2c->state.sid <= h2c->last_sid) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -110,7 +115,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_PROTOCOL_ERROR);
      }
-@@ -1079,7 +1079,7 @@ ngx_http_v2_state_headers(ngx_http_v2_co
+@@ -1079,7 +1079,7 @@ ngx_http_v2_state_headers(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (depend == h2c->state.sid) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -119,7 +124,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        "with incorrect dependency", h2c->state.sid);
  
          status = NGX_HTTP_V2_PROTOCOL_ERROR;
-@@ -1104,7 +1104,7 @@ ngx_http_v2_state_headers(ngx_http_v2_co
+@@ -1104,7 +1104,7 @@ ngx_http_v2_state_headers(ngx_http_v2_connection_t *h2c, u_char *pos,
          && h2scf->preread_size < NGX_HTTP_V2_DEFAULT_WINDOW)
      {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -128,7 +133,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        "before settings were acknowledged");
  
          status = NGX_HTTP_V2_REFUSED_STREAM;
-@@ -1224,14 +1224,14 @@ ngx_http_v2_state_header_block(ngx_http_
+@@ -1224,14 +1224,14 @@ ngx_http_v2_state_header_block(ngx_http_v2_connection_t *h2c, u_char *pos,
  
          if (value == NGX_DECLINED) {
              ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -145,7 +150,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
      }
-@@ -1283,7 +1283,7 @@ ngx_http_v2_state_field_len(ngx_http_v2_
+@@ -1283,7 +1283,7 @@ ngx_http_v2_state_field_len(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.length < 1) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -154,7 +159,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
      }
-@@ -1304,13 +1304,13 @@ ngx_http_v2_state_field_len(ngx_http_v2_
+@@ -1304,13 +1304,13 @@ ngx_http_v2_state_field_len(ngx_http_v2_connection_t *h2c, u_char *pos,
  
          if (len == NGX_DECLINED) {
              ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -170,7 +175,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
      }
-@@ -1324,7 +1324,7 @@ ngx_http_v2_state_field_len(ngx_http_v2_
+@@ -1324,7 +1324,7 @@ ngx_http_v2_state_field_len(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if ((size_t) len > h2scf->max_field_size) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -179,7 +184,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_ENHANCE_YOUR_CALM);
      }
-@@ -1378,7 +1378,7 @@ ngx_http_v2_state_field_huff(ngx_http_v2
+@@ -1378,7 +1378,7 @@ ngx_http_v2_state_field_huff(ngx_http_v2_connection_t *h2c, u_char *pos,
          != NGX_OK)
      {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -188,7 +193,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_COMP_ERROR);
      }
-@@ -1397,7 +1397,7 @@ ngx_http_v2_state_field_huff(ngx_http_v2
+@@ -1397,7 +1397,7 @@ ngx_http_v2_state_field_huff(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.flags & NGX_HTTP_V2_END_HEADERS_FLAG) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -197,7 +202,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
      }
-@@ -1442,7 +1442,7 @@ ngx_http_v2_state_field_raw(ngx_http_v2_
+@@ -1442,7 +1442,7 @@ ngx_http_v2_state_field_raw(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.flags & NGX_HTTP_V2_END_HEADERS_FLAG) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -206,7 +211,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
      }
-@@ -1484,7 +1484,7 @@ ngx_http_v2_state_field_skip(ngx_http_v2
+@@ -1484,7 +1484,7 @@ ngx_http_v2_state_field_skip(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.flags & NGX_HTTP_V2_END_HEADERS_FLAG) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -215,7 +220,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
      }
-@@ -1531,7 +1531,7 @@ ngx_http_v2_state_process_header(ngx_htt
+@@ -1531,7 +1531,7 @@ ngx_http_v2_state_process_header(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (len > h2c->state.header_limit) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -224,7 +229,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_ENHANCE_YOUR_CALM);
      }
-@@ -1601,7 +1601,7 @@ ngx_http_v2_state_process_header(ngx_htt
+@@ -1601,7 +1601,7 @@ ngx_http_v2_state_process_header(ngx_http_v2_connection_t *h2c, u_char *pos,
  
          if (cscf->ignore_invalid_headers) {
              ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
@@ -233,7 +238,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
              return ngx_http_v2_state_header_complete(h2c, pos, end);
          }
-@@ -1727,7 +1727,7 @@ ngx_http_v2_handle_continuation(ngx_http
+@@ -1727,7 +1727,7 @@ ngx_http_v2_handle_continuation(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (ngx_http_v2_parse_type(head) != NGX_HTTP_V2_CONTINUATION_FRAME) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -242,7 +247,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_PROTOCOL_ERROR);
      }
-@@ -1736,7 +1736,7 @@ ngx_http_v2_handle_continuation(ngx_http
+@@ -1736,7 +1736,7 @@ ngx_http_v2_handle_continuation(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.sid != ngx_http_v2_parse_sid(&p[5])) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -251,7 +256,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_PROTOCOL_ERROR);
      }
-@@ -1768,7 +1768,7 @@ ngx_http_v2_state_priority(ngx_http_v2_c
+@@ -1768,7 +1768,7 @@ ngx_http_v2_state_priority(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.length != NGX_HTTP_V2_PRIORITY_SIZE) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -260,7 +265,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        h2c->state.length);
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
-@@ -1793,14 +1793,14 @@ ngx_http_v2_state_priority(ngx_http_v2_c
+@@ -1793,14 +1793,14 @@ ngx_http_v2_state_priority(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.sid == 0) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -277,7 +282,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        "with incorrect dependency", h2c->state.sid);
  
          node = ngx_http_v2_get_node_by_id(h2c, h2c->state.sid, 0);
-@@ -1864,7 +1864,7 @@ ngx_http_v2_state_rst_stream(ngx_http_v2
+@@ -1864,7 +1864,7 @@ ngx_http_v2_state_rst_stream(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.length != NGX_HTTP_V2_RST_STREAM_SIZE) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -286,7 +291,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        h2c->state.length);
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
-@@ -1885,7 +1885,7 @@ ngx_http_v2_state_rst_stream(ngx_http_v2
+@@ -1885,7 +1885,7 @@ ngx_http_v2_state_rst_stream(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.sid == 0) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -295,7 +300,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_PROTOCOL_ERROR);
      }
-@@ -1911,18 +1911,18 @@ ngx_http_v2_state_rst_stream(ngx_http_v2
+@@ -1911,18 +1911,18 @@ ngx_http_v2_state_rst_stream(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      case NGX_HTTP_V2_CANCEL:
          ngx_log_error(NGX_LOG_INFO, fc->log, 0,
@@ -317,7 +322,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        h2c->state.sid, status);
          break;
      }
-@@ -1942,7 +1942,7 @@ ngx_http_v2_state_settings(ngx_http_v2_c
+@@ -1942,7 +1942,7 @@ ngx_http_v2_state_settings(ngx_http_v2_connection_t *h2c, u_char *pos,
  
          if (h2c->state.length != 0) {
              ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -326,7 +331,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                            "and nonzero length");
  
              return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
-@@ -1958,7 +1958,7 @@ ngx_http_v2_state_settings(ngx_http_v2_c
+@@ -1958,7 +1958,7 @@ ngx_http_v2_state_settings(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.length % NGX_HTTP_V2_SETTINGS_PARAM_SIZE) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -335,7 +340,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        h2c->state.length);
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
-@@ -2020,7 +2020,7 @@ ngx_http_v2_state_settings_params(ngx_ht
+@@ -2020,7 +2020,7 @@ ngx_http_v2_state_settings_params(ngx_http_v2_connection_t *h2c, u_char *pos,
  
              if (value > NGX_HTTP_V2_MAX_WINDOW) {
                  ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -344,7 +349,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                                "INITIAL_WINDOW_SIZE value %ui", value);
  
                  return ngx_http_v2_connection_error(h2c,
-@@ -2042,7 +2042,7 @@ ngx_http_v2_state_settings_params(ngx_ht
+@@ -2042,7 +2042,7 @@ ngx_http_v2_state_settings_params(ngx_http_v2_connection_t *h2c, u_char *pos,
                  || value < NGX_HTTP_V2_DEFAULT_FRAME_SIZE)
              {
                  ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -353,7 +358,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                                "MAX_FRAME_SIZE value %ui", value);
  
                  return ngx_http_v2_connection_error(h2c,
-@@ -2102,7 +2102,7 @@ ngx_http_v2_state_push_promise(ngx_http_
+@@ -2102,7 +2102,7 @@ ngx_http_v2_state_push_promise(ngx_http_v2_connection_t *h2c, u_char *pos,
      u_char *end)
  {
      ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -362,7 +367,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
      return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_PROTOCOL_ERROR);
  }
-@@ -2116,7 +2116,7 @@ ngx_http_v2_state_ping(ngx_http_v2_conne
+@@ -2116,7 +2116,7 @@ ngx_http_v2_state_ping(ngx_http_v2_connection_t *h2c, u_char *pos, u_char *end)
  
      if (h2c->state.length != NGX_HTTP_V2_PING_SIZE) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -371,7 +376,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        h2c->state.length);
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
-@@ -2164,7 +2164,7 @@ ngx_http_v2_state_goaway(ngx_http_v2_con
+@@ -2164,7 +2164,7 @@ ngx_http_v2_state_goaway(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.length < NGX_HTTP_V2_GOAWAY_SIZE) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -380,7 +385,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        "with incorrect length %uz", h2c->state.length);
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
-@@ -2203,7 +2203,7 @@ ngx_http_v2_state_window_update(ngx_http
+@@ -2203,7 +2203,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (h2c->state.length != NGX_HTTP_V2_WINDOW_UPDATE_SIZE) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -389,7 +394,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        "with incorrect length %uz", h2c->state.length);
  
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_SIZE_ERROR);
-@@ -2275,7 +2275,7 @@ ngx_http_v2_state_window_update(ngx_http
+@@ -2275,7 +2275,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
          if (window > (size_t) (NGX_HTTP_V2_MAX_WINDOW - stream->send_window)) {
  
              ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -398,7 +403,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                            "received WINDOW_UPDATE frame "
                            "with window increment %uz "
                            "not allowed for window %z",
-@@ -2312,7 +2312,7 @@ ngx_http_v2_state_window_update(ngx_http
+@@ -2312,7 +2312,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
  
      if (window > NGX_HTTP_V2_MAX_WINDOW - h2c->send_window) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -407,7 +412,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                        "received WINDOW_UPDATE frame "
                        "with window increment %uz "
                        "not allowed for window %uz",
-@@ -2355,7 +2355,7 @@ ngx_http_v2_state_continuation(ngx_http_
+@@ -2355,7 +2355,7 @@ ngx_http_v2_state_continuation(ngx_http_v2_connection_t *h2c, u_char *pos,
      u_char *end)
  {
      ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -416,7 +421,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
      return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_PROTOCOL_ERROR);
  }
-@@ -3103,7 +3103,7 @@ ngx_http_v2_validate_header(ngx_http_req
+@@ -3103,7 +3103,7 @@ ngx_http_v2_validate_header(ngx_http_request_t *r, ngx_http_v2_header_t *header)
          case CR:
          case ':':
              ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
@@ -425,7 +430,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                            &header->name);
  
              return NGX_ERROR;
-@@ -3111,7 +3111,7 @@ ngx_http_v2_validate_header(ngx_http_req
+@@ -3111,7 +3111,7 @@ ngx_http_v2_validate_header(ngx_http_request_t *r, ngx_http_v2_header_t *header)
  
          if (ch >= 'A' && ch <= 'Z') {
              ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
@@ -434,7 +439,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                            &header->name);
  
              return NGX_ERROR;
-@@ -3128,7 +3128,7 @@ ngx_http_v2_validate_header(ngx_http_req
+@@ -3128,7 +3128,7 @@ ngx_http_v2_validate_header(ngx_http_request_t *r, ngx_http_v2_header_t *header)
          case LF:
          case CR:
              ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
@@ -443,7 +448,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                            "invalid value: \"%V\"",
                            &header->name, &header->value);
  
-@@ -3182,7 +3182,7 @@ ngx_http_v2_pseudo_header(ngx_http_reque
+@@ -3182,7 +3182,7 @@ ngx_http_v2_pseudo_header(ngx_http_request_t *r, ngx_http_v2_header_t *header)
      }
  
      ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
@@ -452,7 +457,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                    &header->name);
  
      return NGX_DECLINED;
-@@ -4202,7 +4202,7 @@ ngx_http_v2_close_stream_handler(ngx_eve
+@@ -4202,7 +4202,7 @@ ngx_http_v2_close_stream_handler(ngx_event_t *ev)
                     "http2 close stream handler");
  
      if (ev->timedout) {
@@ -461,7 +466,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
  
          fc->timedout = 1;
  
-@@ -4270,7 +4270,7 @@ ngx_http_v2_idle_handler(ngx_event_t *re
+@@ -4270,7 +4270,7 @@ ngx_http_v2_idle_handler(ngx_event_t *rev)
          if (rev->pending_eof) {
              c->log->handler = NULL;
              ngx_log_error(NGX_LOG_INFO, c->log, rev->kq_errno,
@@ -470,10 +475,11 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2.c
                            "idle connection", &c->addr_text);
  #if (NGX_HTTP_SSL)
              if (c->ssl) {
-diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2_table.c
+diff --git a/src/http/v2/ngx_http_v2_table.c b/src/http/v2/ngx_http_v2_table.c
+index a73748a..39dad71 100644
 --- a/src/http/v2/ngx_http_v2_table.c
 +++ b/src/http/v2/ngx_http_v2_table.c
-@@ -96,7 +96,7 @@ ngx_http_v2_get_indexed_header(ngx_http_
+@@ -96,7 +96,7 @@ ngx_http_v2_get_indexed_header(ngx_http_v2_connection_t *h2c, ngx_uint_t index,
  
      if (index == 0) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -482,7 +488,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2_table.c
          return NGX_ERROR;
      }
  
-@@ -165,7 +165,7 @@ ngx_http_v2_get_indexed_header(ngx_http_
+@@ -165,7 +165,7 @@ ngx_http_v2_get_indexed_header(ngx_http_v2_connection_t *h2c, ngx_uint_t index,
      }
  
      ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -491,7 +497,7 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2_table.c
  
      return NGX_ERROR;
  }
-@@ -326,7 +326,7 @@ ngx_http_v2_table_size(ngx_http_v2_conne
+@@ -326,7 +326,7 @@ ngx_http_v2_table_size(ngx_http_v2_connection_t *h2c, size_t size)
  
      if (size > NGX_HTTP_V2_TABLE_SIZE) {
          ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
@@ -500,4 +506,3 @@ diff -r 22d178a11e30 -r 912d9cf36783 src/http/v2/ngx_http_v2_table.c
  
          return NGX_ERROR;
      }
-

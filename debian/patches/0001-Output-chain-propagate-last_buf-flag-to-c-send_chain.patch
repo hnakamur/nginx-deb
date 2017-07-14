@@ -1,13 +1,17 @@
 From: Piotr Sikora <piotrsikora@google.com>
-Date: 1491708381 -0700
+Date: Sat, 8 Apr 2017 20:26:21 -0700
 Subject: Output chain: propagate last_buf flag to c->send_chain().
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+---
+ src/core/ngx_output_chain.c | 19 +++++++++++++++----
+ 1 file changed, 15 insertions(+), 4 deletions(-)
 
-diff -r a39bc74873fa -r 5f5d70428655 src/core/ngx_output_chain.c
+diff --git a/src/core/ngx_output_chain.c b/src/core/ngx_output_chain.c
+index 7f5dc78..cb3484a 100644
 --- a/src/core/ngx_output_chain.c
 +++ b/src/core/ngx_output_chain.c
-@@ -658,6 +658,7 @@ ngx_chain_writer(void *data, ngx_chain_t
+@@ -658,6 +658,7 @@ ngx_chain_writer(void *data, ngx_chain_t *in)
      ngx_chain_writer_ctx_t *ctx = data;
  
      off_t              size;
@@ -15,7 +19,7 @@ diff -r a39bc74873fa -r 5f5d70428655 src/core/ngx_output_chain.c
      ngx_chain_t       *cl, *ln, *chain;
      ngx_connection_t  *c;
  
-@@ -689,9 +690,10 @@ ngx_chain_writer(void *data, ngx_chain_t
+@@ -689,9 +690,10 @@ ngx_chain_writer(void *data, ngx_chain_t *in)
  
          size += ngx_buf_size(in->buf);
  
@@ -29,7 +33,7 @@ diff -r a39bc74873fa -r 5f5d70428655 src/core/ngx_output_chain.c
  
          cl = ngx_alloc_chain_link(ctx->pool);
          if (cl == NULL) {
-@@ -707,6 +709,8 @@ ngx_chain_writer(void *data, ngx_chain_t
+@@ -707,6 +709,8 @@ ngx_chain_writer(void *data, ngx_chain_t *in)
      ngx_log_debug1(NGX_LOG_DEBUG_CORE, c->log, 0,
                     "chain writer in: %p", ctx->out);
  
@@ -38,7 +42,7 @@ diff -r a39bc74873fa -r 5f5d70428655 src/core/ngx_output_chain.c
      for (cl = ctx->out; cl; cl = cl->next) {
  
  #if 1
-@@ -732,9 +736,16 @@ ngx_chain_writer(void *data, ngx_chain_t
+@@ -732,9 +736,16 @@ ngx_chain_writer(void *data, ngx_chain_t *in)
  #endif
  
          size += ngx_buf_size(cl->buf);
@@ -55,4 +59,4 @@ diff -r a39bc74873fa -r 5f5d70428655 src/core/ngx_output_chain.c
 +    {
          return NGX_OK;
      }
-
+ 

@@ -1,13 +1,21 @@
 From: Piotr Sikora <piotrsikora@google.com>
-Date: 1491954701 -0700
+Date: Tue, 11 Apr 2017 16:51:41 -0700
 Subject: Cache: add HTTP/2 support.
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+---
+ src/http/modules/ngx_http_proxy_module.c | 277 +++++++++++++++++++++++++++----
+ src/http/ngx_http_cache.h                |   6 +-
+ src/http/ngx_http_file_cache.c           |  54 +++++-
+ src/http/ngx_http_upstream.c             |  86 ++++++++++
+ src/http/ngx_http_upstream.h             |   6 +
+ 5 files changed, 393 insertions(+), 36 deletions(-)
 
-diff -r cde1f42da7b2 -r 432abcf28574 src/http/modules/ngx_http_proxy_module.c
+diff --git a/src/http/modules/ngx_http_proxy_module.c b/src/http/modules/ngx_http_proxy_module.c
+index b453e14..7c4f1a2 100644
 --- a/src/http/modules/ngx_http_proxy_module.c
 +++ b/src/http/modules/ngx_http_proxy_module.c
-@@ -132,6 +132,14 @@ static ngx_int_t ngx_http_proxy_reinit_r
+@@ -132,6 +132,14 @@ static ngx_int_t ngx_http_proxy_reinit_request(ngx_http_request_t *r);
  static ngx_int_t ngx_http_proxy_body_output_filter(void *data, ngx_chain_t *in);
  static ngx_int_t ngx_http_proxy_process_status_line(ngx_http_request_t *r);
  static ngx_int_t ngx_http_proxy_process_header(ngx_http_request_t *r);
@@ -22,7 +30,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/modules/ngx_http_proxy_module.c
  static ngx_int_t ngx_http_proxy_input_filter_init(void *data);
  static ngx_int_t ngx_http_proxy_copy_filter(ngx_event_pipe_t *p,
      ngx_buf_t *buf);
-@@ -917,6 +925,7 @@ ngx_http_proxy_handler(ngx_http_request_
+@@ -917,6 +925,7 @@ ngx_http_proxy_handler(ngx_http_request_t *r)
      u->create_request = ngx_http_proxy_create_request;
      u->reinit_request = ngx_http_proxy_reinit_request;
      u->process_header = ngx_http_proxy_process_status_line;
@@ -30,7 +38,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/modules/ngx_http_proxy_module.c
      u->abort_request = ngx_http_proxy_abort_request;
      u->finalize_request = ngx_http_proxy_finalize_request;
      r->state = 0;
-@@ -929,6 +938,14 @@ ngx_http_proxy_handler(ngx_http_request_
+@@ -929,6 +938,14 @@ ngx_http_proxy_handler(ngx_http_request_t *r)
          u->create_request = ngx_http_proxy_create_v2_request;
          u->output.output_filter = ngx_http_v2_upstream_output_filter;
          u->output.filter_ctx = r;
@@ -45,7 +53,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/modules/ngx_http_proxy_module.c
      }
  
  #endif
-@@ -2482,6 +2499,227 @@ ngx_http_proxy_process_header(ngx_http_r
+@@ -2482,6 +2499,227 @@ ngx_http_proxy_process_header(ngx_http_request_t *r)
  
  
  static ngx_int_t
@@ -273,7 +281,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/modules/ngx_http_proxy_module.c
  ngx_http_proxy_input_filter_init(void *data)
  {
      ngx_http_request_t    *r = data;
-@@ -3995,18 +4233,6 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t
+@@ -3995,18 +4233,6 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
  #if (NGX_HTTP_CACHE)
  
      if (conf->upstream.cache) {
@@ -292,7 +300,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/modules/ngx_http_proxy_module.c
          rc = ngx_http_proxy_init_headers(cf, conf, &conf->headers_cache,
                                           ngx_http_proxy_cache_headers);
          if (rc != NGX_OK) {
-@@ -4030,26 +4256,13 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t
+@@ -4030,26 +4256,13 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
  #endif
      }
  
@@ -326,7 +334,8 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/modules/ngx_http_proxy_module.c
      }
  
      return NGX_CONF_OK;
-diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_cache.h
+diff --git a/src/http/ngx_http_cache.h b/src/http/ngx_http_cache.h
+index f9e9664..7c2238c 100644
 --- a/src/http/ngx_http_cache.h
 +++ b/src/http/ngx_http_cache.h
 @@ -27,7 +27,7 @@
@@ -354,7 +363,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_cache.h
      uint32_t                         crc32;
      u_short                          valid_msec;
      u_short                          header_start;
-@@ -192,6 +194,8 @@ ngx_int_t ngx_http_file_cache_set_header
+@@ -192,6 +194,8 @@ ngx_int_t ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf);
  void ngx_http_file_cache_update(ngx_http_request_t *r, ngx_temp_file_t *tf);
  void ngx_http_file_cache_update_header(ngx_http_request_t *r);
  ngx_int_t ngx_http_cache_send(ngx_http_request_t *);
@@ -363,10 +372,11 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_cache.h
  void ngx_http_file_cache_free(ngx_http_cache_t *c, ngx_temp_file_t *tf);
  time_t ngx_http_file_cache_valid(ngx_array_t *cache_valid, ngx_uint_t status);
  
-diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_file_cache.c
+diff --git a/src/http/ngx_http_file_cache.c b/src/http/ngx_http_file_cache.c
+index a823c51..fe7db4b 100644
 --- a/src/http/ngx_http_file_cache.c
 +++ b/src/http/ngx_http_file_cache.c
-@@ -605,6 +605,7 @@ ngx_http_file_cache_read(ngx_http_reques
+@@ -605,6 +605,7 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
      c->error_sec = h->error_sec;
      c->last_modified = h->last_modified;
      c->date = h->date;
@@ -374,7 +384,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_file_cache.c
      c->valid_msec = h->valid_msec;
      c->body_start = h->body_start;
      c->etag.len = h->etag_len;
-@@ -1260,6 +1261,7 @@ ngx_http_file_cache_set_header(ngx_http_
+@@ -1260,6 +1261,7 @@ ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf)
      h->error_sec = c->error_sec;
      h->last_modified = c->last_modified;
      h->date = c->date;
@@ -382,7 +392,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_file_cache.c
      h->crc32 = c->crc32;
      h->valid_msec = (u_short) c->valid_msec;
      h->header_start = (u_short) c->header_start;
-@@ -1500,6 +1502,7 @@ ngx_http_file_cache_update_header(ngx_ht
+@@ -1500,6 +1502,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
  
      if (h.version != NGX_HTTP_CACHE_VERSION
          || h.last_modified != c->last_modified
@@ -390,7 +400,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_file_cache.c
          || h.crc32 != c->crc32
          || (size_t) h.header_start != c->header_start
          || (size_t) h.body_start != c->body_start)
-@@ -1523,6 +1526,7 @@ ngx_http_file_cache_update_header(ngx_ht
+@@ -1523,6 +1526,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
      h.error_sec = c->error_sec;
      h.last_modified = c->last_modified;
      h.date = c->date;
@@ -406,7 +416,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_file_cache.c
      ngx_int_t          rc;
      ngx_buf_t         *b;
      ngx_chain_t        out;
-@@ -1571,7 +1576,14 @@ ngx_http_cache_send(ngx_http_request_t *
+@@ -1571,7 +1576,14 @@ ngx_http_cache_send(ngx_http_request_t *r)
      ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                     "http file cache send: %s", c->file.name.data);
  
@@ -422,20 +432,19 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_file_cache.c
          return ngx_http_send_header(r);
      }
  
-@@ -1594,9 +1606,9 @@ ngx_http_cache_send(ngx_http_request_t *
+@@ -1594,9 +1606,9 @@ ngx_http_cache_send(ngx_http_request_t *r)
      }
  
      b->file_pos = c->body_start;
 -    b->file_last = c->length;
--
--    b->in_file = (c->length - c->body_start) ? 1: 0;
 +    b->file_last = c->body_start + body_len;
-+
+ 
+-    b->in_file = (c->length - c->body_start) ? 1: 0;
 +    b->in_file = body_len ? 1 : 0;
      b->last_buf = (r == r->main) ? 1: 0;
      b->last_in_chain = 1;
  
-@@ -1611,6 +1623,42 @@ ngx_http_cache_send(ngx_http_request_t *
+@@ -1611,6 +1623,42 @@ ngx_http_cache_send(ngx_http_request_t *r)
  }
  
  
@@ -478,10 +487,11 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_file_cache.c
  void
  ngx_http_file_cache_free(ngx_http_cache_t *c, ngx_temp_file_t *tf)
  {
-diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_upstream.c
+diff --git a/src/http/ngx_http_upstream.c b/src/http/ngx_http_upstream.c
+index c526f90..898a2d3 100644
 --- a/src/http/ngx_http_upstream.c
 +++ b/src/http/ngx_http_upstream.c
-@@ -58,6 +58,10 @@ static ngx_int_t ngx_http_upstream_proce
+@@ -58,6 +58,10 @@ static ngx_int_t ngx_http_upstream_process_headers(ngx_http_request_t *r,
      ngx_http_upstream_t *u);
  static ngx_int_t ngx_http_upstream_process_trailers(ngx_http_request_t *r,
      ngx_http_upstream_t *u);
@@ -492,7 +502,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_upstream.c
  static void ngx_http_upstream_process_body_in_memory(ngx_http_request_t *r,
      ngx_http_upstream_t *u);
  static void ngx_http_upstream_send_response(ngx_http_request_t *r,
-@@ -1035,6 +1039,7 @@ static ngx_int_t
+@@ -1037,6 +1041,7 @@ static ngx_int_t
  ngx_http_upstream_cache_send(ngx_http_request_t *r, ngx_http_upstream_t *u)
  {
      ngx_int_t          rc;
@@ -500,7 +510,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_upstream.c
      ngx_http_cache_t  *c;
  
      r->cached = 1;
-@@ -1076,6 +1081,24 @@ ngx_http_upstream_cache_send(ngx_http_re
+@@ -1078,6 +1083,24 @@ ngx_http_upstream_cache_send(ngx_http_request_t *r, ngx_http_upstream_t *u)
              return NGX_DONE;
          }
  
@@ -525,7 +535,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_upstream.c
          return ngx_http_cache_send(r);
      }
  
-@@ -2955,6 +2978,49 @@ ngx_http_upstream_process_trailers(ngx_h
+@@ -2970,6 +2993,49 @@ ngx_http_upstream_process_trailers(ngx_http_request_t *r,
  }
  
  
@@ -575,7 +585,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_upstream.c
  static void
  ngx_http_upstream_process_body_in_memory(ngx_http_request_t *r,
      ngx_http_upstream_t *u)
-@@ -3201,9 +3267,16 @@ ngx_http_upstream_send_response(ngx_http
+@@ -3216,9 +3282,16 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
              }
          }
  
@@ -592,7 +602,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_upstream.c
  
              if (u->headers_in.status_n == NGX_HTTP_OK
                  || u->headers_in.status_n == NGX_HTTP_PARTIAL_CONTENT)
-@@ -4107,6 +4180,13 @@ ngx_http_upstream_process_request(ngx_ht
+@@ -4122,6 +4195,13 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
          if (u->cacheable) {
  
              if (p->upstream_done) {
@@ -606,7 +616,7 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_upstream.c
                  ngx_http_file_cache_update(r, p->temp_file);
  
              } else if (p->upstream_eof) {
-@@ -4118,6 +4198,12 @@ ngx_http_upstream_process_request(ngx_ht
+@@ -4133,6 +4213,12 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
                          || u->headers_in.content_length_n
                             == tf->offset - (off_t) r->cache->body_start))
                  {
@@ -619,7 +629,8 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_upstream.c
                      ngx_http_file_cache_update(r, tf);
  
                  } else {
-diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_upstream.h
+diff --git a/src/http/ngx_http_upstream.h b/src/http/ngx_http_upstream.h
+index 8cded7c..d4d43bc 100644
 --- a/src/http/ngx_http_upstream.h
 +++ b/src/http/ngx_http_upstream.h
 @@ -359,6 +359,12 @@ struct ngx_http_upstream_s {
@@ -635,4 +646,3 @@ diff -r cde1f42da7b2 -r 432abcf28574 src/http/ngx_http_upstream.h
      void                           (*abort_request)(ngx_http_request_t *r);
      void                           (*finalize_request)(ngx_http_request_t *r,
                                           ngx_int_t rc);
-

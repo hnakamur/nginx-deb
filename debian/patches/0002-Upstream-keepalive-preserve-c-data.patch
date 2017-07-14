@@ -1,10 +1,14 @@
 From: Piotr Sikora <piotrsikora@google.com>
-Date: 1491886301 -0700
+Date: Mon, 10 Apr 2017 21:51:41 -0700
 Subject: Upstream keepalive: preserve c->data.
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+---
+ src/http/modules/ngx_http_upstream_keepalive_module.c | 3 +++
+ 1 file changed, 3 insertions(+)
 
-diff -r 5f5d70428655 -r a147dd50ee3f src/http/modules/ngx_http_upstream_keepalive_module.c
+diff --git a/src/http/modules/ngx_http_upstream_keepalive_module.c b/src/http/modules/ngx_http_upstream_keepalive_module.c
+index 0048e6b..5f3d815 100644
 --- a/src/http/modules/ngx_http_upstream_keepalive_module.c
 +++ b/src/http/modules/ngx_http_upstream_keepalive_module.c
 @@ -27,6 +27,7 @@ typedef struct {
@@ -23,11 +27,11 @@ diff -r 5f5d70428655 -r a147dd50ee3f src/http/modules/ngx_http_upstream_keepaliv
      c->idle = 0;
      c->sent = 0;
      c->log = pc->log;
-@@ -336,6 +338,7 @@ ngx_http_upstream_free_keepalive_peer(ng
+@@ -336,6 +338,7 @@ ngx_http_upstream_free_keepalive_peer(ngx_peer_connection_t *pc, void *data,
      ngx_queue_insert_head(&kp->conf->cache, q);
  
      item->connection = c;
 +    item->data = c->data;
  
      pc->connection = NULL;
-
+ 

@@ -1,12 +1,16 @@
 From: Piotr Sikora <piotrsikora@google.com>
-Date: 1489114845 -0800
+Date: Thu, 9 Mar 2017 19:00:45 -0800
 Subject: HTTP/2: introduce ngx_http_v2_handle_event().
 
 No functional changes.
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+---
+ src/http/v2/ngx_http_v2.c | 25 +++++++++++++++----------
+ 1 file changed, 15 insertions(+), 10 deletions(-)
 
-diff -r 64d12a65309e -r 00bfd879eaf0 src/http/v2/ngx_http_v2.c
+diff --git a/src/http/v2/ngx_http_v2.c b/src/http/v2/ngx_http_v2.c
+index f9ee2d6..db25d75 100644
 --- a/src/http/v2/ngx_http_v2.c
 +++ b/src/http/v2/ngx_http_v2.c
 @@ -57,6 +57,8 @@
@@ -18,7 +22,7 @@ diff -r 64d12a65309e -r 00bfd879eaf0 src/http/v2/ngx_http_v2.c
  
  static u_char *ngx_http_v2_state_proxy_protocol(ngx_http_v2_connection_t *h2c,
      u_char *pos, u_char *end);
-@@ -655,6 +657,13 @@ ngx_http_v2_handle_connection(ngx_http_v
+@@ -655,6 +657,13 @@ ngx_http_v2_handle_connection(ngx_http_v2_connection_t *h2c)
  }
  
  
@@ -32,7 +36,7 @@ diff -r 64d12a65309e -r 00bfd879eaf0 src/http/v2/ngx_http_v2.c
  static u_char *
  ngx_http_v2_state_proxy_protocol(ngx_http_v2_connection_t *h2c, u_char *pos,
      u_char *end)
-@@ -1853,7 +1862,6 @@ ngx_http_v2_state_rst_stream(ngx_http_v2
+@@ -1853,7 +1862,6 @@ ngx_http_v2_state_rst_stream(ngx_http_v2_connection_t *h2c, u_char *pos,
      u_char *end)
  {
      ngx_uint_t             status;
@@ -40,7 +44,7 @@ diff -r 64d12a65309e -r 00bfd879eaf0 src/http/v2/ngx_http_v2.c
      ngx_connection_t      *fc;
      ngx_http_v2_node_t    *node;
      ngx_http_v2_stream_t  *stream;
-@@ -1923,8 +1931,7 @@ ngx_http_v2_state_rst_stream(ngx_http_v2
+@@ -1923,8 +1931,7 @@ ngx_http_v2_state_rst_stream(ngx_http_v2_connection_t *h2c, u_char *pos,
          break;
      }
  
@@ -50,7 +54,7 @@ diff -r 64d12a65309e -r 00bfd879eaf0 src/http/v2/ngx_http_v2.c
  
      return ngx_http_v2_state_complete(h2c, pos, end);
  }
-@@ -2299,7 +2306,7 @@ ngx_http_v2_state_window_update(ngx_http
+@@ -2299,7 +2306,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
              wev->ready = 1;
  
              if (!wev->delayed) {
@@ -59,7 +63,7 @@ diff -r 64d12a65309e -r 00bfd879eaf0 src/http/v2/ngx_http_v2.c
              }
          }
  
-@@ -2334,7 +2341,7 @@ ngx_http_v2_state_window_update(ngx_http
+@@ -2334,7 +2341,7 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
          wev->ready = 1;
  
          if (!wev->delayed) {
@@ -76,7 +80,7 @@ diff -r 64d12a65309e -r 00bfd879eaf0 src/http/v2/ngx_http_v2.c
      ngx_connection_t  *fc;
  
      if (stream->rst_sent) {
-@@ -4047,8 +4053,7 @@ ngx_http_v2_terminate_stream(ngx_http_v2
+@@ -4047,8 +4053,7 @@ ngx_http_v2_terminate_stream(ngx_http_v2_connection_t *h2c,
      fc = stream->fake_connection;
      fc->error = 1;
  
@@ -86,7 +90,7 @@ diff -r 64d12a65309e -r 00bfd879eaf0 src/http/v2/ngx_http_v2.c
  
      return NGX_OK;
  }
-@@ -4360,7 +4365,7 @@ ngx_http_v2_finalize_connection(ngx_http
+@@ -4360,7 +4365,7 @@ ngx_http_v2_finalize_connection(ngx_http_v2_connection_t *h2c,
              }
  
              ev->eof = 1;
@@ -95,7 +99,7 @@ diff -r 64d12a65309e -r 00bfd879eaf0 src/http/v2/ngx_http_v2.c
          }
      }
  
-@@ -4425,7 +4430,7 @@ ngx_http_v2_adjust_windows(ngx_http_v2_c
+@@ -4425,7 +4430,7 @@ ngx_http_v2_adjust_windows(ngx_http_v2_connection_t *h2c, ssize_t delta)
                  wev->ready = 1;
  
                  if (!wev->delayed) {
@@ -104,4 +108,3 @@ diff -r 64d12a65309e -r 00bfd879eaf0 src/http/v2/ngx_http_v2.c
                  }
              }
          }
-

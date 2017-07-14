@@ -1,13 +1,19 @@
 From: Piotr Sikora <piotrsikora@google.com>
-Date: 1490769087 -0700
+Date: Tue, 28 Mar 2017 23:31:27 -0700
 Subject: Proxy: add HTTP/2 support.
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+---
+ src/http/modules/ngx_http_proxy_module.c | 605 ++++++++++++++++++++++++++++++-
+ src/http/v2/ngx_http_v2.h                |  32 ++
+ src/http/v2/ngx_http_v2_filter_module.c  |  12 +-
+ 3 files changed, 634 insertions(+), 15 deletions(-)
 
-diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
+diff --git a/src/http/modules/ngx_http_proxy_module.c b/src/http/modules/ngx_http_proxy_module.c
+index 98bbeef..d979967 100644
 --- a/src/http/modules/ngx_http_proxy_module.c
 +++ b/src/http/modules/ngx_http_proxy_module.c
-@@ -125,6 +125,9 @@ static ngx_int_t ngx_http_proxy_eval(ngx
+@@ -125,6 +125,9 @@ static ngx_int_t ngx_http_proxy_eval(ngx_http_request_t *r,
  static ngx_int_t ngx_http_proxy_create_key(ngx_http_request_t *r);
  #endif
  static ngx_int_t ngx_http_proxy_create_request(ngx_http_request_t *r);
@@ -17,7 +23,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
  static ngx_int_t ngx_http_proxy_reinit_request(ngx_http_request_t *r);
  static ngx_int_t ngx_http_proxy_body_output_filter(void *data, ngx_chain_t *in);
  static ngx_int_t ngx_http_proxy_process_status_line(ngx_http_request_t *r);
-@@ -149,6 +152,8 @@ static ngx_int_t ngx_http_proxy_port_var
+@@ -149,6 +152,8 @@ static ngx_int_t ngx_http_proxy_port_variable(ngx_http_request_t *r,
  static ngx_int_t
      ngx_http_proxy_add_x_forwarded_for_variable(ngx_http_request_t *r,
      ngx_http_variable_value_t *v, uintptr_t data);
@@ -26,7 +32,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
  static ngx_int_t
      ngx_http_proxy_internal_body_length_variable(ngx_http_request_t *r,
      ngx_http_variable_value_t *v, uintptr_t data);
-@@ -245,6 +250,9 @@ static ngx_conf_bitmask_t  ngx_http_prox
+@@ -245,6 +250,9 @@ static ngx_conf_bitmask_t  ngx_http_proxy_ssl_protocols[] = {
  static ngx_conf_enum_t  ngx_http_proxy_http_version[] = {
      { ngx_string("1.0"), NGX_HTTP_VERSION_10 },
      { ngx_string("1.1"), NGX_HTTP_VERSION_11 },
@@ -36,7 +42,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
      { ngx_null_string, 0 }
  };
  
-@@ -765,7 +773,7 @@ static char  ngx_http_proxy_version_11[]
+@@ -765,7 +773,7 @@ static char  ngx_http_proxy_version_11[] = " HTTP/1.1" CRLF;
  
  static ngx_keyval_t  ngx_http_proxy_headers[] = {
      { ngx_string("Host"), ngx_string("$proxy_host") },
@@ -45,7 +51,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
      { ngx_string("Content-Length"), ngx_string("$proxy_internal_body_length") },
      { ngx_string("Transfer-Encoding"), ngx_string("$proxy_internal_chunked") },
      { ngx_string("TE"), ngx_string("") },
-@@ -793,7 +801,7 @@ static ngx_str_t  ngx_http_proxy_hide_he
+@@ -793,7 +801,7 @@ static ngx_str_t  ngx_http_proxy_hide_headers[] = {
  
  static ngx_keyval_t  ngx_http_proxy_cache_headers[] = {
      { ngx_string("Host"), ngx_string("$proxy_host") },
@@ -54,7 +60,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
      { ngx_string("Content-Length"), ngx_string("$proxy_internal_body_length") },
      { ngx_string("Transfer-Encoding"), ngx_string("$proxy_internal_chunked") },
      { ngx_string("TE"), ngx_string("") },
-@@ -828,6 +836,10 @@ static ngx_http_variable_t  ngx_http_pro
+@@ -828,6 +836,10 @@ static ngx_http_variable_t  ngx_http_proxy_vars[] = {
      { ngx_string("proxy_add_via"), NULL, NULL, 0, NGX_HTTP_VAR_NOHASH, 0 },
  #endif
  
@@ -65,7 +71,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
      { ngx_string("proxy_internal_body_length"), NULL,
        ngx_http_proxy_internal_body_length_variable, 0,
        NGX_HTTP_VAR_NOCACHEABLE|NGX_HTTP_VAR_NOHASH, 0 },
-@@ -902,6 +914,18 @@ ngx_http_proxy_handler(ngx_http_request_
+@@ -902,6 +914,18 @@ ngx_http_proxy_handler(ngx_http_request_t *r)
      u->finalize_request = ngx_http_proxy_finalize_request;
      r->state = 0;
  
@@ -84,7 +90,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
      if (plcf->redirects) {
          u->rewrite_redirect = ngx_http_proxy_rewrite_redirect;
      }
-@@ -929,7 +953,7 @@ ngx_http_proxy_handler(ngx_http_request_
+@@ -929,7 +953,7 @@ ngx_http_proxy_handler(ngx_http_request_t *r)
      if (!plcf->upstream.request_buffering
          && plcf->body_values == NULL && plcf->upstream.pass_request_body
          && (!r->headers_in.chunked
@@ -93,7 +99,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
      {
          r->request_body_no_buffering = 1;
      }
-@@ -1521,6 +1545,509 @@ ngx_http_proxy_create_request(ngx_http_r
+@@ -1521,6 +1545,509 @@ ngx_http_proxy_create_request(ngx_http_request_t *r)
  }
  
  
@@ -603,7 +609,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
  static ngx_int_t
  ngx_http_proxy_reinit_request(ngx_http_request_t *r)
  {
-@@ -1966,6 +2493,14 @@ ngx_http_proxy_input_filter_init(void *d
+@@ -1966,6 +2493,14 @@ ngx_http_proxy_input_filter_init(void *data)
                     u->headers_in.status_n, ctx->head, u->headers_in.chunked,
                     u->headers_in.content_length_n);
  
@@ -618,7 +624,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
      /* as per RFC2616, 4.4 Message Length */
  
      if (u->headers_in.status_n == NGX_HTTP_NO_CONTENT
-@@ -2480,6 +3015,34 @@ ngx_http_proxy_add_x_forwarded_for_varia
+@@ -2480,6 +3015,34 @@ ngx_http_proxy_add_x_forwarded_for_variable(ngx_http_request_t *r,
  
  
  static ngx_int_t
@@ -675,7 +681,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
  
      ctx = ngx_http_get_module_ctx(r, ngx_http_proxy_module);
  
-@@ -3407,6 +3983,18 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t
+@@ -3407,6 +3983,18 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
  #if (NGX_HTTP_CACHE)
  
      if (conf->upstream.cache) {
@@ -694,7 +700,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
          rc = ngx_http_proxy_init_headers(cf, conf, &conf->headers_cache,
                                           ngx_http_proxy_cache_headers);
          if (rc != NGX_OK) {
-@@ -4361,6 +4949,15 @@ ngx_http_proxy_set_ssl(ngx_conf_t *cf, n
+@@ -4361,6 +4949,15 @@ ngx_http_proxy_set_ssl(ngx_conf_t *cf, ngx_http_proxy_loc_conf_t *plcf)
          case NGX_HTTP_VERSION_11:
              ngx_str_set(&alpn, NGX_HTTP_11_ALPN_ADVERTISE);
              break;
@@ -710,7 +716,8 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/modules/ngx_http_proxy_module.c
          }
  
          if (ngx_ssl_alpn_protos(cf, plcf->upstream.ssl, &alpn) != NGX_OK) {
-diff -r 0637acdb51e2 -r 7eb807b056da src/http/v2/ngx_http_v2.h
+diff --git a/src/http/v2/ngx_http_v2.h b/src/http/v2/ngx_http_v2.h
+index 0263355..dc95e05 100644
 --- a/src/http/v2/ngx_http_v2.h
 +++ b/src/http/v2/ngx_http_v2.h
 @@ -13,6 +13,28 @@
@@ -742,7 +749,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/v2/ngx_http_v2.h
  #define NGX_HTTP_V2_ALPN_ADVERTISE       "\x02h2"
  #define NGX_HTTP_V2_NPN_ADVERTISE        NGX_HTTP_V2_ALPN_ADVERTISE
  
-@@ -325,6 +347,9 @@ void ngx_http_v2_finalize_connection(ngx
+@@ -325,6 +347,9 @@ void ngx_http_v2_finalize_connection(ngx_http_v2_connection_t *h2c,
      ngx_uint_t status);
  
  
@@ -752,7 +759,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/v2/ngx_http_v2.h
  ngx_http_v2_out_frame_t *ngx_http_v2_create_headers_frame(
      ngx_http_v2_stream_t *stream, u_char *pos, u_char *end, ngx_uint_t fin);
  
-@@ -415,4 +440,11 @@ size_t ngx_http_v2_huff_encode(u_char *s
+@@ -415,4 +440,11 @@ size_t ngx_http_v2_huff_encode(u_char *src, size_t len, u_char *dst,
  
  #define ngx_http_v2_write_sid  ngx_http_v2_write_uint32
  
@@ -764,7 +771,8 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/v2/ngx_http_v2.h
 +
 +
  #endif /* _NGX_HTTP_V2_H_INCLUDED_ */
-diff -r 0637acdb51e2 -r 7eb807b056da src/http/v2/ngx_http_v2_filter_module.c
+diff --git a/src/http/v2/ngx_http_v2_filter_module.c b/src/http/v2/ngx_http_v2_filter_module.c
+index 654b351..9aaf957 100644
 --- a/src/http/v2/ngx_http_v2_filter_module.c
 +++ b/src/http/v2/ngx_http_v2_filter_module.c
 @@ -22,14 +22,6 @@
@@ -791,7 +799,7 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/v2/ngx_http_v2_filter_module.c
  static u_char *ngx_http_v2_write_int(u_char *pos, ngx_uint_t prefix,
      ngx_uint_t value);
  static ngx_http_v2_out_frame_t *ngx_http_v2_create_trailers_frame(
-@@ -740,7 +730,7 @@ ngx_http_v2_create_trailers_frame(ngx_ht
+@@ -740,7 +730,7 @@ ngx_http_v2_create_trailers_frame(ngx_http_request_t *r)
  }
  
  
@@ -800,4 +808,3 @@ diff -r 0637acdb51e2 -r 7eb807b056da src/http/v2/ngx_http_v2_filter_module.c
  ngx_http_v2_string_encode(u_char *dst, u_char *src, size_t len, u_char *tmp,
      ngx_uint_t lower)
  {
-
