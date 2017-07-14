@@ -78,6 +78,7 @@ config.status.nginx: config.env.nginx
 		--with-stream_realip_module \
 		--with-stream_ssl_module \
 		--with-stream_ssl_preread_module \
+		--with-ipv6 \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)"
 	touch $@
@@ -124,6 +125,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--with-stream_realip_module \
 		--with-stream_ssl_module \
 		--with-stream_ssl_preread_module \
+		--with-ipv6 \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)" \
 		--with-debug
