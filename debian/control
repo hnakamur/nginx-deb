@@ -8,7 +8,8 @@ Build-Depends: debhelper (>= 9~),
                lsb-release,
                libssl-dev (>= 0.9.7),
                libpcre3-dev,
-               zlib1g-dev
+               zlib1g-dev,
+               libluajit-5.1-dev
 Standards-Version: 3.9.8.0
 Homepage: http://nginx.org
 
