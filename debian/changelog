@@ -1,3 +1,9 @@
+nginx (1.13.3-1~xenial1ppa1) xenial; urgency=medium
+
+  * Add ngx_http_v2_upstream patches
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Fri, 14 Jul 2017 16:07:32 +0900
+
 nginx (1.13.3-1~xenial) xenial; urgency=low
 
   * 1.13.3
