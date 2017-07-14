@@ -1,0 +1,163 @@
+From: Piotr Sikora <piotrsikora@google.com>
+Date: 1489621682 -0700
+Subject: Proxy: add "proxy_ssl_alpn" directive.
+
+ALPN is used here only to indicate which version of the HTTP protocol
+is going to be used and we doesn't verify that upstream agreed to it.
+
+Please note that upstream is allowed to reject SSL connection with a
+fatal "no_application_protocol" alert if it doesn't support it.
+
+Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+
+diff -r 154ca6c5e62a -r 96075d4cd2a6 src/event/ngx_event_openssl.c
+--- a/src/event/ngx_event_openssl.c
++++ b/src/event/ngx_event_openssl.c
+@@ -654,6 +654,29 @@ ngx_ssl_ciphers(ngx_conf_t *cf, ngx_ssl_
+ 
+ 
+ ngx_int_t
++ngx_ssl_alpn_protos(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *protos)
++{
++#ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
++
++    if (SSL_CTX_set_alpn_protos(ssl->ctx, protos->data, protos->len) != 0) {
++        ngx_ssl_error(NGX_LOG_EMERG, ssl->log, 0,
++                      "SSL_CTX_set_alpn_protos() failed");
++        return NGX_ERROR;
++    }
++
++    return NGX_OK;
++
++#else
++
++    ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
++                  "nginx was built with OpenSSL that lacks ALPN support");
++    return NGX_ERROR;
++
++#endif
++}
++
++
++ngx_int_t
+ ngx_ssl_client_certificate(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *cert,
+     ngx_int_t depth)
+ {
+diff -r 154ca6c5e62a -r 96075d4cd2a6 src/event/ngx_event_openssl.h
+--- a/src/event/ngx_event_openssl.h
++++ b/src/event/ngx_event_openssl.h
+@@ -153,6 +153,8 @@ ngx_int_t ngx_ssl_certificate(ngx_conf_t
+     ngx_str_t *cert, ngx_str_t *key, ngx_array_t *passwords);
+ ngx_int_t ngx_ssl_ciphers(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *ciphers,
+     ngx_uint_t prefer_server_ciphers);
++ngx_int_t ngx_ssl_alpn_protos(ngx_conf_t *cf, ngx_ssl_t *ssl,
++    ngx_str_t *protos);
+ ngx_int_t ngx_ssl_client_certificate(ngx_conf_t *cf, ngx_ssl_t *ssl,
+     ngx_str_t *cert, ngx_int_t depth);
+ ngx_int_t ngx_ssl_trusted_certificate(ngx_conf_t *cf, ngx_ssl_t *ssl,
+diff -r 154ca6c5e62a -r 96075d4cd2a6 src/http/modules/ngx_http_proxy_module.c
+--- a/src/http/modules/ngx_http_proxy_module.c
++++ b/src/http/modules/ngx_http_proxy_module.c
+@@ -652,6 +652,13 @@ static ngx_command_t  ngx_http_proxy_com
+       offsetof(ngx_http_proxy_loc_conf_t, ssl_ciphers),
+       NULL },
+ 
++    { ngx_string("proxy_ssl_alpn"),
++      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
++      ngx_conf_set_flag_slot,
++      NGX_HTTP_LOC_CONF_OFFSET,
++      offsetof(ngx_http_proxy_loc_conf_t, upstream.ssl_alpn),
++      NULL },
++
+     { ngx_string("proxy_ssl_name"),
+       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+       ngx_http_set_complex_value_slot,
+@@ -2882,6 +2889,7 @@ ngx_http_proxy_create_loc_conf(ngx_conf_
+     conf->upstream.intercept_errors = NGX_CONF_UNSET;
+ 
+ #if (NGX_HTTP_SSL)
++    conf->upstream.ssl_alpn = NGX_CONF_UNSET;
+     conf->upstream.ssl_session_reuse = NGX_CONF_UNSET;
+     conf->upstream.ssl_server_name = NGX_CONF_UNSET;
+     conf->upstream.ssl_verify = NGX_CONF_UNSET;
+@@ -3212,6 +3220,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t
+         conf->upstream.ssl_name = prev->upstream.ssl_name;
+     }
+ 
++    ngx_conf_merge_value(conf->upstream.ssl_alpn,
++                              prev->upstream.ssl_alpn, 0);
+     ngx_conf_merge_value(conf->upstream.ssl_server_name,
+                               prev->upstream.ssl_server_name, 0);
+     ngx_conf_merge_value(conf->upstream.ssl_verify,
+@@ -4320,6 +4330,7 @@ ngx_http_proxy_lowat_check(ngx_conf_t *c
+ static ngx_int_t
+ ngx_http_proxy_set_ssl(ngx_conf_t *cf, ngx_http_proxy_loc_conf_t *plcf)
+ {
++    ngx_str_t            alpn;
+     ngx_pool_cleanup_t  *cln;
+ 
+     plcf->upstream.ssl = ngx_pcalloc(cf->pool, sizeof(ngx_ssl_t));
+@@ -4366,6 +4377,24 @@ ngx_http_proxy_set_ssl(ngx_conf_t *cf, n
+         return NGX_ERROR;
+     }
+ 
++    if (plcf->upstream.ssl_alpn) {
++
++        switch (plcf->http_version) {
++
++        case NGX_HTTP_VERSION_10:
++            ngx_str_set(&alpn, NGX_HTTP_10_ALPN_ADVERTISE);
++            break;
++
++        case NGX_HTTP_VERSION_11:
++            ngx_str_set(&alpn, NGX_HTTP_11_ALPN_ADVERTISE);
++            break;
++        }
++
++        if (ngx_ssl_alpn_protos(cf, plcf->upstream.ssl, &alpn) != NGX_OK) {
++            return NGX_ERROR;
++        }
++    }
++
+     if (plcf->upstream.ssl_verify) {
+         if (plcf->ssl_trusted_certificate.len == 0) {
+             ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
+diff -r 154ca6c5e62a -r 96075d4cd2a6 src/http/modules/ngx_http_ssl_module.c
+--- a/src/http/modules/ngx_http_ssl_module.c
++++ b/src/http/modules/ngx_http_ssl_module.c
+@@ -17,8 +17,6 @@ typedef ngx_int_t (*ngx_ssl_variable_han
+ #define NGX_DEFAULT_CIPHERS     "HIGH:!aNULL:!MD5"
+ #define NGX_DEFAULT_ECDH_CURVE  "auto"
+ 
+-#define NGX_HTTP_NPN_ADVERTISE  "\x08http/1.1"
+-
+ 
+ #ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
+ static int ngx_http_ssl_alpn_select(ngx_ssl_conn_t *ssl_conn,
+diff -r 154ca6c5e62a -r 96075d4cd2a6 src/http/ngx_http.h
+--- a/src/http/ngx_http.h
++++ b/src/http/ngx_http.h
+@@ -13,6 +13,11 @@
+ #include <ngx_core.h>
+ 
+ 
++#define NGX_HTTP_10_ALPN_ADVERTISE  "\x08http/1.0"
++#define NGX_HTTP_11_ALPN_ADVERTISE  "\x08http/1.1"
++#define NGX_HTTP_NPN_ADVERTISE      NGX_HTTP_11_ALPN_ADVERTISE
++
++
+ typedef struct ngx_http_request_s     ngx_http_request_t;
+ typedef struct ngx_http_upstream_s    ngx_http_upstream_t;
+ typedef struct ngx_http_cache_s       ngx_http_cache_t;
+diff -r 154ca6c5e62a -r 96075d4cd2a6 src/http/ngx_http_upstream.h
+--- a/src/http/ngx_http_upstream.h
++++ b/src/http/ngx_http_upstream.h
+@@ -224,6 +224,7 @@ typedef struct {
+ 
+ #if (NGX_HTTP_SSL || NGX_COMPAT)
+     ngx_ssl_t                       *ssl;
++    ngx_flag_t                       ssl_alpn;
+     ngx_flag_t                       ssl_session_reuse;
+ 
+     ngx_http_complex_value_t        *ssl_name;
+
