@@ -1,3 +1,10 @@
+nginx (1.13.3+mod.2-1~xenial1ppa1) xenial; urgency=medium
+
+  * Add openresty/headers-more-nginx-module
+    7b0762aba64495e289c3f9cd7f0bd74d0051a980
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Sat, 15 Jul 2017 15:45:41 +0900
+
 nginx (1.13.3+mod.1-1~xenial1ppa1) xenial; urgency=medium
 
   * Add lua-nginx-module commit a5094766702d97ab43c742f26d6d55098aa1b1f0
