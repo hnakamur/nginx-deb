@@ -18,3 +18,4 @@ objs/ngx_http_redis2_module.so		usr/lib/nginx/modules
 objs/ngx_http_set_misc_module.so	usr/lib/nginx/modules
 objs/ngx_http_srcache_filter_module.so	usr/lib/nginx/modules
 objs/ngx_mail_module.so			usr/lib/nginx/modules
+objs/ngx_rtmp_module.so			usr/lib/nginx/modules
