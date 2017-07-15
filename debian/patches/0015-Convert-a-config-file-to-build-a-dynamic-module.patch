@@ -1,11 +1,10 @@
-From 26d7114ac82195cd4f7db606d7762a6cff9132ad Mon Sep 17 00:00:00 2001
 From: Hiroaki Nakamura <hnakamur@gmail.com>
 Date: Fri, 12 Feb 2016 09:03:35 +0900
-Subject: [PATCH] Convert a config file to build a dynamic module
+Subject: Convert a config file to build a dynamic module
 
 Origin: https://github.com/FRiCKLE/ngx_cache_purge/pull/45/commits/26d7114ac82195cd4f7db606d7762a6cff9132ad
 ---
- config | 14 ++++++++++++--
+ ngx_cache_purge/config | 14 ++++++++++++--
  1 file changed, 12 insertions(+), 2 deletions(-)
 
 diff --git a/ngx_cache_purge/config b/ngx_cache_purge/config
@@ -32,6 +31,3 @@ index 34f42ec..b900680 100644
 +fi
  
  have=NGX_CACHE_PURGE_MODULE . auto/have
--- 
-2.7.4
-
