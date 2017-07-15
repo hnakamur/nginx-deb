@@ -77,6 +77,7 @@ config.status.nginx: config.env.nginx
 		--with-http_flv_module \
 		--with-http_gunzip_module \
 		--with-http_gzip_static_module \
+		--with-http_image_filter_module=dynamic \
 		--with-http_mp4_module \
 		--with-http_random_index_module \
 		--with-http_realip_module \
@@ -139,6 +140,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--with-http_flv_module \
 		--with-http_gunzip_module \
 		--with-http_gzip_static_module \
+		--with-http_image_filter_module=dynamic \
 		--with-http_mp4_module \
 		--with-http_random_index_module \
 		--with-http_realip_module \
