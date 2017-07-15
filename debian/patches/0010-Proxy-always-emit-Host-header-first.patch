@@ -1,6 +1,7 @@
 From: Piotr Sikora <piotrsikora@google.com>
 Date: Wed, 15 Mar 2017 15:54:49 -0700
 Subject: Proxy: always emit "Host" header first.
+Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010218.html
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
 ---

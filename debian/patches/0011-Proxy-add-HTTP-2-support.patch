@@ -1,6 +1,7 @@
 From: Piotr Sikora <piotrsikora@google.com>
 Date: Tue, 28 Mar 2017 23:31:27 -0700
 Subject: Proxy: add HTTP/2 support.
+Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010221.html
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
 ---

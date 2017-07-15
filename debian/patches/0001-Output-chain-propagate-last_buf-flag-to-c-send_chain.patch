@@ -1,6 +1,7 @@
 From: Piotr Sikora <piotrsikora@google.com>
 Date: Sat, 8 Apr 2017 20:26:21 -0700
 Subject: Output chain: propagate last_buf flag to c->send_chain().
+Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010209.html
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
 ---
