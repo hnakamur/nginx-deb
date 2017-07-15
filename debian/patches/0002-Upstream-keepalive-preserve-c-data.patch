@@ -1,6 +1,7 @@
 From: Piotr Sikora <piotrsikora@google.com>
 Date: Mon, 10 Apr 2017 21:51:41 -0700
 Subject: Upstream keepalive: preserve c->data.
+
 Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010210.html
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>

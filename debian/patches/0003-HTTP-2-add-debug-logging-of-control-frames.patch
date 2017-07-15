@@ -1,6 +1,7 @@
 From: Piotr Sikora <piotrsikora@google.com>
 Date: Sun, 26 Mar 2017 01:25:11 -0700
 Subject: HTTP/2: add debug logging of control frames.
+
 Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010211.html
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>

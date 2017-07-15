@@ -1,6 +1,7 @@
 From: Piotr Sikora <piotrsikora@google.com>
 Date: Thu, 9 Mar 2017 18:02:38 -0800
 Subject: HTTP/2: introduce stream->fake_connection.
+
 Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010214.html
 
 No functional changes.

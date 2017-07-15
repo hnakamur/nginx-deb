@@ -1,6 +1,7 @@
 From: Piotr Sikora <piotrsikora@google.com>
 Date: Tue, 31 Jan 2017 18:59:24 -0800
 Subject: HTTP/2: s/client/peer/.
+
 Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010212.html
 
 No functional changes.

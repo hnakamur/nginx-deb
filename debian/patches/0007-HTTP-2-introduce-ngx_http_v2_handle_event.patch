@@ -1,6 +1,7 @@
 From: Piotr Sikora <piotrsikora@google.com>
 Date: Thu, 9 Mar 2017 19:00:45 -0800
 Subject: HTTP/2: introduce ngx_http_v2_handle_event().
+
 Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010215.html
 
 No functional changes.

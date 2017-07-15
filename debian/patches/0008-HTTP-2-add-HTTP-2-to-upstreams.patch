@@ -1,6 +1,7 @@
 From: Piotr Sikora <piotrsikora@google.com>
 Date: Tue, 28 Mar 2017 22:59:40 -0700
 Subject: HTTP/2: add HTTP/2 to upstreams.
+
 Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010216.html
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>

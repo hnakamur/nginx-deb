@@ -1,12 +1,10 @@
-From e06c9edb52a81c462fd52c3df0926e29c12a7e54 Mon Sep 17 00:00:00 2001
 From: Bruno Lorenz <b.lorenz@afterspring.org>
 Date: Mon, 2 Jan 2017 16:18:59 +0100
-Subject: [PATCH] Update config to be used as external module for nginx >=
- 1.9.11
-Origin: https://github.com/senuphtyz/nginx-dav-ext-module/commit/e06c9edb52a81c462fd52c3df0926e29c12a7e54
+Subject: Update config to be used as external module for nginx >= 1.9.11
 
+Origin: https://github.com/senuphtyz/nginx-dav-ext-module/commit/e06c9edb52a81c462fd52c3df0926e29c12a7e54
 ---
- config | 17 ++++++++++++-----
+ nginx-dav-ext-module/config | 17 ++++++++++++-----
  1 file changed, 12 insertions(+), 5 deletions(-)
 
 diff --git a/nginx-dav-ext-module/config b/nginx-dav-ext-module/config
@@ -35,6 +33,3 @@ index 98b2b7a..00ac047 100644
 +fi
  
 -CORE_LIBS="$CORE_LIBS -lexpat"
--- 
-2.7.4
-

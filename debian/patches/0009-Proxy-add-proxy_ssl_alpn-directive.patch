@@ -1,6 +1,7 @@
 From: Piotr Sikora <piotrsikora@google.com>
 Date: Wed, 15 Mar 2017 16:48:02 -0700
 Subject: Proxy: add "proxy_ssl_alpn" directive.
+
 Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010217.html
 
 ALPN is used here only to indicate which version of the HTTP protocol
