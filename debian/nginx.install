@@ -13,4 +13,5 @@ debian/build-nginx-debug/objs/nginx-debug	usr/sbin
 objs/ngx_http_echo_module.so		usr/lib/nginx/modules
 objs/ngx_http_headers_more_filter_module.so	usr/lib/nginx/modules
 objs/ngx_http_lua_upstream_module.so	usr/lib/nginx/modules
+objs/ngx_http_memc_module.so		usr/lib/nginx/modules
 objs/ngx_mail_module.so			usr/lib/nginx/modules

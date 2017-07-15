@@ -38,6 +38,7 @@ config.env.%:
 	cp -Pa $(CURDIR)/echo-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/headers-more-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/lua-upstream-nginx-module $(BUILDDIR_$*)/
+	cp -Pa $(CURDIR)/memc-nginx-module $(BUILDDIR_$*)/
 	touch $@
 
 config.status.nginx: config.env.nginx
@@ -87,6 +88,7 @@ config.status.nginx: config.env.nginx
 		--add-dynamic-module=./echo-nginx-module \
 		--add-dynamic-module=./headers-more-nginx-module \
 		--add-dynamic-module=./lua-upstream-nginx-module \
+		--add-dynamic-module=./memc-nginx-module \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)"
 	touch $@
@@ -138,6 +140,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--add-dynamic-module=./echo-nginx-module \
 		--add-dynamic-module=./headers-more-nginx-module \
 		--add-dynamic-module=./lua-upstream-nginx-module \
+		--add-dynamic-module=./memc-nginx-module \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)" \
 		--with-debug
