@@ -12,7 +12,8 @@ Build-Depends: debhelper (>= 9~),
                libluajit-5.1-dev,
                libexpat1-dev,
                libxslt1-dev,
-               libgd-dev
+               libgd-dev,
+               libgeoip-dev
 Standards-Version: 3.9.8.0
 Homepage: http://nginx.org
 
