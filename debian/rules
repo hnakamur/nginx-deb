@@ -39,6 +39,7 @@ config.env.%:
 	cp -Pa $(CURDIR)/headers-more-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/lua-upstream-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/nginx-rtmp-module $(BUILDDIR_$*)/
+	cp -Pa $(CURDIR)/nginx-sorted-querystring-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/ngx_http_enhanced_memcached_module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/memc-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/redis2-nginx-module $(BUILDDIR_$*)/
@@ -95,6 +96,7 @@ config.status.nginx: config.env.nginx
 		--add-dynamic-module=./lua-upstream-nginx-module \
 		--add-dynamic-module=./memc-nginx-module \
 		--add-dynamic-module=./nginx-rtmp-module \
+		--add-dynamic-module=./nginx-sorted-querystring-module \
 		--add-dynamic-module=./ngx_http_enhanced_memcached_module \
 		--add-dynamic-module=./redis2-nginx-module \
 		--add-dynamic-module=./set-misc-nginx-module \
@@ -152,6 +154,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--add-dynamic-module=./lua-upstream-nginx-module \
 		--add-dynamic-module=./memc-nginx-module \
 		--add-dynamic-module=./nginx-rtmp-module \
+		--add-dynamic-module=./nginx-sorted-querystring-module \
 		--add-dynamic-module=./ngx_http_enhanced_memcached_module \
 		--add-dynamic-module=./redis2-nginx-module \
 		--add-dynamic-module=./set-misc-nginx-module \
