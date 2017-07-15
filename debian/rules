@@ -35,6 +35,7 @@ config.env.%:
 	cp -Pa $(CURDIR)/man $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/src $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/lua-nginx-module $(BUILDDIR_$*)/
+	cp -Pa $(CURDIR)/headers-more-nginx-module $(BUILDDIR_$*)/
 	touch $@
 
 config.status.nginx: config.env.nginx
@@ -81,6 +82,7 @@ config.status.nginx: config.env.nginx
 		--with-stream_ssl_preread_module \
 		--with-ipv6 \
 		--add-module=./lua-nginx-module \
+		--add-dynamic-module=./headers-more-nginx-module \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)"
 	touch $@
@@ -129,6 +131,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--with-stream_ssl_preread_module \
 		--with-ipv6 \
 		--add-module=./lua-nginx-module \
+		--add-dynamic-module=./headers-more-nginx-module \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)" \
 		--with-debug
