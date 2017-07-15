@@ -1,6 +1,4 @@
 #!/bin/bash
-ngx_lua_commit=a5094766702d97ab43c742f26d6d55098aa1b1f0
-
 download_github_repo() {
   local user=$1
   local repo=$2
@@ -16,7 +14,22 @@ download_github_repo() {
   fi
 }
 
-download_github_repo openresty lua-nginx-module a5094766702d97ab43c742f26d6d55098aa1b1f0
+
+download_github_repo openresty echo-nginx-module master
 download_github_repo openresty headers-more-nginx-module master
-download_github_repo openresty replay ngx_http_secure_download master
-download_github_repo openresty replay ngx_http_consistent_hash master
+download_github_repo openresty lua-nginx-module master
+download_github_repo openresty lua-upstream-nginx-module master
+download_github_repo openresty memc-nginx-module master
+download_github_repo openresty redis2-nginx-module master
+download_github_repo openresty set-misc-nginx-module master
+download_github_repo openresty srcache-nginx-module master
+
+download_github_repo FRiCKLE ngx_cache_purge master
+download_github_repo arut nginx-rtmp-module master
+download_github_repo bpaquet ngx_http_enhanced_memcached_module master
+download_github_repo replay ngx_http_secure_download master
+download_github_repo replay ngx_http_consistent_hash master
+download_github_repo simpl ngx_devel_kit master
+download_github_repo wandenberg nginx-sorted-querystring-module master
+
+
