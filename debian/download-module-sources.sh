@@ -26,6 +26,7 @@ download_github_repo openresty srcache-nginx-module master
 
 download_github_repo FRiCKLE ngx_cache_purge master
 download_github_repo arut nginx-rtmp-module master
+download_github_repo arut nginx-dav-ext-module master
 download_github_repo bpaquet ngx_http_enhanced_memcached_module master
 download_github_repo replay ngx_http_secure_download master
 download_github_repo replay ngx_http_consistent_hash master
