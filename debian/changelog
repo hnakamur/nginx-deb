@@ -1,3 +1,12 @@
+nginx (1.13.3+mod.3-1~xenial1ppa2) xenial; urgency=medium
+
+  * Build http_xslt_filter_module as dynamic module
+  * Build http_image_filter_module as dynamic module
+  * Build http_geoip_module as dynamic module
+  * Add 0020-SSL-handled-SSL_CTX_set_cert_cb-callback-yielding.patch
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Sun, 16 Jul 2017 02:50:36 +0900
+
 nginx (1.13.3+mod.3-1~xenial1ppa1) xenial; urgency=medium
 
   * Add replay/ngx_http_consistent_hash c7245c9230496f575f4d81aa62b8ce108fee10dd
