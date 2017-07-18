@@ -1,3 +1,12 @@
+nginx (1.13.3+mod.4-1~xenial1ppa1) xenial; urgency=medium
+
+  * Build replay/ngx_http_secure_download as dynamic module
+    using commit c7245c9230496f575f4d81aa62b8ce108fee10dd
+  * Remove replay/ngx_http_consistent_hash c7245c9230496f575f4d81aa62b8ce108fee10dd
+  * Add luajit, etc to Depends
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Tue, 18 Jul 2017 10:12:16 +0900
+
 nginx (1.13.3+mod.3-1~xenial1ppa2) xenial; urgency=medium
 
   * Build http_xslt_filter_module as dynamic module
