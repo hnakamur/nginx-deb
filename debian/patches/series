@@ -17,4 +17,4 @@
 0017-feat-purge-all-Include-option-to-purge-all-the-cache.patch
 0018-feat-partial-keys-Support-partial-keys-to-purge-mult.patch
 0019-added-cache_purge_response_type-directive-selecting-.patch
-0020-SSL-handled-SSL_CTX_set_cert_cb-callback-yielding.patch
+0020-Make-replay-ngx_http_secure_download-as-dynamic-modu.patch
