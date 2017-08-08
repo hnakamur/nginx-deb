@@ -10,7 +10,7 @@ Signed-off-by: Piotr Sikora <piotrsikora@google.com>
  1 file changed, 23 insertions(+), 3 deletions(-)
 
 diff --git a/src/http/modules/ngx_http_proxy_module.c b/src/http/modules/ngx_http_proxy_module.c
-index 5f03038..98bbeef 100644
+index dcea50e..fae87ef 100644
 --- a/src/http/modules/ngx_http_proxy_module.c
 +++ b/src/http/modules/ngx_http_proxy_module.c
 @@ -3443,7 +3443,7 @@ ngx_http_proxy_init_headers(ngx_conf_t *cf, ngx_http_proxy_loc_conf_t *conf,

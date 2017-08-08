@@ -21,7 +21,7 @@ Signed-off-by: Piotr Sikora <piotrsikora@google.com>
  6 files changed, 60 insertions(+), 2 deletions(-)
 
 diff --git a/src/event/ngx_event_openssl.c b/src/event/ngx_event_openssl.c
-index 2c4e114..5c6e1ce 100644
+index 07646b6..7fcff3b 100644
 --- a/src/event/ngx_event_openssl.c
 +++ b/src/event/ngx_event_openssl.c
 @@ -654,6 +654,29 @@ ngx_ssl_ciphers(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *ciphers,
@@ -68,7 +68,7 @@ index 2a14980..4db5704 100644
      ngx_str_t *cert, ngx_int_t depth);
  ngx_int_t ngx_ssl_trusted_certificate(ngx_conf_t *cf, ngx_ssl_t *ssl,
 diff --git a/src/http/modules/ngx_http_proxy_module.c b/src/http/modules/ngx_http_proxy_module.c
-index 61bf55c..5f03038 100644
+index b42839c..dcea50e 100644
 --- a/src/http/modules/ngx_http_proxy_module.c
 +++ b/src/http/modules/ngx_http_proxy_module.c
 @@ -652,6 +652,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
@@ -136,7 +136,7 @@ index 61bf55c..5f03038 100644
          if (plcf->ssl_trusted_certificate.len == 0) {
              ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
 diff --git a/src/http/modules/ngx_http_ssl_module.c b/src/http/modules/ngx_http_ssl_module.c
-index b466e5d..57693c6 100644
+index 4370275..8bf1943 100644
 --- a/src/http/modules/ngx_http_ssl_module.c
 +++ b/src/http/modules/ngx_http_ssl_module.c
 @@ -17,8 +17,6 @@ typedef ngx_int_t (*ngx_ssl_variable_handler_pt)(ngx_connection_t *c,

@@ -14,7 +14,7 @@ Signed-off-by: Piotr Sikora <piotrsikora@google.com>
  5 files changed, 393 insertions(+), 36 deletions(-)
 
 diff --git a/src/http/modules/ngx_http_proxy_module.c b/src/http/modules/ngx_http_proxy_module.c
-index b453e14..7c4f1a2 100644
+index b258fcd..0b47af2 100644
 --- a/src/http/modules/ngx_http_proxy_module.c
 +++ b/src/http/modules/ngx_http_proxy_module.c
 @@ -132,6 +132,14 @@ static ngx_int_t ngx_http_proxy_reinit_request(ngx_http_request_t *r);
@@ -375,10 +375,10 @@ index f9e9664..7c2238c 100644
  time_t ngx_http_file_cache_valid(ngx_array_t *cache_valid, ngx_uint_t status);
  
 diff --git a/src/http/ngx_http_file_cache.c b/src/http/ngx_http_file_cache.c
-index a823c51..fe7db4b 100644
+index 3b2b68a..eb6bb19 100644
 --- a/src/http/ngx_http_file_cache.c
 +++ b/src/http/ngx_http_file_cache.c
-@@ -605,6 +605,7 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
+@@ -606,6 +606,7 @@ ngx_http_file_cache_read(ngx_http_request_t *r, ngx_http_cache_t *c)
      c->error_sec = h->error_sec;
      c->last_modified = h->last_modified;
      c->date = h->date;
@@ -386,7 +386,7 @@ index a823c51..fe7db4b 100644
      c->valid_msec = h->valid_msec;
      c->body_start = h->body_start;
      c->etag.len = h->etag_len;
-@@ -1260,6 +1261,7 @@ ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf)
+@@ -1261,6 +1262,7 @@ ngx_http_file_cache_set_header(ngx_http_request_t *r, u_char *buf)
      h->error_sec = c->error_sec;
      h->last_modified = c->last_modified;
      h->date = c->date;
@@ -394,7 +394,7 @@ index a823c51..fe7db4b 100644
      h->crc32 = c->crc32;
      h->valid_msec = (u_short) c->valid_msec;
      h->header_start = (u_short) c->header_start;
-@@ -1500,6 +1502,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
+@@ -1501,6 +1503,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
  
      if (h.version != NGX_HTTP_CACHE_VERSION
          || h.last_modified != c->last_modified
@@ -402,7 +402,7 @@ index a823c51..fe7db4b 100644
          || h.crc32 != c->crc32
          || (size_t) h.header_start != c->header_start
          || (size_t) h.body_start != c->body_start)
-@@ -1523,6 +1526,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
+@@ -1524,6 +1527,7 @@ ngx_http_file_cache_update_header(ngx_http_request_t *r)
      h.error_sec = c->error_sec;
      h.last_modified = c->last_modified;
      h.date = c->date;
@@ -410,7 +410,7 @@ index a823c51..fe7db4b 100644
      h.crc32 = c->crc32;
      h.valid_msec = (u_short) c->valid_msec;
      h.header_start = (u_short) c->header_start;
-@@ -1561,6 +1565,7 @@ done:
+@@ -1562,6 +1566,7 @@ done:
  ngx_int_t
  ngx_http_cache_send(ngx_http_request_t *r)
  {
@@ -418,7 +418,7 @@ index a823c51..fe7db4b 100644
      ngx_int_t          rc;
      ngx_buf_t         *b;
      ngx_chain_t        out;
-@@ -1571,7 +1576,14 @@ ngx_http_cache_send(ngx_http_request_t *r)
+@@ -1572,7 +1577,14 @@ ngx_http_cache_send(ngx_http_request_t *r)
      ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                     "http file cache send: %s", c->file.name.data);
  
@@ -434,7 +434,7 @@ index a823c51..fe7db4b 100644
          return ngx_http_send_header(r);
      }
  
-@@ -1594,9 +1606,9 @@ ngx_http_cache_send(ngx_http_request_t *r)
+@@ -1595,9 +1607,9 @@ ngx_http_cache_send(ngx_http_request_t *r)
      }
  
      b->file_pos = c->body_start;
@@ -446,7 +446,7 @@ index a823c51..fe7db4b 100644
      b->last_buf = (r == r->main) ? 1: 0;
      b->last_in_chain = 1;
  
-@@ -1611,6 +1623,42 @@ ngx_http_cache_send(ngx_http_request_t *r)
+@@ -1612,6 +1624,42 @@ ngx_http_cache_send(ngx_http_request_t *r)
  }
  
  
@@ -490,7 +490,7 @@ index a823c51..fe7db4b 100644
  ngx_http_file_cache_free(ngx_http_cache_t *c, ngx_temp_file_t *tf)
  {
 diff --git a/src/http/ngx_http_upstream.c b/src/http/ngx_http_upstream.c
-index c526f90..898a2d3 100644
+index aa017e3..cca3073 100644
 --- a/src/http/ngx_http_upstream.c
 +++ b/src/http/ngx_http_upstream.c
 @@ -58,6 +58,10 @@ static ngx_int_t ngx_http_upstream_process_headers(ngx_http_request_t *r,
@@ -537,7 +537,7 @@ index c526f90..898a2d3 100644
          return ngx_http_cache_send(r);
      }
  
-@@ -2970,6 +2993,49 @@ ngx_http_upstream_process_trailers(ngx_http_request_t *r,
+@@ -2974,6 +2997,49 @@ ngx_http_upstream_process_trailers(ngx_http_request_t *r,
  }
  
  
@@ -587,7 +587,7 @@ index c526f90..898a2d3 100644
  static void
  ngx_http_upstream_process_body_in_memory(ngx_http_request_t *r,
      ngx_http_upstream_t *u)
-@@ -3216,9 +3282,16 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
+@@ -3222,9 +3288,16 @@ ngx_http_upstream_send_response(ngx_http_request_t *r, ngx_http_upstream_t *u)
              }
          }
  
@@ -604,7 +604,7 @@ index c526f90..898a2d3 100644
  
              if (u->headers_in.status_n == NGX_HTTP_OK
                  || u->headers_in.status_n == NGX_HTTP_PARTIAL_CONTENT)
-@@ -4122,6 +4195,13 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
+@@ -4128,6 +4201,13 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
          if (u->cacheable) {
  
              if (p->upstream_done) {
@@ -618,7 +618,7 @@ index c526f90..898a2d3 100644
                  ngx_http_file_cache_update(r, p->temp_file);
  
              } else if (p->upstream_eof) {
-@@ -4133,6 +4213,12 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
+@@ -4139,6 +4219,12 @@ ngx_http_upstream_process_request(ngx_http_request_t *r,
                          || u->headers_in.content_length_n
                             == tf->offset - (off_t) r->cache->body_start))
                  {

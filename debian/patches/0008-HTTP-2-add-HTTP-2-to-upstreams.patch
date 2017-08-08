@@ -19,7 +19,7 @@ Signed-off-by: Piotr Sikora <piotrsikora@google.com>
  create mode 100644 src/http/v2/ngx_http_v2_upstream.c
 
 diff --git a/auto/modules b/auto/modules
-index be3561e..f72a63c 100644
+index 26b05bd..8baf32a 100644
 --- a/auto/modules
 +++ b/auto/modules
 @@ -429,7 +429,8 @@ if [ $HTTP = YES ]; then
@@ -48,7 +48,7 @@ index e4dfe58..3a02a0c 100644
      unsigned            sndlowat:1;
      unsigned            tcp_nodelay:2;   /* ngx_connection_tcp_nodelay_e */
 diff --git a/src/http/ngx_http_upstream.c b/src/http/ngx_http_upstream.c
-index c394b29..d91a6d9 100644
+index 6a2b322..b722704 100644
 --- a/src/http/ngx_http_upstream.c
 +++ b/src/http/ngx_http_upstream.c
 @@ -52,7 +52,8 @@ static ngx_int_t ngx_http_upstream_test_next(ngx_http_request_t *r,
@@ -73,7 +73,7 @@ index c394b29..d91a6d9 100644
  
  static ngx_http_upstream_header_t  ngx_http_upstream_headers_in[] = {
  
-@@ -1517,6 +1523,18 @@ ngx_http_upstream_connect(ngx_http_request_t *r, ngx_http_upstream_t *u)
+@@ -1521,6 +1527,18 @@ ngx_http_upstream_connect(ngx_http_request_t *r, ngx_http_upstream_t *u)
  
      c = u->peer.connection;
  
@@ -92,7 +92,7 @@ index c394b29..d91a6d9 100644
      c->data = r;
  
      c->write->handler = ngx_http_upstream_handler;
-@@ -1540,10 +1558,15 @@ ngx_http_upstream_connect(ngx_http_request_t *r, ngx_http_upstream_t *u)
+@@ -1544,10 +1562,15 @@ ngx_http_upstream_connect(ngx_http_request_t *r, ngx_http_upstream_t *u)
          }
      }
  
@@ -112,7 +112,7 @@ index c394b29..d91a6d9 100644
  
      /* init or reinit the ngx_output_chain() and ngx_chain_writer() contexts */
  
-@@ -1603,6 +1626,16 @@ ngx_http_upstream_connect(ngx_http_request_t *r, ngx_http_upstream_t *u)
+@@ -1607,6 +1630,16 @@ ngx_http_upstream_connect(ngx_http_request_t *r, ngx_http_upstream_t *u)
  
  #endif
  
@@ -129,7 +129,7 @@ index c394b29..d91a6d9 100644
      ngx_http_upstream_send_request(r, u, 1);
  }
  
-@@ -1616,7 +1649,7 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
+@@ -1620,7 +1653,7 @@ ngx_http_upstream_ssl_init_connection(ngx_http_request_t *r,
      ngx_int_t                  rc;
      ngx_http_core_loc_conf_t  *clcf;
  
@@ -138,7 +138,7 @@ index c394b29..d91a6d9 100644
          ngx_http_upstream_next(r, u, NGX_HTTP_UPSTREAM_FT_ERROR);
          return;
      }
-@@ -1733,6 +1766,16 @@ ngx_http_upstream_ssl_handshake(ngx_http_request_t *r, ngx_http_upstream_t *u,
+@@ -1737,6 +1770,16 @@ ngx_http_upstream_ssl_handshake(ngx_http_request_t *r, ngx_http_upstream_t *u,
          c->write->handler = ngx_http_upstream_handler;
          c->read->handler = ngx_http_upstream_handler;
  
@@ -155,7 +155,7 @@ index c394b29..d91a6d9 100644
          ngx_http_upstream_send_request(r, u, 1);
  
          return;
-@@ -1845,6 +1888,51 @@ done:
+@@ -1849,6 +1892,51 @@ done:
  #endif
  
  
@@ -207,7 +207,7 @@ index c394b29..d91a6d9 100644
  static ngx_int_t
  ngx_http_upstream_reinit(ngx_http_request_t *r, ngx_http_upstream_t *u)
  {
-@@ -1939,7 +2027,7 @@ ngx_http_upstream_send_request(ngx_http_request_t *r, ngx_http_upstream_t *u,
+@@ -1943,7 +2031,7 @@ ngx_http_upstream_send_request(ngx_http_request_t *r, ngx_http_upstream_t *u,
          u->state->connect_time = ngx_current_msec - u->state->response_time;
      }
  
@@ -216,7 +216,7 @@ index c394b29..d91a6d9 100644
          ngx_http_upstream_next(r, u, NGX_HTTP_UPSTREAM_FT_ERROR);
          return;
      }
-@@ -2141,6 +2229,16 @@ ngx_http_upstream_send_request_handler(ngx_http_request_t *r,
+@@ -2145,6 +2233,16 @@ ngx_http_upstream_send_request_handler(ngx_http_request_t *r,
  
  #endif
  
@@ -233,7 +233,7 @@ index c394b29..d91a6d9 100644
      if (u->header_sent) {
          u->write_event_handler = ngx_http_upstream_dummy_handler;
  
-@@ -2194,11 +2292,34 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
+@@ -2198,11 +2296,34 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
          return;
      }
  
@@ -269,7 +269,7 @@ index c394b29..d91a6d9 100644
      if (u->buffer.start == NULL) {
          u->buffer.start = ngx_palloc(r->pool, u->conf->buffer_size);
          if (u->buffer.start == NULL) {
-@@ -2289,6 +2410,12 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
+@@ -2293,6 +2414,12 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
          break;
      }
  
@@ -282,7 +282,7 @@ index c394b29..d91a6d9 100644
      if (rc == NGX_HTTP_UPSTREAM_INVALID_HEADER) {
          ngx_http_upstream_next(r, u, NGX_HTTP_UPSTREAM_FT_INVALID_HEADER);
          return;
-@@ -2319,6 +2446,36 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
+@@ -2323,6 +2450,36 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
          return;
      }
  
@@ -319,7 +319,7 @@ index c394b29..d91a6d9 100644
      if (!r->subrequest_in_memory) {
          ngx_http_upstream_send_response(r, u);
          return;
-@@ -2537,11 +2694,19 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
+@@ -2541,11 +2698,19 @@ ngx_http_upstream_intercept_errors(ngx_http_request_t *r,
  
  
  static ngx_int_t
@@ -340,7 +340,7 @@ index c394b29..d91a6d9 100644
  #if (NGX_HAVE_KQUEUE)
  
      if (ngx_event_flags & NGX_USE_KQUEUE_EVENT)  {
-@@ -4037,6 +4202,14 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
+@@ -4043,6 +4208,14 @@ ngx_http_upstream_next(ngx_http_request_t *r, ngx_http_upstream_t *u,
      ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                     "http next upstream, %xi", ft_type);
  
@@ -355,7 +355,7 @@ index c394b29..d91a6d9 100644
      if (u->peer.sockaddr) {
  
          if (ft_type == NGX_HTTP_UPSTREAM_FT_HTTP_403
-@@ -4210,6 +4383,14 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
+@@ -4216,6 +4389,14 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
  
      u->finalize_request(r, rc);
  
@@ -2144,7 +2144,7 @@ index cc52b10..654b351 100644
  {
      ngx_http_v2_stream_t *stream = data;
 diff --git a/src/http/v2/ngx_http_v2_module.c b/src/http/v2/ngx_http_v2_module.c
-index 032abcb..4379f80 100644
+index 7f7dab2..1f43b25 100644
 --- a/src/http/v2/ngx_http_v2_module.c
 +++ b/src/http/v2/ngx_http_v2_module.c
 @@ -362,7 +362,8 @@ ngx_http_v2_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)

@@ -11,10 +11,9 @@
 0011-Proxy-add-HTTP-2-support.patch
 0012-Proxy-add-proxy_pass_trailers-directive.patch
 0013-Cache-add-HTTP-2-support.patch
-0014-Update-config-to-be-used-as-external-module-for-ngin.patch
 0015-Convert-a-config-file-to-build-a-dynamic-module.patch
 0016-Fix-compatibility-with-nginx-1.11.6.patch
 0017-feat-purge-all-Include-option-to-purge-all-the-cache.patch
 0018-feat-partial-keys-Support-partial-keys-to-purge-mult.patch
-0019-added-cache_purge_response_type-directive-selecting-.patch
-0020-Make-replay-ngx_http_secure_download-as-dynamic-modu.patch
+0018-added-cache_purge_response_type-directive-selecting-.patch
+0019-Make-replay-ngx_http_secure_download-as-dynamic-modu.patch

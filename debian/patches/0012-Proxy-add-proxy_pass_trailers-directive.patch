@@ -16,7 +16,7 @@ Signed-off-by: Piotr Sikora <piotrsikora@google.com>
  7 files changed, 163 insertions(+), 8 deletions(-)
 
 diff --git a/src/http/modules/ngx_http_fastcgi_module.c b/src/http/modules/ngx_http_fastcgi_module.c
-index 741e577..7bbe843 100644
+index ea16eca..2696119 100644
 --- a/src/http/modules/ngx_http_fastcgi_module.c
 +++ b/src/http/modules/ngx_http_fastcgi_module.c
 @@ -2788,10 +2788,10 @@ ngx_http_fastcgi_create_loc_conf(ngx_conf_t *cf)
@@ -45,7 +45,7 @@ index 69f28fa..b681e45 100644
      conf->index = NGX_CONF_UNSET;
      conf->gzip_flag = NGX_CONF_UNSET_UINT;
 diff --git a/src/http/modules/ngx_http_proxy_module.c b/src/http/modules/ngx_http_proxy_module.c
-index d979967..b453e14 100644
+index e31403f..b258fcd 100644
 --- a/src/http/modules/ngx_http_proxy_module.c
 +++ b/src/http/modules/ngx_http_proxy_module.c
 @@ -630,6 +630,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
@@ -159,7 +159,7 @@ index a2bec4c..6f0583c 100644
      ngx_str_set(&conf->upstream.module, "uwsgi");
  
 diff --git a/src/http/ngx_http_upstream.c b/src/http/ngx_http_upstream.c
-index d91a6d9..c526f90 100644
+index b722704..aa017e3 100644
 --- a/src/http/ngx_http_upstream.c
 +++ b/src/http/ngx_http_upstream.c
 @@ -56,6 +56,8 @@ static ngx_int_t ngx_http_upstream_test_connect(ngx_http_upstream_t *u,
@@ -224,7 +224,7 @@ index d91a6d9..c526f90 100644
      rc = u->process_header(r);
  
      if (rc == NGX_OK) {
-@@ -1957,6 +1977,13 @@ ngx_http_upstream_reinit(ngx_http_request_t *r, ngx_http_upstream_t *u)
+@@ -1961,6 +1981,13 @@ ngx_http_upstream_reinit(ngx_http_request_t *r, ngx_http_upstream_t *u)
          return NGX_ERROR;
      }
  
@@ -238,7 +238,7 @@ index d91a6d9..c526f90 100644
      /* reinit the request chain */
  
      file_pos = 0;
-@@ -2344,6 +2371,15 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
+@@ -2348,6 +2375,15 @@ ngx_http_upstream_process_header(ngx_http_request_t *r, ngx_http_upstream_t *u)
              return;
          }
  
@@ -254,7 +254,7 @@ index d91a6d9..c526f90 100644
  #if (NGX_HTTP_CACHE)
  
          if (r->cache) {
-@@ -2895,6 +2931,45 @@ ngx_http_upstream_process_headers(ngx_http_request_t *r, ngx_http_upstream_t *u)
+@@ -2899,6 +2935,45 @@ ngx_http_upstream_process_headers(ngx_http_request_t *r, ngx_http_upstream_t *u)
  }
  
  
@@ -300,7 +300,7 @@ index d91a6d9..c526f90 100644
  static void
  ngx_http_upstream_process_body_in_memory(ngx_http_request_t *r,
      ngx_http_upstream_t *u)
-@@ -4506,6 +4581,13 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
+@@ -4512,6 +4587,13 @@ ngx_http_upstream_finalize_request(ngx_http_request_t *r,
      }
  
      if (rc == 0) {
@@ -314,7 +314,7 @@ index d91a6d9..c526f90 100644
          rc = ngx_http_send_special(r, NGX_HTTP_LAST);
  
      } else if (flush) {
-@@ -5292,6 +5374,27 @@ ngx_http_upstream_copy_allow_ranges(ngx_http_request_t *r,
+@@ -5298,6 +5380,27 @@ ngx_http_upstream_copy_allow_ranges(ngx_http_request_t *r,
  }
  
  
@@ -342,7 +342,7 @@ index d91a6d9..c526f90 100644
  #if (NGX_HTTP_GZIP)
  
  static ngx_int_t
-@@ -5630,6 +5733,21 @@ ngx_http_upstream_header_variable(ngx_http_request_t *r,
+@@ -5636,6 +5739,21 @@ ngx_http_upstream_header_variable(ngx_http_request_t *r,
  
  
  static ngx_int_t

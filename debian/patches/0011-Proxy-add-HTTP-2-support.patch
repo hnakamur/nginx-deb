@@ -12,7 +12,7 @@ Signed-off-by: Piotr Sikora <piotrsikora@google.com>
  3 files changed, 634 insertions(+), 15 deletions(-)
 
 diff --git a/src/http/modules/ngx_http_proxy_module.c b/src/http/modules/ngx_http_proxy_module.c
-index 98bbeef..d979967 100644
+index fae87ef..e31403f 100644
 --- a/src/http/modules/ngx_http_proxy_module.c
 +++ b/src/http/modules/ngx_http_proxy_module.c
 @@ -125,6 +125,9 @@ static ngx_int_t ngx_http_proxy_eval(ngx_http_request_t *r,
