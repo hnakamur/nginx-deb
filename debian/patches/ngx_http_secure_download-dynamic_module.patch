@@ -4,9 +4,22 @@ Subject: Make replay/ngx_http_secure_download as dynamic module as well
 
 Origin: https://github.com/replay/ngx_http_secure_download/pull/4/files
 ---
- ngx_http_secure_download/config | 19 +++++++++++++++----
- 1 file changed, 15 insertions(+), 4 deletions(-)
+ ...lay-ngx_http_secure_download-as-dynamic-modu.patch |  1 +
+ ngx_http_secure_download/config                       | 19 +++++++++++++++----
+ 2 files changed, 16 insertions(+), 4 deletions(-)
 
+diff --git a/debian/patches/0019-Make-replay-ngx_http_secure_download-as-dynamic-modu.patch b/debian/patches/0019-Make-replay-ngx_http_secure_download-as-dynamic-modu.patch
+index 60d2306..53f0d17 100644
+--- a/debian/patches/0019-Make-replay-ngx_http_secure_download-as-dynamic-modu.patch
++++ b/debian/patches/0019-Make-replay-ngx_http_secure_download-as-dynamic-modu.patch
+@@ -2,6 +2,7 @@ From: Hiroaki Nakamura <hnakamur@gmail.com>
+ Date: Fri, 12 Feb 2016 09:05:48 +0900
+ Subject: Make replay/ngx_http_secure_download as dynamic module as well
+ 
++Gbp-Pq: Name ngx_http_secure_download_dynamic_module
+ Origin: https://github.com/replay/ngx_http_secure_download/pull/4/files
+ ---
+  ngx_http_secure_download/config | 19 +++++++++++++++----
 diff --git a/ngx_http_secure_download/config b/ngx_http_secure_download/config
 index 2403adc..7e5ddeb 100644
 --- a/ngx_http_secure_download/config
