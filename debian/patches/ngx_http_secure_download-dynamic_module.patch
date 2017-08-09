@@ -4,6 +4,9 @@ Subject: Make replay/ngx_http_secure_download as dynamic module as well
 
 Origin: https://github.com/replay/ngx_http_secure_download/pull/4/files
 ---
+ ngx_http_secure_download/config | 19 +++++++++++++++----
+ 1 file changed, 15 insertions(+), 4 deletions(-)
+
 diff --git a/ngx_http_secure_download/config b/ngx_http_secure_download/config
 index 2403adc..7e5ddeb 100644
 --- a/ngx_http_secure_download/config

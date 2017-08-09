@@ -2,11 +2,10 @@ From: Piotr Sikora <piotrsikora@google.com>
 Date: Thu, 9 Mar 2017 17:33:55 -0700
 Subject: HTTP/2: introduce h2c->conf_ctx.
 
-Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010213.html
-
 No functional changes.
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010213.html
 ---
  src/http/v2/ngx_http_v2.c | 36 +++++++++++++-----------------------
  src/http/v2/ngx_http_v2.h |  1 +

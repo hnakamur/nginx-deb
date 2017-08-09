@@ -2,9 +2,8 @@ From: Piotr Sikora <piotrsikora@google.com>
 Date: Tue, 11 Apr 2017 16:51:41 -0700
 Subject: Cache: add HTTP/2 support.
 
-Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010222.html
-
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010222.html
 ---
  src/http/modules/ngx_http_proxy_module.c | 277 +++++++++++++++++++++++++++----
  src/http/ngx_http_cache.h                |   6 +-

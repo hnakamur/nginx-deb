@@ -2,8 +2,6 @@ From: Piotr Sikora <piotrsikora@google.com>
 Date: Wed, 15 Mar 2017 16:48:02 -0700
 Subject: Proxy: add "proxy_ssl_alpn" directive.
 
-Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010217.html
-
 ALPN is used here only to indicate which version of the HTTP protocol
 is going to be used and we doesn't verify that upstream agreed to it.
 
@@ -11,6 +9,7 @@ Please note that upstream is allowed to reject SSL connection with a
 fatal "no_application_protocol" alert if it doesn't support it.
 
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010217.html
 ---
  src/event/ngx_event_openssl.c            | 23 +++++++++++++++++++++++
  src/event/ngx_event_openssl.h            |  2 ++

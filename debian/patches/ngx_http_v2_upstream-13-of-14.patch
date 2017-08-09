@@ -2,9 +2,8 @@ From: Piotr Sikora <piotrsikora@google.com>
 Date: Fri, 24 Mar 2017 03:37:34 -0700
 Subject: Proxy: add "proxy_pass_trailers" directive.
 
-Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010220.html
-
 Signed-off-by: Piotr Sikora <piotrsikora@google.com>
+Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010220.html
 ---
  src/http/modules/ngx_http_fastcgi_module.c   |   4 +-
  src/http/modules/ngx_http_memcached_module.c |   1 +
