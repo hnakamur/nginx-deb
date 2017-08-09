@@ -17,3 +17,4 @@ ngx_cache_purge-fix_compatibility_with_nginx_1.11.6.patch
 ngx_cache_purge-feat_purge_all.patch
 ngx_cache_purge-feat_purge_partial_keys.patch
 ngx_cache_purge-select_response_type.patch
+nginx-1.11.2-ssl_cert_cb_yield.patch
