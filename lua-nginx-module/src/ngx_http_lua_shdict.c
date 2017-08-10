@@ -34,8 +34,8 @@ static int ngx_http_lua_shdict_delete(lua_State *L);
 static int ngx_http_lua_shdict_flush_all(lua_State *L);
 static int ngx_http_lua_shdict_flush_expired(lua_State *L);
 static int ngx_http_lua_shdict_get_keys(lua_State *L);
-static int ngx_http_lua_shdict_get_keys_iter(lua_State *L);
-static int ngx_http_lua_shdict_get_keys_iter_next(lua_State *L);
+static int ngx_http_lua_shdict_iter_ikv(lua_State *L);
+static int ngx_http_lua_shdict_iter_ikv_next(lua_State *L);
 static int ngx_http_lua_shdict_lpush(lua_State *L);
 static int ngx_http_lua_shdict_rpush(lua_State *L);
 static int ngx_http_lua_shdict_push_helper(lua_State *L, int flags);
@@ -385,9 +385,9 @@ ngx_http_lua_inject_shdict_api(ngx_http_lua_main_conf_t *lmcf, lua_State *L)
         lua_pushcfunction(L, ngx_http_lua_shdict_get_keys);
         lua_setfield(L, -2, "get_keys");
 
-        lua_pushcfunction(L, ngx_http_lua_shdict_get_keys_iter_next);
-        lua_pushcclosure(L, ngx_http_lua_shdict_get_keys_iter, 1);
-        lua_setfield(L, -2, "get_keys_iter");
+        lua_pushcfunction(L, ngx_http_lua_shdict_iter_ikv_next);
+        lua_pushcclosure(L, ngx_http_lua_shdict_iter_ikv, 1);
+        lua_setfield(L, -2, "iter_ikv");
 
         lua_pushvalue(L, -1); /* shared mt mt */
         lua_setfield(L, -2, "__index"); /* shared mt */
@@ -872,7 +872,7 @@ ngx_http_lua_shdict_get_keys(lua_State *L)
 }
 
 static int
-ngx_http_lua_shdict_get_keys_iter(lua_State *L)
+ngx_http_lua_shdict_iter_ikv(lua_State *L)
 {
     ngx_http_lua_shdict_ctx_t   *ctx;
     ngx_shm_zone_t              *zone;
@@ -896,14 +896,14 @@ ngx_http_lua_shdict_get_keys_iter(lua_State *L)
 
     lua_pushvalue(L, lua_upvalueindex(1));  /* return generator, */
     lua_pushlightuserdata(L, ctx);  /* state, */
-    lua_pushinteger(L, 0);  /* and initial value */
+    lua_pushnil(L);  /* and initial value */
     return 3;
 }
 
 static int
-ngx_http_lua_shdict_get_keys_iter_next(lua_State *L)
+ngx_http_lua_shdict_iter_ikv_next(lua_State *L)
 {
-    ngx_queue_t                 *q, *prev;
+    ngx_queue_t                 *q;
     ngx_http_lua_shdict_node_t  *sd;
     ngx_http_lua_shdict_ctx_t   *ctx;
     ngx_time_t                  *tp;
@@ -916,38 +916,30 @@ ngx_http_lua_shdict_get_keys_iter_next(lua_State *L)
 
     ngx_shmtx_lock(&ctx->shpool->mutex);
 
-    if (n == 1 && ngx_queue_empty(&ctx->sh->lru_queue)) {
-        ngx_shmtx_unlock(&ctx->shpool->mutex);
-        return 0;
-    }
-
     tp = ngx_timeofday();
 
     now = (uint64_t) tp->sec * 1000 + tp->msec;
 
     i = 0;
-    q = ngx_queue_last(&ctx->sh->lru_queue);
-
-    while (q != ngx_queue_sentinel(&ctx->sh->lru_queue)) {
-        prev = ngx_queue_prev(q);
-
+    for (q = ngx_queue_last(&ctx->sh->lru_queue);
+         q != ngx_queue_sentinel(&ctx->sh->lru_queue);
+         q = ngx_queue_prev(q))
+    {
         sd = ngx_queue_data(q, ngx_http_lua_shdict_node_t, queue);
-
         if (sd->expires == 0 || sd->expires > now) {
             ++i;
             if (i == n) {
                 lua_pushinteger(L, n);
                 lua_pushlstring(L, (char *) sd->data, sd->key_len);
-                break;
+                ngx_shmtx_unlock(&ctx->shpool->mutex);
+                return 2;
             }
         }
-
-        q = prev;
     }
 
     ngx_shmtx_unlock(&ctx->shpool->mutex);
-
-    return i == n ? 2 : 0;
+    lua_pushnil(L);
+    return 1;
 }
 
 static int
