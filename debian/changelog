@@ -1,3 +1,9 @@
+nginx (1.13.4+mod.1-1hnakamur2) xenial; urgency=medium
+
+  * Add get_keys_iter to lua-nginx-module
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Thu, 10 Aug 2017 11:43:06 +0900
+
 nginx (1.13.4+mod.1-1hnakamur1) xenial; urgency=medium
 
   * 1.13.4
@@ -17,7 +23,7 @@ nginx (1.13.4+mod.1-1hnakamur1) xenial; urgency=medium
   * simpl/ngx_devel_kit e443262071e759c047492be60ec7e2d73c5b57ec
   * wandenberg/nginx-sorted-querystring-module e5bbded07fd67e2977edc2bc145c45a7b3fc4d26
 
- -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 09 Aug 2017 06:57:39 +0900
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Thu, 10 Aug 2017 11:43:06 +0900
 
 nginx (1.13.3+mod.4-1~xenial1ppa1) xenial; urgency=medium
 
