@@ -4,14 +4,15 @@ download_github_repo() {
   local repo=$2
   local commit=$3
 
-  if [ ! -d $repo ]; then
-    if [ $commit = master ]; then
-      commit=$(curl -sS https://api.github.com/repos/$user/$repo/commits/master | jq -r .sha)
-    fi
-    curl -sSL https://github.com/$user/$repo/archive/${commit}.tar.gz | tar zxf -
-    mv ${repo}-${commit} $repo
-    echo $user/$repo $commit
+  if [ -d $repo ]; then
+    rm -rf $repo
   fi
+  if [ $commit = master ]; then
+    commit=$(curl -sS https://api.github.com/repos/$user/$repo/commits/master | jq -r .sha)
+  fi
+  curl -sSL https://github.com/$user/$repo/archive/${commit}.tar.gz | tar zxf -
+  mv ${repo}-${commit} $repo
+  echo $user/$repo $commit
 }
 
 
