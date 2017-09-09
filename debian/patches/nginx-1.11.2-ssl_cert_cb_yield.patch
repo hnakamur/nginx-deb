@@ -15,10 +15,10 @@ Origin: https://raw.githubusercontent.com/openresty/openresty/dbccee1418ddb24a2a
  1 file changed, 17 insertions(+)
 
 diff --git a/src/event/ngx_event_openssl.c b/src/event/ngx_event_openssl.c
-index 7fcff3b..b1e555d 100644
+index a5ed9ec..663888c 100644
 --- a/src/event/ngx_event_openssl.c
 +++ b/src/event/ngx_event_openssl.c
-@@ -1369,6 +1369,23 @@ ngx_ssl_handshake(ngx_connection_t *c)
+@@ -1370,6 +1370,23 @@ ngx_ssl_handshake(ngx_connection_t *c)
          return NGX_AGAIN;
      }
  

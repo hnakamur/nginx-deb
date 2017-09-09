@@ -54,10 +54,11 @@ index b258fcd..0b47af2 100644
      }
  
  #endif
-@@ -2482,6 +2499,227 @@ ngx_http_proxy_process_header(ngx_http_request_t *r)
+@@ -2481,6 +2498,227 @@ ngx_http_proxy_process_header(ngx_http_request_t *r)
+ }
  
  
- static ngx_int_t
++static ngx_int_t
 +ngx_http_proxy_process_trailer(ngx_http_request_t *r, ngx_buf_t *buf)
 +{
 +    ngx_int_t         rc;
@@ -278,10 +279,9 @@ index b258fcd..0b47af2 100644
 +#endif
 +
 +
-+static ngx_int_t
+ static ngx_int_t
  ngx_http_proxy_input_filter_init(void *data)
  {
-     ngx_http_request_t    *r = data;
 @@ -3995,18 +4233,6 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
  #if (NGX_HTTP_CACHE)
  
@@ -489,7 +489,7 @@ index 3b2b68a..eb6bb19 100644
  ngx_http_file_cache_free(ngx_http_cache_t *c, ngx_temp_file_t *tf)
  {
 diff --git a/src/http/ngx_http_upstream.c b/src/http/ngx_http_upstream.c
-index aa017e3..cca3073 100644
+index 4e2d7ed..e346e5b 100644
 --- a/src/http/ngx_http_upstream.c
 +++ b/src/http/ngx_http_upstream.c
 @@ -58,6 +58,10 @@ static ngx_int_t ngx_http_upstream_process_headers(ngx_http_request_t *r,

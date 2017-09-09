@@ -625,10 +625,11 @@ index fae87ef..e31403f 100644
      /* as per RFC2616, 4.4 Message Length */
  
      if (u->headers_in.status_n == NGX_HTTP_NO_CONTENT
-@@ -2480,6 +3015,34 @@ ngx_http_proxy_add_x_forwarded_for_variable(ngx_http_request_t *r,
+@@ -2479,6 +3014,34 @@ ngx_http_proxy_add_x_forwarded_for_variable(ngx_http_request_t *r,
+ }
  
  
- static ngx_int_t
++static ngx_int_t
 +ngx_http_proxy_internal_connection_variable(ngx_http_request_t *r,
 +    ngx_http_variable_value_t *v, uintptr_t data)
 +{
@@ -656,10 +657,9 @@ index fae87ef..e31403f 100644
 +}
 +
 +
-+static ngx_int_t
+ static ngx_int_t
  ngx_http_proxy_internal_body_length_variable(ngx_http_request_t *r,
      ngx_http_variable_value_t *v, uintptr_t data)
- {
 @@ -2512,7 +3075,20 @@ static ngx_int_t
  ngx_http_proxy_internal_chunked_variable(ngx_http_request_t *r,
      ngx_http_variable_value_t *v, uintptr_t data)

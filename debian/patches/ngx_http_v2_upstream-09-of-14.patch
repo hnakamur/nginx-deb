@@ -20,13 +20,14 @@ Origin: http://mailman.nginx.org/pipermail/nginx-devel/2017-June/010217.html
  6 files changed, 60 insertions(+), 2 deletions(-)
 
 diff --git a/src/event/ngx_event_openssl.c b/src/event/ngx_event_openssl.c
-index 07646b6..7fcff3b 100644
+index 88a6dbe..a5ed9ec 100644
 --- a/src/event/ngx_event_openssl.c
 +++ b/src/event/ngx_event_openssl.c
-@@ -654,6 +654,29 @@ ngx_ssl_ciphers(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *ciphers,
+@@ -653,6 +653,29 @@ ngx_ssl_ciphers(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *ciphers,
+ }
  
  
- ngx_int_t
++ngx_int_t
 +ngx_ssl_alpn_protos(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *protos)
 +{
 +#ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
@@ -49,12 +50,11 @@ index 07646b6..7fcff3b 100644
 +}
 +
 +
-+ngx_int_t
+ ngx_int_t
  ngx_ssl_client_certificate(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *cert,
      ngx_int_t depth)
- {
 diff --git a/src/event/ngx_event_openssl.h b/src/event/ngx_event_openssl.h
-index 2a14980..4db5704 100644
+index b9a3a96..92bb34e 100644
 --- a/src/event/ngx_event_openssl.h
 +++ b/src/event/ngx_event_openssl.h
 @@ -153,6 +153,8 @@ ngx_int_t ngx_ssl_certificate(ngx_conf_t *cf, ngx_ssl_t *ssl,
@@ -135,7 +135,7 @@ index b42839c..dcea50e 100644
          if (plcf->ssl_trusted_certificate.len == 0) {
              ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
 diff --git a/src/http/modules/ngx_http_ssl_module.c b/src/http/modules/ngx_http_ssl_module.c
-index 4370275..8bf1943 100644
+index 7d62176..0ac8596 100644
 --- a/src/http/modules/ngx_http_ssl_module.c
 +++ b/src/http/modules/ngx_http_ssl_module.c
 @@ -17,8 +17,6 @@ typedef ngx_int_t (*ngx_ssl_variable_handler_pt)(ngx_connection_t *c,
