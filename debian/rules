@@ -44,6 +44,7 @@ config.env.%:
 	cp -Pa $(CURDIR)/ngx_cache_purge $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/ngx_devel_kit $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/ngx_http_enhanced_memcached_module $(BUILDDIR_$*)/
+	cp -Pa $(CURDIR)/ngx_http_pipelog_module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/ngx_http_secure_download $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/memc-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/redis2-nginx-module $(BUILDDIR_$*)/
@@ -108,6 +109,7 @@ config.status.nginx: config.env.nginx
 		--add-dynamic-module=./nginx-sorted-querystring-module \
 		--add-dynamic-module=./ngx_cache_purge \
 		--add-dynamic-module=./ngx_http_enhanced_memcached_module \
+		--add-dynamic-module=./ngx_http_pipelog_module \
 		--add-dynamic-module=./ngx_http_secure_download \
 		--add-dynamic-module=./redis2-nginx-module \
 		--add-dynamic-module=./set-misc-nginx-module \
@@ -173,6 +175,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--add-dynamic-module=./nginx-sorted-querystring-module \
 		--add-dynamic-module=./ngx_cache_purge \
 		--add-dynamic-module=./ngx_http_enhanced_memcached_module \
+		--add-dynamic-module=./ngx_http_pipelog_module \
 		--add-dynamic-module=./ngx_http_secure_download \
 		--add-dynamic-module=./redis2-nginx-module \
 		--add-dynamic-module=./set-misc-nginx-module \
