@@ -1,16 +1,3 @@
-ngx_http_v2_upstream-01-of-14.patch
-ngx_http_v2_upstream-02-of-14.patch
-ngx_http_v2_upstream-03-of-14.patch
-ngx_http_v2_upstream-04-of-14.patch
-ngx_http_v2_upstream-05-of-14.patch
-ngx_http_v2_upstream-06-of-14.patch
-ngx_http_v2_upstream-07-of-14.patch
-ngx_http_v2_upstream-08-of-14.patch
-ngx_http_v2_upstream-09-of-14.patch
-ngx_http_v2_upstream-10-of-14.patch
-ngx_http_v2_upstream-12-of-14.patch
-ngx_http_v2_upstream-13-of-14.patch
-ngx_http_v2_upstream-14-of-14.patch
 ngx_http_secure_download-dynamic_module.patch
 ngx_cache_purge-dynamic_module.patch
 ngx_cache_purge-fix_compatibility_with_nginx_1.11.6.patch
