@@ -1,3 +1,27 @@
+nginx (1.13.6+mod.2-1hnakamur1) xenial; urgency=medium
+
+  * Add stream-lua-nginx-module and update modules
+  * openresty/echo-nginx-module 7365fb01fd7c5630eeb298d43959a84fc629791a
+  * openresty/headers-more-nginx-module 55fbdaba96be3d4e534201232f6b555f3415fbb9
+  * openresty/lua-nginx-module b2aae31a85be4b51469ae8f7a128743e6e633b05
+  * openresty/lua-upstream-nginx-module 9610123819cf324fcdad7b907187d5a4f70bb07a
+  * openresty/memc-nginx-module 1d8ef84616e13b64d6021b3ab0c24f40ea09f750
+  * openresty/redis2-nginx-module 0402a28467b8532e7a892bbdb8213a7654f872b4
+  * openresty/set-misc-nginx-module 0112cf0bca7f2ce1c608ac692515204a254f942c
+  * openresty/srcache-nginx-module b741f55e32b66120fbe380f203e4ed7e96235d1f
+  * openresty/lua-resty-core 5116cc6014c525608527395c0843834ba1eed4b9
+  * openresty/stream-lua-nginx-module 3c89e16cc8a29ef26bafc9a60a7c2c8f5ea5e30a
+  * FRiCKLE/ngx_cache_purge 331fe43e8d9a3d1fa5e0c9fec7d3201d431a9177
+  * arut/nginx-rtmp-module 43f1e4209b7ee7b795595912943a8fdc37f2ea4a
+  * arut/nginx-dav-ext-module 430fd774fe838a04f1a5defbf1dd571d42300cf9
+  * bpaquet/ngx_http_enhanced_memcached_module a9b76b6c9e0623e3ee84fecb04284dc8c91dfdb4
+  * replay/ngx_http_secure_download f379a1acf2a76f63431a12fa483d9e22e718400b
+  * simpl/ngx_devel_kit 440cdb0cefc8132c99674eac9dc531ee5ba7ddb2
+  * wandenberg/nginx-sorted-querystring-module e5bbded07fd67e2977edc2bc145c45a7b3fc4d26
+  * pandax381/ngx_http_pipelog_module 2503d5ef853ff2542ee7e08d898a85a7747812e5
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Thu, 09 Nov 2017 10:24:39 +0900
+
 nginx (1.13.6+mod.1-1hnakamur1) xenial; urgency=medium
 
   * Imported Upstream version 1.13.6
