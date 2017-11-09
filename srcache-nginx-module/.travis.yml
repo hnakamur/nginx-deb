@@ -9,11 +9,6 @@ cache:
   directories:
   - download-cache
 
-addons:
-  apt:
-    packages:
-    - mysql-server
-
 compiler:
   - gcc
   - clang
@@ -29,12 +24,14 @@ env:
     - JOBS=3
     - NGX_BUILD_JOBS=$JOBS
   matrix:
-    - NGINX_VERSION=1.9.15
+    - NGINX_VERSION=1.11.2
+    - NGINX_VERSION=1.13.6
 
 services:
  - memcache
  - redis-server
  - postgresql
+ - mysql
 
 before_install:
   - sudo apt-get install -qq -y axel cpanminus libtest-base-perl libtext-diff-perl liburi-perl libwww-perl libtest-longstring-perl liblist-moreutils-perl > build.log 2>&1 || (cat build.log && exit 1)
@@ -44,7 +41,7 @@ install:
   - if [ ! -d download-cache ]; then mkdir download-cache; fi
   - if [ ! -f download-cache/ngx_http_redis-0.3.7.tar.gz ]; then wget -O download-cache/ngx_http_redis-0.3.7.tar.gz http://people.freebsd.org/~osa/ngx_http_redis-0.3.7.tar.gz; fi
   - if [ ! -f download-cache/drizzle7-2011.07.21.tar.gz ]; then wget -O download-cache/drizzle7-2011.07.21.tar.gz http://openresty.org/download/drizzle7-2011.07.21.tar.gz; fi
-  - mkdir -p ~/work/nginx && tar -xf download-cache/ngx_http_redis-0.3.7.tar.gz -C ~/work/nginx
+  - mkdir -p ~/work/nginx && cp download-cache/ngx_http_redis-0.3.7.tar.gz ~/work/nginx/
   - git clone https://github.com/openresty/nginx-devel-utils.git
   - git clone https://github.com/openresty/openresty.git ../openresty
   - git clone https://github.com/openresty/no-pool-nginx.git ../no-pool-nginx
@@ -61,7 +58,7 @@ install:
   - git clone https://github.com/openresty/rds-json-nginx-module.git ../rds-json-nginx-module
   - git clone https://github.com/openresty/drizzle-nginx-module.git ../drizzle-nginx-module
   - git clone https://github.com/openresty/memc-nginx-module.git ../memc-nginx-module
-  - git clone https://github.com/FRiCKLE/ngx_postgres.git ../postgres-nginx-module
+  - git clone https://github.com/openresty/ngx_postgres.git ../postgres-nginx-module
   - git clone https://github.com/openresty/openresty.git ../ngx_openresty
 
 before_script:

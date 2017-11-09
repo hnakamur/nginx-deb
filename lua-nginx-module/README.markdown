@@ -62,7 +62,7 @@ Production ready.
 Version
 =======
 
-This document describes ngx_lua [v0.10.10](https://github.com/openresty/lua-nginx-module/tags) released on 8 August 2017.
+This document describes ngx_lua [v0.10.11](https://github.com/openresty/lua-nginx-module/tags) released on 3 November 2017.
 
 Synopsis
 ========
@@ -249,6 +249,8 @@ Nginx Compatibility
 
 The latest version of this module is compatible with the following versions of Nginx:
 
+* 1.13.x  (last tested: 1.13.6)
+* 1.12.x
 * 1.11.x  (last tested: 1.11.2)
 * 1.10.x
 * 1.9.x (last tested: 1.9.15)
@@ -276,9 +278,9 @@ Build the source with this module:
 
 ```bash
 
- wget 'http://nginx.org/download/nginx-1.11.2.tar.gz'
- tar -xzvf nginx-1.11.2.tar.gz
- cd nginx-1.11.2/
+ wget 'http://nginx.org/download/nginx-1.13.6.tar.gz'
+ tar -xzvf nginx-1.13.6.tar.gz
+ cd nginx-1.13.6/
 
  # tell nginx's build system where to find LuaJIT 2.0:
  export LUAJIT_LIB=/path/to/luajit/lib
@@ -871,6 +873,7 @@ Nginx may terminate a request early with (at least):
 * 400 (Bad Request)
 * 405 (Not Allowed)
 * 408 (Request Timeout)
+* 413 (Request Entity Too Large)
 * 414 (Request URI Too Large)
 * 494 (Request Headers Too Large)
 * 499 (Client Closed Request)
