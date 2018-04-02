@@ -1,3 +1,30 @@
+nginx (1.13.10+mod.1-1ubuntu1ppa1~ubuntu16.04.1) xenial; urgency=medium
+
+  * Imported Upstream version 1.13.10
+  * Add module sources
+  * Update module download script for ngx_devel_kit
+  * Conform versioning with https://help.launchpad.net/Packaging/PPA/BuildingASourcePackage
+  * openresty/echo-nginx-module c65f5c638d0501b482fbc3ebbda9a49648022d40
+  * openresty/headers-more-nginx-module a9f7c7e86cc7441d04e2f11f01c2e3a9c4b0301d
+  * openresty/lua-nginx-module 91a0ad236c9661f38b78cdc99e05025f7ce5cccb
+  * openresty/lua-upstream-nginx-module 6ebcda3c1ee56a73ba73f3a36f5faa7821657115
+  * openresty/memc-nginx-module 66de925b7da5931badf24c7e675e2ee62c697069
+  * openresty/redis2-nginx-module 4b7ff9bdf669d487efd32ac3d06d3ee981f5a2f6
+  * openresty/set-misc-nginx-module 77ae35bfb00e81196d8dbae48c359e1d591a8d01
+  * openresty/srcache-nginx-module 53a98806b0a24cc736d11003662e8b769c3e7eb3
+  * openresty/lua-resty-core 6ea0dea70647a54c68ca02be47c3deb83b15a6ad
+  * openresty/stream-lua-nginx-module a9e856564ccae54a43f27d909ce9af80064f5688
+  * FRiCKLE/ngx_cache_purge 331fe43e8d9a3d1fa5e0c9fec7d3201d431a9177
+  * arut/nginx-rtmp-module 791b6136f02bc9613daf178723ac09f4df5a3bbf
+  * arut/nginx-dav-ext-module 430fd774fe838a04f1a5defbf1dd571d42300cf9
+  * bpaquet/ngx_http_enhanced_memcached_module a9b76b6c9e0623e3ee84fecb04284dc8c91dfdb4
+  * replay/ngx_http_secure_download f379a1acf2a76f63431a12fa483d9e22e718400b
+  * simplresty/ngx_devel_kit a22dade76c838e5f377d58d007f65d35b5ce1df3
+  * wandenberg/nginx-sorted-querystring-module e5bbded07fd67e2977edc2bc145c45a7b3fc4d26
+  * pandax381/ngx_http_pipelog_module 2503d5ef853ff2542ee7e08d898a85a7747812e5
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Mon, 02 Apr 2018 09:59:30 +0900
+
 nginx (1.13.9+mod.1-1hnakamur1) xenial; urgency=medium
 
   * Imported Upstream version 1.13.9
