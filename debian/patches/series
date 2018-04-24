@@ -1,3 +1,4 @@
+lua-nginx-module-luajit-2.1.patch
 ngx_http_secure_download-dynamic_module.patch
 ngx_cache_purge-dynamic_module.patch
 ngx_cache_purge-fix_compatibility_with_nginx_1.11.6.patch
