@@ -56,7 +56,7 @@ Table of Contents
 Version
 =======
 
-This document describes ngx_memc [v0.18](http://github.com/openresty/memc-nginx-module/tags) released on 8 April 2017.
+This document describes ngx_memc [v0.19](http://github.com/openresty/memc-nginx-module/tags) released on 19 April 2018.
 
 Synopsis
 ========
@@ -599,13 +599,13 @@ You're recommended to install this module (as well as the Nginx core and many ot
 Alternatively, you can compile this module into the standard Nginx source distribution by hand:
 
 Grab the nginx source code from [nginx.org](http://nginx.org/), for example,
-the version 1.11.2 (see [nginx compatibility](#compatibility)), and then build the source with this module:
+the version 1.13.6 (see [nginx compatibility](#compatibility)), and then build the source with this module:
 
 ```bash
 
- wget 'http://nginx.org/download/nginx-1.11.2.tar.gz'
- tar -xzvf nginx-1.11.2.tar.gz
- cd nginx-1.11.2/
+ wget 'http://nginx.org/download/nginx-1.13.6.tar.gz'
+ tar -xzvf nginx-1.13.6.tar.gz
+ cd nginx-1.13.6/
 
  # Here we assume you would install you nginx under /opt/nginx/.
  ./configure --prefix=/opt/nginx \
@@ -645,6 +645,8 @@ Compatibility
 
 The following versions of Nginx should work with this module:
 
+* **1.13.x**                      (last tested: 1.13.6)
+* **1.12.x**
 * **1.11.x**                      (last tested: 1.11.2)
 * **1.10.x**
 * **1.9.x**                       (last tested: 1.9.15)
