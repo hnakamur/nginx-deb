@@ -25,6 +25,7 @@ objs/ngx_http_secure_download_module.so	usr/lib/nginx/modules
 objs/ngx_http_set_misc_module.so	usr/lib/nginx/modules
 objs/ngx_http_sorted_querystring_module.so	usr/lib/nginx/modules
 objs/ngx_http_srcache_filter_module.so	usr/lib/nginx/modules
+objs/ngx_http_shibboleth_module.so	usr/lib/nginx/modules
 objs/ngx_http_xslt_filter_module.so	usr/lib/nginx/modules
 objs/ngx_mail_module.so			usr/lib/nginx/modules
 objs/ngx_rtmp_module.so			usr/lib/nginx/modules

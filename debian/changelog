@@ -1,3 +1,29 @@
+nginx (1.15.0+mod.2-1ubuntu1ppa1~ubuntu18.04.1) bionic; urgency=medium
+
+  * Add github.com/nginx-shib/nginx-http-shibboleth module
+  * Also update other modules
+  * openresty/echo-nginx-module c65f5c638d0501b482fbc3ebbda9a49648022d40
+  * openresty/headers-more-nginx-module a9f7c7e86cc7441d04e2f11f01c2e3a9c4b0301d
+  * openresty/lua-nginx-module 576a10d246daf81c0ce1b959c50ee807769c01a8
+  * openresty/lua-upstream-nginx-module 6ebcda3c1ee56a73ba73f3a36f5faa7821657115
+  * openresty/memc-nginx-module 858fcdcf145ce2cad51cf5c8aa3d5e41a0facac3
+  * openresty/redis2-nginx-module c989c829a2877132cb100f901e320921250e068d
+  * openresty/set-misc-nginx-module aac9afe4c42d96e35d496994c552839799010255
+  * openresty/srcache-nginx-module 53a98806b0a24cc736d11003662e8b769c3e7eb3
+  * openresty/lua-resty-core 1d5c898e3574d7c38ef2d8d905e8481f9cfd5aaa
+  * openresty/stream-lua-nginx-module e3eb228c08e5bab30404d5d715bd9b5a545f68a8
+  * FRiCKLE/ngx_cache_purge 331fe43e8d9a3d1fa5e0c9fec7d3201d431a9177
+  * arut/nginx-rtmp-module 791b6136f02bc9613daf178723ac09f4df5a3bbf
+  * arut/nginx-dav-ext-module 430fd774fe838a04f1a5defbf1dd571d42300cf9
+  * bpaquet/ngx_http_enhanced_memcached_module b58a4500db3c4ee274be54a18abc767219dcfd36
+  * replay/ngx_http_secure_download f379a1acf2a76f63431a12fa483d9e22e718400b
+  * simplresty/ngx_devel_kit a22dade76c838e5f377d58d007f65d35b5ce1df3
+  * wandenberg/nginx-sorted-querystring-module e5bbded07fd67e2977edc2bc145c45a7b3fc4d26
+  * pandax381/ngx_http_pipelog_module 2503d5ef853ff2542ee7e08d898a85a7747812e5
+  * nginx-shib/nginx-http-shibboleth b441df08887fc10e44cc047da2a188014a0dadf5
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 27 Jun 2018 15:35:25 +0900
+
 nginx (1.15.0+mod.1-1ubuntu1ppa1~ubuntu18.04) bionic; urgency=medium
 
   * New upstream version 1.15.0
