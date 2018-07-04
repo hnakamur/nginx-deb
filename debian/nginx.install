@@ -30,3 +30,4 @@ objs/ngx_http_xslt_filter_module.so	usr/lib/nginx/modules
 objs/ngx_mail_module.so			usr/lib/nginx/modules
 objs/ngx_rtmp_module.so			usr/lib/nginx/modules
 lua-resty-core/lib/*			usr/lib/nginx/lua
+lua-resty-cookie/lib/*			usr/lib/nginx/lua
