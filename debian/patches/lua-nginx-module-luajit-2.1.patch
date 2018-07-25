@@ -1,5 +1,13 @@
+From: Sergey Budnevitch <sb@nginx.com>
+Date: Wed, 25 Jul 2018 12:43:19 +0900
+Subject: lua-nginx-module-luajit-2.1
+
+---
+ lua-nginx-module/config | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
 diff --git a/lua-nginx-module/config b/lua-nginx-module/config
-index 044deb9..ea35f23 100644
+index 2005535..d28b8e7 100644
 --- a/lua-nginx-module/config
 +++ b/lua-nginx-module/config
 @@ -281,6 +281,30 @@ END
