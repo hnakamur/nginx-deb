@@ -125,7 +125,7 @@ config.status.nginx_debug: config.env.nginx_debug
 	CFLAGS="" ./configure \
 		--prefix=/etc/nginx \
 		--sbin-path=/usr/sbin/nginx \
-		--modules-path=/usr/lib/nginx/modules \
+		--modules-path=/usr/lib/nginx/modules-debug \
 		--conf-path=/etc/nginx/nginx.conf \
 		--error-log-path=/var/log/nginx/error.log \
 		--http-log-path=/var/log/nginx/access.log \
@@ -234,11 +234,14 @@ install:
 	dh_installdirs
 	dh_install
 	mkdir -p $(INSTALLDIR)/usr/lib/nginx/modules
+	mkdir -p $(INSTALLDIR)/usr/lib/nginx/modules-debug
 	mkdir -p $(INSTALLDIR)/usr/lib/nginx/lua
 	mkdir -p $(INSTALLDIR)/usr/share/doc/nginx
 	install -m 644 debian/CHANGES $(INSTALLDIR)/usr/share/doc/nginx/changelog
 	install -m 644 debian/nginx.vh.default.conf $(INSTALLDIR)/etc/nginx/conf.d/default.conf
+	install -m 755 $(BUILDDIR_nginx_debug)/objs/*.so $(INSTALLDIR)/usr/lib/nginx/modules-debug/
 	ln -s /usr/lib/nginx/modules $(INSTALLDIR)/etc/nginx/modules
+	ln -s /usr/lib/nginx/modules-debug $(INSTALLDIR)/etc/nginx/modules-debug
 
 binary-indep: build post-build install
 	dh_testdir
