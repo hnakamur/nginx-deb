@@ -1,3 +1,37 @@
+nginx (1.15.2+mod.2-1ubuntu1ppa1~ubuntu18.04.1) bionic; urgency=medium
+
+  * Add nginx-lua-saml-service-provider and dependencies
+  * Update download-module-sources.sh
+  * openresty/echo-nginx-module c65f5c638d0501b482fbc3ebbda9a49648022d40
+  * openresty/headers-more-nginx-module a9f7c7e86cc7441d04e2f11f01c2e3a9c4b0301d
+  * openresty/lua-nginx-module e94f2e5d64daa45ff396e262d8dab8e56f5f10e0
+  * openresty/lua-upstream-nginx-module 6ebcda3c1ee56a73ba73f3a36f5faa7821657115
+  * openresty/memc-nginx-module 858fcdcf145ce2cad51cf5c8aa3d5e41a0facac3
+  * openresty/redis2-nginx-module c989c829a2877132cb100f901e320921250e068d
+  * openresty/set-misc-nginx-module aac9afe4c42d96e35d496994c552839799010255
+  * openresty/srcache-nginx-module 53a98806b0a24cc736d11003662e8b769c3e7eb3
+  * openresty/lua-resty-core bdbac701eb017370775f7333979922041021aeee
+  * openresty/stream-lua-nginx-module e3eb228c08e5bab30404d5d715bd9b5a545f68a8
+  * openresty/lua-resty-string 2ac7c3bdba55e06bbfd8d76aa981611ffb2cb321
+  * openresty/lua-resty-lrucache edaafeb0c2be6b2835911a3e38a5e4152d6a0d98
+  * cloudflare/lua-resty-cookie 3edcd960ba9e3b2154cd3a24bf3e12f3a2a598a6
+  * pintsized/lua-resty-http 75e30060863d41df47c95a5b54e1458954e98792
+  * FRiCKLE/ngx_cache_purge 331fe43e8d9a3d1fa5e0c9fec7d3201d431a9177
+  * arut/nginx-rtmp-module 791b6136f02bc9613daf178723ac09f4df5a3bbf
+  * arut/nginx-dav-ext-module 430fd774fe838a04f1a5defbf1dd571d42300cf9
+  * bpaquet/ngx_http_enhanced_memcached_module b58a4500db3c4ee274be54a18abc767219dcfd36
+  * replay/ngx_http_secure_download f379a1acf2a76f63431a12fa483d9e22e718400b
+  * simplresty/ngx_devel_kit a22dade76c838e5f377d58d007f65d35b5ce1df3
+  * wandenberg/nginx-sorted-querystring-module e5bbded07fd67e2977edc2bc145c45a7b3fc4d26
+  * pandax381/ngx_http_pipelog_module 2503d5ef853ff2542ee7e08d898a85a7747812e5
+  * nginx-shib/nginx-http-shibboleth b441df08887fc10e44cc047da2a188014a0dadf5
+  * hnakamur/nginx-lua-saml-service-provider 391490b399187e3648f6d796ba6141a00be2f8fc
+  * hnakamur/nginx-lua-session 00cfbbf018c6b8b74614e6fe3dc350b29a5c6ae8
+  * hamishforbes/lua-ffi-zlib 3d6dbee710b4712b8d0e0235425abee04a22b1bd
+  * Phrogz/SLAXML 8bfc922c6ed14f89548d7bbc2401ce35d7d92749
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Tue, 31 Jul 2018 10:55:39 +0900
+
 nginx (1.15.2+mod.1-1ubuntu1ppa1~ubuntu18.04.1) bionic; urgency=medium
 
   * New upstream version 1.15.2
