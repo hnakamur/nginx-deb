@@ -31,3 +31,14 @@ objs/ngx_mail_module.so			usr/lib/nginx/modules
 objs/ngx_rtmp_module.so			usr/lib/nginx/modules
 lua-resty-core/lib/*			usr/lib/nginx/lua
 lua-resty-cookie/lib/*			usr/lib/nginx/lua
+lua-resty-http/lib/* 			usr/lib/nginx/lua
+lua-resty-string/lib/* 			usr/lib/nginx/lua
+lua-resty-lrucache/lib/* 		usr/lib/nginx/lua
+lua-resty-openidc/lib/* 		usr/lib/nginx/lua
+lua-resty-session/lib/* 		usr/lib/nginx/lua
+lua-resty-jwt/lib/* 			usr/lib/nginx/lua
+lua-resty-hmac/lib/* 			usr/lib/nginx/lua
+nginx-lua-saml-service-provider/lib/* 	usr/lib/nginx/lua
+nginx-lua-session/lib/* 		usr/lib/nginx/lua
+lua-ffi-zlib/lib/* 			usr/lib/nginx/lua
+SLAXML/*.lua 				usr/lib/nginx/lua
