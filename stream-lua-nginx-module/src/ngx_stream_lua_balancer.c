@@ -1,5 +1,13 @@
 
 /*
+ * !!! DO NOT EDIT DIRECTLY !!!
+ * This file was automatically generated from the following template:
+ *
+ * src/subsys/ngx_subsys_lua_balancer.c.tt2
+ */
+
+
+/*
  * Copyright (C) Yichun Zhang (agentzh)
  */
 
@@ -394,6 +402,8 @@ ngx_stream_lua_balancer_by_chunk(lua_State *L, ngx_stream_lua_request_t *r)
 
     /* init nginx context in Lua VM */
     ngx_stream_lua_set_req(L, r);
+
+#ifndef OPENRESTY_LUAJIT
     ngx_stream_lua_create_new_globals_table(L, 0 /* narr */, 1 /* nrec */);
 
     /*  {{{ make new env inheriting main thread's globals table */
@@ -404,6 +414,7 @@ ngx_stream_lua_balancer_by_chunk(lua_State *L, ngx_stream_lua_request_t *r)
     /*  }}} */
 
     lua_setfenv(L, -2);    /*  set new running env for the code closure */
+#endif /* OPENRESTY_LUAJIT */
 
     lua_pushcfunction(L, ngx_stream_lua_traceback);
     lua_insert(L, 1);  /* put it under chunk and args */

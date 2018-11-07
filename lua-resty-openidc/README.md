@@ -109,16 +109,20 @@ http {
 
           local opts = {
              -- the full redirect URI must be protected by this script
+             -- if the URI starts with a / the full redirect URI becomes
+             -- ngx.var.scheme.."://"..ngx.var.http_host..opts.redirect_uri
+             -- unless the scheme was overridden using opts.redirect_uri_scheme or an X-Forwarded-Proto header in the incoming request
              redirect_uri = "https://MY_HOST_NAME/redirect_uri"
              -- up until version 1.6.1 you'd specify
              -- redirect_uri_path = "/redirect_uri",
-             -- and the redirect URI became
-             -- ngx.var.scheme.."://"..ngx.var.http_host..opts.redirect_uri_path
-             -- unless the scheme was overridden using opts.redirect_uri_scheme or an X-Forwarded-Proto header in the incoming request
+             -- and could not set the hostname
 
              discovery = "https://accounts.google.com/.well-known/openid-configuration",
+             -- For non compliant OPs to OAuth 2.0 RFC 6749 for client Authentication (cf. https://tools.ietf.org/html/rfc6749#section-2.3.1)
+             -- client_id and client_secret MUST be invariant when url encoded
              client_id = "<client_id>",
-             client_secret = "<client_secret>"
+             client_secret = "<client_secret>",
+              
              --authorization_params = { hd="zmartzone.eu" },
              --scope = "openid email profile",
              -- Refresh the users id_token after 900 seconds without requiring re-authentication
@@ -172,6 +176,10 @@ http {
              -- which may be necessary when talking to a broken OpenID
              -- Connect provider that ignores the paramter as the
              -- id_token will be rejected otherwise.
+
+             --revoke_tokens_on_logout = false
+             -- When revoke_tokens_on_logout is set to true a logout notifies the authorization server that previously obtained refresh and access tokens are no longer needed. This requires that revocation_endpoint is discoverable.
+             -- If there is no revocation endpoint supplied or if there are errors on revocation the user will not be notified and the logout process continues normally.
 
              -- Optional : use outgoing proxy to the OpenID Connect provider endpoints with the proxy_opts table : 
              -- this requires lua-resty-http >= 0.12

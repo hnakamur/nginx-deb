@@ -1,5 +1,13 @@
 
 /*
+ * !!! DO NOT EDIT DIRECTLY !!!
+ * This file was automatically generated from the following template:
+ *
+ * src/subsys/ngx_subsys_lua_common.h.tt2
+ */
+
+
+/*
  * Copyright (C) Xiaozhe Wang (chaoslawful)
  * Copyright (C) Yichun Zhang (agentzh)
  */
@@ -22,7 +30,7 @@
 #include <setjmp.h>
 #include <stdint.h>
 
-#include <lua.h>
+#include <luajit.h>
 #include <lualib.h>
 #include <lauxlib.h>
 
@@ -118,12 +126,17 @@
 #define NGX_STREAM_LUA_CONTEXT_INIT_WORKER                          0x0008
 #define NGX_STREAM_LUA_CONTEXT_BALANCER                             0x0010
 #define NGX_STREAM_LUA_CONTEXT_PREREAD                              0x0020
+#define NGX_STREAM_LUA_CONTEXT_SSL_CERT                             0x0040
 
 
 #ifndef NGX_LUA_NO_FFI_API
 #define NGX_STREAM_LUA_FFI_NO_REQ_CTX         -100
 #define NGX_STREAM_LUA_FFI_BAD_CONTEXT        -101
 #endif
+
+
+#define ngx_stream_lua_lightudata_mask(ludata)                               \
+    ((void *) ((uintptr_t) (&ngx_stream_lua_##ludata) & ((1UL << 47) - 1)))
 
 
 typedef struct ngx_stream_lua_main_conf_s  ngx_stream_lua_main_conf_t;
@@ -193,10 +206,11 @@ struct ngx_stream_lua_main_conf_s {
     ngx_str_t                                    init_worker_src;
 
     ngx_stream_lua_balancer_peer_data_t          *balancer_peer_data;
-    /* balancer_by_lua does not support yielding and
-     * there cannot be any conflicts among concurrent requests,
-     * thus it is safe to store the peer data in the main conf.
-     */
+                    /* neither yielding nor recursion is possible in
+                     * balancer_by_lua*, so there cannot be any races among
+                     * concurrent requests and it is safe to store the peer
+                     * data pointer in the main conf.
+                     */
 
     ngx_uint_t                      shm_zones_inited;
 
@@ -225,6 +239,12 @@ struct ngx_stream_lua_srv_conf_s {
     ngx_uint_t              ssl_verify_depth;
     ngx_str_t               ssl_trusted_certificate;
     ngx_str_t               ssl_crl;
+
+    struct {
+        ngx_stream_lua_srv_conf_handler_pt           ssl_cert_handler;
+        ngx_str_t                                    ssl_cert_src;
+        u_char                                      *ssl_cert_src_key;
+    } srv;
 #endif
 
     ngx_flag_t              enable_code_cache; /* whether to enable

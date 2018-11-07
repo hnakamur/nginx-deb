@@ -76,7 +76,7 @@ qr/\[lua\] content_by_lua\(nginx\.conf:\d+\):\d+: elapsed: 0\.0(?:4[4-9]|5[0-6])
 
 
 
-=== TEST 2: separated global env
+=== TEST 2: globals are shared
 --- config
     location /t {
         content_by_lua '
@@ -104,7 +104,7 @@ F(ngx_http_lua_timer_handler) {
 
 --- response_body
 registered timer
-foo = nil
+foo = 3
 
 --- wait: 0.1
 --- no_error_log
@@ -1023,7 +1023,7 @@ qr/go\(\): connected: 1, reused: \d+/,
         content_by_lua '
             local cc, cr, cy = coroutine.create, coroutine.resume, coroutine.yield
             local function f()
-                function f()
+                local function f()
                     local cnt = 0
                     for i = 1, 20 do
                         print("cnt = ", cnt)
@@ -1090,7 +1090,7 @@ registered timer
                 ngx.log(ngx.ERR, ...)
             end
             local function handle()
-                function f()
+                local function f()
                     print("hello in thread")
                     return "done"
                 end

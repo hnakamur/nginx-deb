@@ -1,5 +1,13 @@
 
 /*
+ * !!! DO NOT EDIT DIRECTLY !!!
+ * This file was automatically generated from the following template:
+ *
+ * src/subsys/ngx_subsys_lua_semaphore.c.tt2
+ */
+
+
+/*
  * Copyright (C) Yichun Zhang (agentzh)
  * Copyright (C) cuiweixie
  * I hereby assign copyright in this code to the lua-nginx-module project,
@@ -379,6 +387,7 @@ ngx_stream_lua_ffi_sema_wait(ngx_stream_lua_request_t *r,
 
     rc = ngx_stream_lua_ffi_check_context(ctx, NGX_STREAM_LUA_CONTEXT_CONTENT
                                           | NGX_STREAM_LUA_CONTEXT_PREREAD
+                                          | NGX_STREAM_LUA_CONTEXT_SSL_CERT
                                           | NGX_STREAM_LUA_CONTEXT_TIMER,
                                           err, errlen);
 

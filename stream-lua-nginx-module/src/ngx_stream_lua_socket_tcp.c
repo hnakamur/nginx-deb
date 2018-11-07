@@ -1,5 +1,13 @@
 
 /*
+ * !!! DO NOT EDIT DIRECTLY !!!
+ * This file was automatically generated from the following template:
+ *
+ * src/subsys/ngx_subsys_lua_socket_tcp.c.tt2
+ */
+
+
+/*
  * Copyright (C) Yichun Zhang (agentzh)
  */
 
@@ -245,7 +253,8 @@ ngx_stream_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
 
 
     /* {{{raw req socket object metatable */
-    lua_pushlightuserdata(L, &ngx_stream_lua_raw_req_socket_metatable_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          raw_req_socket_metatable_key));
     lua_createtable(L, 0 /* narr */, 6 /* nrec */);
 
     lua_pushcfunction(L, ngx_stream_lua_socket_tcp_receive);
@@ -273,7 +282,8 @@ ngx_stream_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
     /* }}} */
 
     /* {{{tcp object metatable */
-    lua_pushlightuserdata(L, &ngx_stream_lua_tcp_socket_metatable_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          tcp_socket_metatable_key));
     lua_createtable(L, 0 /* narr */, 12 /* nrec */);
 
     lua_pushcfunction(L, ngx_stream_lua_socket_tcp_connect);
@@ -322,7 +332,8 @@ ngx_stream_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
     /* }}} */
 
     /* {{{upstream userdata metatable */
-    lua_pushlightuserdata(L, &ngx_stream_lua_upstream_udata_metatable_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          upstream_udata_metatable_key));
     lua_createtable(L, 0 /* narr */, 1 /* nrec */); /* metatable */
     lua_pushcfunction(L, ngx_stream_lua_socket_tcp_upstream_destroy);
     lua_setfield(L, -2, "__gc");
@@ -330,7 +341,8 @@ ngx_stream_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
     /* }}} */
 
     /* {{{downstream userdata metatable */
-    lua_pushlightuserdata(L, &ngx_stream_lua_downstream_udata_metatable_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          downstream_udata_metatable_key));
     lua_createtable(L, 0 /* narr */, 1 /* nrec */); /* metatable */
     lua_pushcfunction(L, ngx_stream_lua_socket_downstream_destroy);
     lua_setfield(L, -2, "__gc");
@@ -338,7 +350,8 @@ ngx_stream_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
     /* }}} */
 
     /* {{{socket pool userdata metatable */
-    lua_pushlightuserdata(L, &ngx_stream_lua_pool_udata_metatable_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          pool_udata_metatable_key));
     lua_createtable(L, 0, 1); /* metatable */
     lua_pushcfunction(L, ngx_stream_lua_socket_shutdown_pool);
     lua_setfield(L, -2, "__gc");
@@ -346,7 +359,8 @@ ngx_stream_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
     /* }}} */
 
     /* {{{socket compiled pattern userdata metatable */
-    lua_pushlightuserdata(L, &ngx_stream_lua_pattern_udata_metatable_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          pattern_udata_metatable_key));
     lua_createtable(L, 0 /* narr */, 1 /* nrec */); /* metatable */
     lua_pushcfunction(L, ngx_stream_lua_socket_cleanup_compiled_pattern);
     lua_setfield(L, -2, "__gc");
@@ -356,7 +370,8 @@ ngx_stream_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
 #if (NGX_STREAM_SSL)
 
     /* {{{ssl session userdata metatable */
-    lua_pushlightuserdata(L, &ngx_stream_lua_ssl_session_metatable_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          ssl_session_metatable_key));
     lua_createtable(L, 0 /* narr */, 1 /* nrec */); /* metatable */
     lua_pushcfunction(L, ngx_stream_lua_ssl_free_session);
     lua_setfield(L, -2, "__gc");
@@ -390,10 +405,12 @@ ngx_stream_lua_socket_tcp(lua_State *L)
 
     ngx_stream_lua_check_context(L, ctx, NGX_STREAM_LUA_CONTEXT_CONTENT
                                  | NGX_STREAM_LUA_CONTEXT_PREREAD
+                                 | NGX_STREAM_LUA_CONTEXT_SSL_CERT
                                  | NGX_STREAM_LUA_CONTEXT_TIMER);
 
     lua_createtable(L, 5 /* narr */, 1 /* nrec */);
-    lua_pushlightuserdata(L, &ngx_stream_lua_tcp_socket_metatable_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          tcp_socket_metatable_key));
     lua_rawget(L, LUA_REGISTRYINDEX);
     lua_setmetatable(L, -2);
 
@@ -450,6 +467,7 @@ ngx_stream_lua_socket_tcp_connect(lua_State *L)
 
                                | NGX_STREAM_LUA_CONTEXT_PREREAD
 
+                               | NGX_STREAM_LUA_CONTEXT_SSL_CERT
                                | NGX_STREAM_LUA_CONTEXT_TIMER);
 
     luaL_checktype(L, 1, LUA_TTABLE);
@@ -563,7 +581,8 @@ ngx_stream_lua_socket_tcp_connect(lua_State *L)
         }
 
 #if 1
-        lua_pushlightuserdata(L, &ngx_stream_lua_upstream_udata_metatable_key);
+        lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                              upstream_udata_metatable_key));
         lua_rawget(L, LUA_REGISTRYINDEX);
         lua_setmetatable(L, -2);
 #endif
@@ -1636,7 +1655,8 @@ ngx_stream_lua_ssl_handshake_retval_handler(ngx_stream_lua_request_t *r,
                       "stream lua ssl save session: %p", ssl_session);
 
         /* set up the __gc metamethod */
-        lua_pushlightuserdata(L, &ngx_stream_lua_ssl_session_metatable_key);
+        lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                              ssl_session_metatable_key));
         lua_rawget(L, LUA_REGISTRYINDEX);
         lua_setmetatable(L, -2);
     }
@@ -3755,7 +3775,8 @@ ngx_stream_lua_socket_tcp_receiveuntil(lua_State *L)
         return luaL_error(L, "no memory");
     }
 
-    lua_pushlightuserdata(L, &ngx_stream_lua_pattern_udata_metatable_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          pattern_udata_metatable_key));
     lua_rawget(L, LUA_REGISTRYINDEX);
     lua_setmetatable(L, -2);
 
@@ -4320,9 +4341,9 @@ ngx_stream_lua_req_socket_tcp(lua_State *L)
     lua_createtable(L, 2 /* narr */, 3 /* nrec */); /* the object */
 
     if (raw) {
-        lua_pushlightuserdata(L, &ngx_stream_lua_raw_req_socket_metatable_key);
+        lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                              raw_req_socket_metatable_key));
 
-    } else {
     }
 
     lua_rawget(L, LUA_REGISTRYINDEX);
@@ -4334,7 +4355,8 @@ ngx_stream_lua_req_socket_tcp(lua_State *L)
     }
 
 #if 1
-    lua_pushlightuserdata(L, &ngx_stream_lua_downstream_udata_metatable_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          downstream_udata_metatable_key));
     lua_rawget(L, LUA_REGISTRYINDEX);
     lua_setmetatable(L, -2);
 #endif
@@ -4484,7 +4506,8 @@ ngx_stream_lua_socket_tcp_setkeepalive(lua_State *L)
 
     luaL_checktype(L, 1, LUA_TTABLE);
 
-    lua_pushlightuserdata(L, &ngx_stream_lua_socket_pool_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          socket_pool_key));
     lua_rawget(L, LUA_REGISTRYINDEX);
 
     lua_rawgeti(L, 1, SOCKET_KEY_INDEX);
@@ -4603,7 +4626,8 @@ ngx_stream_lua_socket_tcp_setkeepalive(lua_State *L)
             return luaL_error(L, "no memory");
         }
 
-        lua_pushlightuserdata(L, &ngx_stream_lua_pool_udata_metatable_key);
+        lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                              pool_udata_metatable_key));
         lua_rawget(L, LUA_REGISTRYINDEX);
         lua_setmetatable(L, -2);
 
@@ -4758,7 +4782,8 @@ ngx_stream_lua_get_keepalive_peer(ngx_stream_lua_request_t *r, lua_State *L,
 
     pc = &u->peer;
 
-    lua_pushlightuserdata(L, &ngx_stream_lua_socket_pool_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          socket_pool_key));
     lua_rawget(L, LUA_REGISTRYINDEX); /* table */
     lua_pushvalue(L, key_index); /* key */
     lua_rawget(L, -2);
@@ -4934,7 +4959,8 @@ ngx_stream_lua_socket_free_pool(ngx_log_t *log,
 
     L = spool->lua_vm;
 
-    lua_pushlightuserdata(L, &ngx_stream_lua_socket_pool_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          socket_pool_key));
     lua_rawget(L, LUA_REGISTRYINDEX);
     lua_pushstring(L, (char *) spool->key);
     lua_pushnil(L);
@@ -5395,7 +5421,8 @@ ngx_stream_lua_cleanup_conn_pools(lua_State *L)
 {
     ngx_stream_lua_socket_pool_t                *spool;
 
-    lua_pushlightuserdata(L, &ngx_stream_lua_socket_pool_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          socket_pool_key));
     lua_rawget(L, LUA_REGISTRYINDEX); /* table */
 
     lua_pushnil(L);  /* first key */

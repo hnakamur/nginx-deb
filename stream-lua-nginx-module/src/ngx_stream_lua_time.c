@@ -1,5 +1,13 @@
 
 /*
+ * !!! DO NOT EDIT DIRECTLY !!!
+ * This file was automatically generated from the following template:
+ *
+ * src/subsys/ngx_subsys_lua_time.c.tt2
+ */
+
+
+/*
  * Copyright (C) Xiaozhe Wang (chaoslawful)
  * Copyright (C) Yichun Zhang (agentzh)
  */
@@ -170,7 +178,6 @@ ngx_stream_lua_inject_req_time_api(lua_State *L)
 }
 
 
-#ifndef NGX_LUA_NO_FFI_API
 double
 ngx_stream_lua_ffi_now(void)
 {
@@ -239,9 +246,6 @@ ngx_stream_lua_ffi_utctime(u_char *buf)
                 tm.ngx_tm_mon, tm.ngx_tm_mday, tm.ngx_tm_hour, tm.ngx_tm_min,
                 tm.ngx_tm_sec);
 }
-
-
-#endif /* NGX_LUA_NO_FFI_API */
 
 
 /* vi:set ft=c ts=4 sw=4 et fdm=marker: */

@@ -1,5 +1,13 @@
 
 /*
+ * !!! DO NOT EDIT DIRECTLY !!!
+ * This file was automatically generated from the following template:
+ *
+ * src/subsys/ngx_subsys_lua_phase.c.tt2
+ */
+
+
+/*
  * Copyright (C) Yichun Zhang (agentzh)
  */
 
@@ -44,12 +52,20 @@ ngx_stream_lua_ngx_get_phase(lua_State *L)
         lua_pushliteral(L, "init_worker");
         break;
 
+    case NGX_STREAM_LUA_CONTEXT_SSL_CERT:
+        lua_pushliteral(L, "ssl_cert");
+        break;
+
     case NGX_STREAM_LUA_CONTEXT_PREREAD:
         lua_pushliteral(L, "preread");
         break;
 
     case NGX_STREAM_LUA_CONTEXT_CONTENT:
         lua_pushliteral(L, "content");
+        break;
+
+    case NGX_STREAM_LUA_CONTEXT_LOG:
+        lua_pushliteral(L, "log");
         break;
 
     case NGX_STREAM_LUA_CONTEXT_TIMER:

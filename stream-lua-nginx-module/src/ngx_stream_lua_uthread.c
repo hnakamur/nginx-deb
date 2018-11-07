@@ -1,5 +1,13 @@
 
 /*
+ * !!! DO NOT EDIT DIRECTLY !!!
+ * This file was automatically generated from the following template:
+ *
+ * src/subsys/ngx_subsys_lua_uthread.c.tt2
+ */
+
+
+/*
  * Copyright (C) Yichun Zhang (agentzh)
  */
 
@@ -70,7 +78,8 @@ ngx_stream_lua_uthread_spawn(lua_State *L)
 
     /* anchor the newly created coroutine into the Lua registry */
 
-    lua_pushlightuserdata(L, &ngx_stream_lua_coroutines_key);
+    lua_pushlightuserdata(L, ngx_stream_lua_lightudata_mask(
+                          coroutines_key));
     lua_rawget(L, LUA_REGISTRYINDEX);
     lua_pushvalue(L, -2);
     coctx->co_ref = luaL_ref(L, -2);
@@ -128,6 +137,7 @@ ngx_stream_lua_uthread_wait(lua_State *L)
 
                                | NGX_STREAM_LUA_CONTEXT_PREREAD
 
+                               | NGX_STREAM_LUA_CONTEXT_SSL_CERT
                                | NGX_STREAM_LUA_CONTEXT_TIMER);
 
     coctx = ctx->cur_co_ctx;
@@ -227,6 +237,7 @@ ngx_stream_lua_uthread_kill(lua_State *L)
 
                                | NGX_STREAM_LUA_CONTEXT_PREREAD
 
+                               | NGX_STREAM_LUA_CONTEXT_SSL_CERT
                                | NGX_STREAM_LUA_CONTEXT_TIMER);
 
     coctx = ctx->cur_co_ctx;

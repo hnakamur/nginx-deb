@@ -1,7 +1,37 @@
+11/06/2018
+- make sure opts.discovery is resolved when "iss" is returned as part of the
+  authorization response; see #224 ; thanks @mijohansen
+
+11/03/2018
+- we no longer verify the issuer field of the discovery document points
+  to a parent URI of the discovery document's location; see #219
+
+10/19/2018
+- release 1.7.0
+
+10/18/2018
+- add token revocation support on logout (opts.revoke_tokens_on_logout)
+
+10/16/2018
+- lua-resty-openidc now creates a new session whenever the token(s)
+  are refreshed, trying to soften the impact when multiple requests
+  race to refresh the token at the same time. See #190 and #209
+
+10/11/2018
+- url-encode client_id/client_secret; closes #204 and #205; thanks @grrolland
+  https://tools.ietf.org/html/rfc6749#section-2.3.1
+- make call_userinfo_endpoint a public function; closes #207; thanks @thomasleplus
+
+10/8/2018
+- make call_token_endpoint a public function
+
+10/04/2018
+- use session.start instead of session.open; see #174; thanks @thomasleplus
+
 09/23/2018
 - added redirect_uri option that specifies an absolute URI for the
-  redirect URI. The existing redirect_uri_path and redirect_uri_scheme
-  options have been deprecated in favor of the new option.
+  redirect URI. The existing redirect_uri_path option has been
+  deprecated in favor of the new option.
 
 09/17/2018
 - added an optional "request decorator" option that can be used to augment
@@ -14,7 +44,7 @@
 - add an option to disable nonce parameter for broken OpenID Connect providers
 
 09/14/2018
-- deprecate `opt.secret` in favor of `opts.public_key` and `opts.symmetric_key`
+- deprecate `opt.secret` in favor of `opts.public_key` and `opts.symmetric_key`; thanks @dholth
 
 09/06/2018
 - bypass introspection cache on demand with introspection_cache_ignore; thanks @dmitriyblok

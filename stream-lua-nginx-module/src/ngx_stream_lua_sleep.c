@@ -1,5 +1,13 @@
 
 /*
+ * !!! DO NOT EDIT DIRECTLY !!!
+ * This file was automatically generated from the following template:
+ *
+ * src/subsys/ngx_subsys_lua_sleep.c.tt2
+ */
+
+
+/*
  * Copyright (C) Xiaozhe Wang (chaoslawful)
  * Copyright (C) Yichun Zhang (agentzh)
  */
@@ -57,6 +65,7 @@ ngx_stream_lua_ngx_sleep(lua_State *L)
 
                                | NGX_STREAM_LUA_CONTEXT_PREREAD
 
+                               | NGX_STREAM_LUA_CONTEXT_SSL_CERT
                                | NGX_STREAM_LUA_CONTEXT_TIMER);
 
     coctx = ctx->cur_co_ctx;

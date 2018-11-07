@@ -131,6 +131,8 @@ documentation of `ngx_http_lua_module` for more details about their usage and be
 * [balancer_by_lua_file](https://github.com/openresty/lua-nginx-module#balancer_by_lua_file)
 * [log_by_lua_block](#log_by_lua_block)
 * [log_by_lua_file](#log_by_lua_file)
+* [ssl_certificate_by_lua_block](https://github.com/openresty/lua-nginx-module#ssl_certificate_by_lua_block)
+* [ssl_certificate_by_lua_file](https://github.com/openresty/lua-nginx-module#ssl_certificate_by_lua_file)
 * [lua_shared_dict](https://github.com/openresty/lua-nginx-module#lua_shared_dict)
 * [lua_socket_connect_timeout](https://github.com/openresty/lua-nginx-module#lua_socket_connect_timeout)
 * [lua_socket_buffer_size](https://github.com/openresty/lua-nginx-module#lua_socket_buffer_size)
@@ -526,9 +528,12 @@ Please submit bug reports, wishlists, or patches by
 Acknowledgments
 ===============
 
-* We appreciate [Mashape, Inc.](https://www.mashape.com/) for kindly sponsoring [OpenResty Inc.](https://openresty.com/) to make
-this module compatible with Nginx core 1.13.3. In addition, they sponsored the work on making code sharing between this module and
-[lua-nginx-module](https://github.com/openresty/lua-nginx-module), as well as balancer_by_lua_*, preread_by_lua_* and log_by_lua_* support possible.
+We appreciate [Kong Inc.](https://konghq.com/) for kindly sponsoring [OpenResty Inc.](https://openresty.com/) on the following
+work:
+* Compatibility with Nginx core 1.13.3.
+* Development of [meta-lua-nginx-module](https://github.com/openresty/meta-lua-nginx-module)
+to make code sharing between this module and [lua-nginx-module](https://github.com/openresty/lua-nginx-module) possible.
+* `balancer_by_lua_*`, `preread_by_lua_*`, `log_by_lua_*` and `ssl_certby_lua*` phases support.
 
 Copyright and License
 =====================

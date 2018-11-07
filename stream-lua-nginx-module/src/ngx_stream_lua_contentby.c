@@ -1,5 +1,13 @@
 
 /*
+ * !!! DO NOT EDIT DIRECTLY !!!
+ * This file was automatically generated from the following template:
+ *
+ * src/subsys/ngx_subsys_lua_contentby.c.tt2
+ */
+
+
+/*
  * Copyright (C) Xiaozhe Wang (chaoslawful)
  * Copyright (C) Yichun Zhang (agentzh)
  */
@@ -56,9 +64,11 @@ ngx_stream_lua_content_by_chunk(lua_State *L, ngx_stream_lua_request_t *r)
     /*  move code closure to new coroutine */
     lua_xmove(L, co, 1);
 
+#ifndef OPENRESTY_LUAJIT
     /*  set closure's env table to new coroutine's globals table */
     ngx_stream_lua_get_globals_table(co);
     lua_setfenv(co, -2);
+#endif
 
     /*  save nginx request in coroutine globals table */
     ngx_stream_lua_set_req(co, r);
