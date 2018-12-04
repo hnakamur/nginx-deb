@@ -1,3 +1,9 @@
+nginx (1.15.7+mod.1-1ubuntu1ppa2~ubuntu18.04.1) bionic; urgency=medium
+
+  * Use OpenResty LuaJIT 2.1.0~beta3.20181029
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Tue, 04 Dec 2018 12:11:16 +0900
+
 nginx (1.15.7+mod.1-1ubuntu1ppa1~ubuntu18.04.1) bionic; urgency=medium
 
   * New upstream version 1.15.7
