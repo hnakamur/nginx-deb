@@ -1,4 +1,41 @@
 
+Changes with nginx 1.15.9                                        26 Feb 2019
+
+    *) Feature: variables support in the "ssl_certificate" and
+       "ssl_certificate_key" directives.
+
+    *) Feature: the "poll" method is now available on Windows when using
+       Windows Vista or newer.
+
+    *) Bugfix: if the "select" method was used on Windows and an error
+       occurred while establishing a backend connection, nginx waited for
+       the connection establishment timeout to expire.
+
+    *) Bugfix: the "proxy_upload_rate" and "proxy_download_rate" directives
+       in the stream module worked incorrectly when proxying UDP datagrams.
+
+
+Changes with nginx 1.15.8                                        25 Dec 2018
+
+    *) Feature: the $upstream_bytes_sent variable.
+       Thanks to Piotr Sikora.
+
+    *) Feature: new directives in vim syntax highlighting scripts.
+       Thanks to Gena Makhomed.
+
+    *) Bugfix: in the "proxy_cache_background_update" directive.
+
+    *) Bugfix: in the "geo" directive when using unix domain listen sockets.
+
+    *) Workaround: the "ignoring stale global SSL error ... bad length"
+       alerts might appear in logs when using the "ssl_early_data" directive
+       with OpenSSL.
+
+    *) Bugfix: in nginx/Windows.
+
+    *) Bugfix: in the ngx_http_autoindex_module on 32-bit platforms.
+
+
 Changes with nginx 1.15.7                                        27 Nov 2018
 
     *) Feature: the "proxy_requests" directive in the stream module.
