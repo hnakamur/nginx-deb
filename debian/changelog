@@ -1,3 +1,10 @@
+nginx (1.15.9+mod.1+openssl.1.1.1b-1ubuntu1ppa1~18.04.1) bionic; urgency=medium
+
+  * Add OpenSSL 1.1.1b source
+  * Link OpenSSL statically
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 27 Feb 2019 15:18:05 +0900
+
 nginx (1.15.9+mod.1-1ubuntu1ppa1~18.04.1) bionic; urgency=medium
 
   * New upstream version 1.15.9
