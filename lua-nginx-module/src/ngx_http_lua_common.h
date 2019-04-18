@@ -182,6 +182,8 @@ struct ngx_http_lua_main_conf_s {
     ngx_cycle_t         *cycle;
     ngx_pool_t          *pool;
 
+    ngx_flag_t           load_resty_core;
+
     ngx_int_t            max_pending_timers;
     ngx_int_t            pending_timers;
 
@@ -479,7 +481,7 @@ typedef struct {
 
 
 typedef struct ngx_http_lua_ctx_s {
-    /* for lua_coce_cache off: */
+    /* for lua_code_cache off: */
     ngx_http_lua_vm_state_t  *vm_state;
 
     ngx_http_request_t      *request;
