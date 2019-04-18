@@ -1,3 +1,43 @@
+nginx (1.15.12+mod.1+openssl.1.1.1b-1ubuntu1ppa1~18.04.1) bionic; urgency=medium
+
+  * New upstream version 1.15.12
+  * Add module sources
+  * openresty/echo-nginx-module 866bab2da7ef2f7296ccf5640f119cb062f9a3ab
+  * openresty/headers-more-nginx-module 085fbbc28fe5d7bd61bc7cd8d1355e73abc296ea
+  * openresty/lua-nginx-module 61e4d0aac8974b8fad1b5b93d0d3d694d257d328
+  * openresty/lua-upstream-nginx-module 6e31bed3220b3083c6029f9f7043ab3651b23f78
+  * openresty/memc-nginx-module 133aac6cca0c9228062924cd1770a2408af515a2
+  * openresty/redis2-nginx-module a0b4cf012b27ba0d9a55fe17af18f154e49b7dae
+  * openresty/set-misc-nginx-module bcfa7a6d0d0fca4dac57d5b45e6064c6fa7f1cae
+  * openresty/srcache-nginx-module b6a7aeb1653d2846da7d139fd6e717ca49b3a9a6
+  * openresty/lua-resty-core 7a735eaf34ae1dddf853fdf10a9616af07da3517
+  * openresty/stream-lua-nginx-module 84507348cc01590542d0a3b7c1181600427776f4
+  * openresty/lua-resty-string f9d23cf95861815b1125472c7415297e8226c9f2
+  * openresty/lua-resty-lrucache 22c6c6e8eb17438157abed327bc8b76f3fcbb890
+  * cloudflare/lua-resty-cookie 3edcd960ba9e3b2154cd3a24bf3e12f3a2a598a6
+  * zmartzone/lua-resty-openidc b8277e232099c1aeef439da31886222bca0db28b
+  * bungle/lua-resty-session 0b18efa72deb3798c7f05d4669e11ad23646d17a
+  * cdbattags/lua-resty-jwt f17d7c6ed45d59beb9fbf3bd5f50e89ead395b98
+  * jkeys089/lua-resty-hmac 989f601acbe74dee71c1a48f3e140a427f2d03ae
+  * pintsized/lua-resty-http f71e9708a3fd0ff4179d4b0d770c91fcf98d0042
+  * FRiCKLE/ngx_cache_purge 331fe43e8d9a3d1fa5e0c9fec7d3201d431a9177
+  * arut/nginx-rtmp-module 791b6136f02bc9613daf178723ac09f4df5a3bbf
+  * arut/nginx-dav-ext-module f5e30888a256136d9c550bf1ada77d6ea78a48af
+  * bpaquet/ngx_http_enhanced_memcached_module b58a4500db3c4ee274be54a18abc767219dcfd36
+  * replay/ngx_http_secure_download f379a1acf2a76f63431a12fa483d9e22e718400b
+  * simplresty/ngx_devel_kit a22dade76c838e5f377d58d007f65d35b5ce1df3
+  * wandenberg/nginx-sorted-querystring-module e5bbded07fd67e2977edc2bc145c45a7b3fc4d26
+  * pandax381/ngx_http_pipelog_module 68b5f4b6553e1588c42d2cf021aa8b5f7bf268fb
+  * nginx-shib/nginx-http-shibboleth 284935267e1ed53968c0beef8201723770d46456
+  * hnakamur/nginx-lua-saml-service-provider 90b79233bfc28dd48ad8f2d38a8d547d182f1a62
+  * hnakamur/nginx-lua-session 00cfbbf018c6b8b74614e6fe3dc350b29a5c6ae8
+  * hamishforbes/lua-ffi-zlib 3d6dbee710b4712b8d0e0235425abee04a22b1bd
+  * Phrogz/SLAXML b7f376997e720d0deb7d0e1e4803c9f264c239de
+  * Add OpenSSL 1.1.1b source
+  * Update nginx-1.11.2-ssl_cert_cb_yield.patch
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Thu, 18 Apr 2019 18:05:50 +0900
+
 nginx (1.15.10+mod.1+openssl.1.1.1b-1ubuntu1ppa1~18.04.1) bionic; urgency=medium
 
   * New upstream version 1.15.10
