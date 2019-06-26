@@ -51,7 +51,6 @@ config.env.%:
 	cp -Pa $(CURDIR)/redis2-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/set-misc-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/srcache-nginx-module $(BUILDDIR_$*)/
-	cp -Pa $(CURDIR)/openssl $(BUILDDIR_$*)/
 	touch $@
 
 config.status.nginx: config.env.nginx
@@ -89,7 +88,6 @@ config.status.nginx: config.env.nginx
 		--with-http_secure_link_module \
 		--with-http_slice_module \
 		--with-http_ssl_module \
-		--with-openssl=./openssl \
 		--with-http_stub_status_module \
 		--with-http_sub_module \
 		--with-http_v2_module \
@@ -157,7 +155,6 @@ config.status.nginx_debug: config.env.nginx_debug
 		--with-http_secure_link_module \
 		--with-http_slice_module \
 		--with-http_ssl_module \
-		--with-openssl=./openssl \
 		--with-http_stub_status_module \
 		--with-http_sub_module \
 		--with-http_v2_module \
