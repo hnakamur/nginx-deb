@@ -190,7 +190,11 @@ The optional table argument `opts` can be used to control the behavior of
 spawned processes. For instance:
 
 ```lua
-local opts = {merge_stderr = true, buffer_size = 256}
+local opts = {
+    merge_stderr = true,
+    buffer_size = 256,
+    environ = {"PATH=/tmp/bin", "CWD=/tmp/work"}
+}
 local proc, err = ngx_pipe.spawn({"sh", "-c", ">&2 echo data"}, opts)
 if not proc then
     ngx.say(err)
@@ -201,9 +205,13 @@ end
 The following options are supported:
 
 * `merge_stderr`: when set to `true`, the output to stderr will be redirected
-  to stdout in the spawned process. This is similar to doing `>&1` in a shell.
+  to stdout in the spawned process. This is similar to doing `2>&1` in a shell.
 * `buffer_size`: specifies the buffer size used by reading operations, in
   bytes. The default buffer size is `4096`.
+* `environ`: specifies environment variables for the spawned process. The value
+  must be a single-level, array-like Lua table with string values. If the
+  current platform does not support this option, `nil` plus a string `"environ
+  option not supported"` will be returned.
 
 [Back to TOC](#table-of-contents)
 
@@ -217,7 +225,7 @@ milliseconds.
 
 The default threshold for each timeout is 10 seconds.
 
-If a specified timeout argument is `nil`, the corresponding timeout threshold
+If the specified timeout argument is `nil`, the corresponding timeout threshold
 will not be changed. For example:
 
 ```lua
@@ -230,7 +238,7 @@ proc:set_timeouts(nil, nil, nil, 100)
 proc:set_timeouts(100)
 ```
 
-If a specified timeout argument is `0`, the corresponding operation will
+If the specified timeout argument is `0`, the corresponding operation will
 never time out.
 
 [Back to TOC](#table-of-contents)

@@ -72,7 +72,7 @@ qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):11 loop\]/
         -- local cd = ffi.cast("void *", dogs)
         -- dogs:set("foo", "bar")
         for i = 1, 100 do
-            val, flags = dogs:get("foo")
+            val, flags = dogs:get("nonexistent")
         end
         ngx.say("value type: ", type(val))
         ngx.say("value: ", val)
@@ -205,6 +205,8 @@ qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):7 loop\]/
         local val, flags
         local dogs = ngx.shared.dogs
         -- local cd = ffi.cast("void *", dogs)
+        dogs:flush_all()
+        dogs:flush_expired()
         dogs:set("foo", string.rep("bbbb", 1024) .. "a", 0, 912)
         for i = 1, 100 do
             val, flags = dogs:get("foo")
@@ -219,7 +221,7 @@ value: " . ("bbbb" x 1024) . "a
 flags: 912
 "
 --- error_log eval
-qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):7 loop\]/
+qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):9 loop\]/
 --- no_error_log
 [error]
  -- NYI:
@@ -233,6 +235,8 @@ qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):7 loop\]/
         local val, flags, stale
         local dogs = ngx.shared.dogs
         -- local cd = ffi.cast("void *", dogs)
+        dogs:flush_all()
+        dogs:flush_expired()
         dogs:set("foo", "bar", 0, 72)
         for i = 1, 100 do
             val, flags, stale = dogs:get_stale("foo")
@@ -248,7 +252,7 @@ value: bar
 flags: 72
 stale: false
 --- error_log eval
-qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):7 loop\]/
+qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):9 loop\]/
 --- no_error_log
 [error]
  -- NYI:
@@ -262,13 +266,13 @@ qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):7 loop\]/
         local val, flags, stale
         local dogs = ngx.shared.dogs
         -- local cd = ffi.cast("void *", dogs)
-        local ok, err, forcible = dogs:set("foo", "bar", 0.001, 72)
+        local ok, err, forcible = dogs:set("foo", "bar", 0.01, 72)
         if not ok then
             ngx.say("failed to set: ", err)
             return
         end
         ngx.update_time()
-        ngx.sleep(0.002)
+        ngx.sleep(0.02)
         for i = 1, 100 do
             val, flags, stale = dogs:get_stale("foo")
         end
@@ -524,6 +528,8 @@ qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):6 loop\]/
         local val, flags
         local dogs = ngx.shared.dogs
         -- local cd = ffi.cast("void *", dogs)
+        dogs:flush_all()
+        dogs:flush_expired()
         for i = 1, 100 do
             dogs:safe_set("foo", 3.1415926, 0, 78)
         end
@@ -537,7 +543,7 @@ value type: number
 value: 3.1415926
 flags: 78
 --- error_log eval
-qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):6 loop\]/
+qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):8 loop\]/
 --- no_error_log
 [error]
  -- NYI:
@@ -585,6 +591,7 @@ qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):8 loop\]/
         local dogs = ngx.shared.dogs
         -- local cd = ffi.cast("void *", dogs)
         dogs:flush_all()
+        dogs:flush_expired()
         local ok, err, forcible
         for i = 1, 100 do
             ok, err, forcible = dogs:safe_add("foo" .. i, "bar", 0, 72)
@@ -603,7 +610,7 @@ value type: string
 value: bar
 flags: 72
 --- error_log eval
-qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):8 loop\]/
+qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):9 loop\]/
 --- no_error_log
 [error]
  -- NYI:
@@ -1132,7 +1139,7 @@ not ok: bad init_ttl arg: number expected, got string
 --- stream_server_config
     content_by_lua_block {
         local dogs = ngx.shared.dogs
-        local pok, err = pcall(dogs.incr, dogs, "foo", 1, nil, 0.001)
+        local pok, err = pcall(dogs.incr, dogs, "foo", 1, nil, 0.01)
         if not pok then
             ngx.say("not ok: ", err)
             return
@@ -1155,12 +1162,12 @@ not ok: must provide "init" when providing "init_ttl"
         local dogs = ngx.shared.dogs
         dogs:set("foo", 32)
 
-        local res, err = dogs:incr("foo", 10502, 0, 0.001)
+        local res, err = dogs:incr("foo", 10502, 0, 0.01)
         ngx.say("incr: ", res, " ", err)
         ngx.say("foo = ", dogs:get("foo"))
 
         ngx.update_time()
-        ngx.sleep(0.002)
+        ngx.sleep(0.02)
 
         ngx.say("foo after incr init_ttl = ", dogs:get("foo"))
     }
@@ -1181,12 +1188,12 @@ foo after incr init_ttl = 10534
         local dogs = ngx.shared.dogs
         dogs:flush_all()
 
-        local res, err = dogs:incr("foo", 10502, 1, 0.001)
+        local res, err = dogs:incr("foo", 10502, 1, 0.01)
         ngx.say("incr: ", res, " ", err)
         ngx.say("foo = ", dogs:get("foo"))
 
         ngx.update_time()
-        ngx.sleep(0.002)
+        ngx.sleep(0.02)
 
         ngx.say("foo after init_ttl = ", dogs:get("foo"))
     }
@@ -1207,12 +1214,12 @@ foo after init_ttl = nil
         local dogs = ngx.shared.dogs
         dogs:flush_all()
 
-        local res, err = dogs:incr("foo", 10502, 1, "0.001")
+        local res, err = dogs:incr("foo", 10502, 1, "0.01")
         ngx.say("incr: ", res, " ", err)
         ngx.say("foo = ", dogs:get("foo"))
 
         ngx.update_time()
-        ngx.sleep(0.002)
+        ngx.sleep(0.02)
 
         ngx.say("foo after init_ttl = ", dogs:get("foo"))
     }
@@ -1232,18 +1239,18 @@ foo after init_ttl = nil
     content_by_lua_block {
         local dogs = ngx.shared.dogs
         for i = 1, 100 do
-            dogs:set("bar" .. i, i, 0.002)
+            dogs:set("bar" .. i, i, 0.02)
         end
-        dogs:set("foo", 32, 0.002)
+        dogs:set("foo", 32, 0.02)
         ngx.update_time()
-        ngx.sleep(0.003)
+        ngx.sleep(0.03)
 
-        local res, err = dogs:incr("foo", 10502, 0, 0.001)
+        local res, err = dogs:incr("foo", 10502, 0, 0.01)
         ngx.say("incr: ", res, " ", err)
         ngx.say("foo = ", dogs:get("foo"))
 
         ngx.update_time()
-        ngx.sleep(0.002)
+        ngx.sleep(0.02)
 
         ngx.say("foo after init_ttl = ", dogs:get("foo"))
     }
@@ -1276,12 +1283,12 @@ foo after init_ttl = nil
         local res, err, forcible = dogs:incr(long_prefix .. "bar", 10502, 0)
         ngx.say("incr: ", res, " ", err, " ", forcible)
 
-        local res, err, forcible = dogs:incr(long_prefix .. "foo", 10502, 0, 0.001)
+        local res, err, forcible = dogs:incr(long_prefix .. "foo", 10502, 0, 0.01)
         ngx.say("incr: ", res, " ", err, " ", forcible)
         ngx.say("foo = ", dogs:get(long_prefix .. "foo"))
 
         ngx.update_time()
-        ngx.sleep(0.002)
+        ngx.sleep(0.02)
         ngx.say("foo after init_ttl = ", dogs:get("foo"))
     }
 --- stream_response
