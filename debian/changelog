@@ -1,3 +1,9 @@
+nginx (1.17.3+mod.1-1ppa2~bionic) bionic; urgency=medium
+
+  * Update lua-nginx-module-luajit-2.1.patch
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 14 Aug 2019 14:07:52 +0900
+
 nginx (1.17.3+mod.1-1ppa1~bionic) bionic; urgency=medium
 
   * New upstream version 1.17.3
