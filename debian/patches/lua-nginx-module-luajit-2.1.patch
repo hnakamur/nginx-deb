@@ -8,10 +8,19 @@ Subject: lua-nginx-module-luajit-2.1
 
 --- a/lua-nginx-module/config
 +++ b/lua-nginx-module/config
-@@ -136,6 +136,30 @@
-         fi
-         . auto/feature
-     fi
+@@ -1,3 +1,4 @@
++set -x
+ ngx_lua_opt_I=
+ ngx_lua_opt_L=
+ 
+@@ -132,6 +133,30 @@
+         if [ $NGX_RPATH = YES ]; then
+             ngx_feature_libs="-R/usr/lib -L/usr/lib -lm -lluajit-5.1"
+         else
++            ngx_feature_libs="-L/usr/lib -lm -lluajit-5.1"
++        fi
++        . auto/feature
++    fi
 +
 +    if [ $ngx_found = no ]; then
 +        # Ubuntu 18.04 with LuaJIT-2.1, try with -ldl
@@ -32,10 +41,6 @@ Subject: lua-nginx-module-luajit-2.1
 +        if [ $NGX_RPATH = YES ]; then
 +            ngx_feature_libs="-R/usr/lib -L/usr/lib -lm -lluajit-5.1"
 +        else
-+            ngx_feature_libs="-L/usr/lib -lm -lluajit-5.1"
-+        fi
-+        . auto/feature
-+    fi
- fi
- 
- ngx_module_incs=
+             ngx_feature_libs="-L/usr/lib -lm -lluajit-5.1"
+         fi
+         . auto/feature
