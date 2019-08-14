@@ -8,34 +8,34 @@ Subject: lua-nginx-module-luajit-2.1
 
 --- a/lua-nginx-module/config
 +++ b/lua-nginx-module/config
-@@ -74,6 +74,30 @@
-             CC_TEST_FLAGS="$SAVED_CC_TEST_FLAGS"
-             NGX_TEST_LD_OPT="$SAVED_NGX_TEST_LD_OPT"
+@@ -136,6 +136,30 @@
          fi
-+
-+        if [ $ngx_found = no ]; then
-+            # Ubuntu 18.04 with LuaJIT-2.1, try with -ldl
-+            ngx_feature="LuaJIT library in /usr/"
-+            ngx_feature_path="/usr/include/luajit-2.1"
-+            if [ $NGX_RPATH = YES ]; then
-+                ngx_feature_libs="-R/usr/lib -L/usr/lib -lm -lluajit-5.1 -ldl"
-+            else
-+                ngx_feature_libs="-L/usr/lib -lm -lluajit-5.1 -ldl"
-+            fi
-+            . auto/feature
-+        fi
-+
-+        if [ $ngx_found = no ]; then
-+            # Ubuntu 18.04 with LuaJIT 2.1
-+            ngx_feature="LuaJIT library in /usr/"
-+            ngx_feature_path="/usr/include/luajit-2.1"
-+            if [ $NGX_RPATH = YES ]; then
-+                ngx_feature_libs="-R/usr/lib -L/usr/lib -lm -lluajit-5.1"
-+            else
-+                ngx_feature_libs="-L/usr/lib -lm -lluajit-5.1"
-+            fi
-+            . auto/feature
-+        fi
+         . auto/feature
      fi
++
++    if [ $ngx_found = no ]; then
++        # Ubuntu 18.04 with LuaJIT-2.1, try with -ldl
++        ngx_feature="LuaJIT library in /usr/"
++        ngx_feature_path="/usr/include/luajit-2.1"
++        if [ $NGX_RPATH = YES ]; then
++            ngx_feature_libs="-R/usr/lib -L/usr/lib -lm -lluajit-5.1 -ldl"
++        else
++            ngx_feature_libs="-L/usr/lib -lm -lluajit-5.1 -ldl"
++        fi
++        . auto/feature
++    fi
++
++    if [ $ngx_found = no ]; then
++        # Ubuntu 18.04 with LuaJIT 2.1
++        ngx_feature="LuaJIT library in /usr/"
++        ngx_feature_path="/usr/include/luajit-2.1"
++        if [ $NGX_RPATH = YES ]; then
++            ngx_feature_libs="-R/usr/lib -L/usr/lib -lm -lluajit-5.1"
++        else
++            ngx_feature_libs="-L/usr/lib -lm -lluajit-5.1"
++        fi
++        . auto/feature
++    fi
+ fi
  
-     if [ $ngx_found = no ]; then
+ ngx_module_incs=
