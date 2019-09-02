@@ -14,13 +14,15 @@ Build-Depends: debhelper (>= 9~),
                libxslt1-dev,
                libgd-dev,
                libgeoip-dev,
-               libmhash-dev
+               libmhash-dev,
+               libmaxminddb-dev
 Depends: luajit,
-         libgd3 (>= 2.1.0~alpha~),
-         libgeoip1,
-         libxml2 (>= 2.7.4),
-         libxslt1.1 (>= 1.1.25),
          libmhash2
+Recommends: libgeoip1,
+         libgd3 (>= 2.1.0~alpha~),
+         libxml2 (>= 2.7.4),
+         libxslt1.1 (>= 1.1.25)
+Suggests: libmaxminddb0
 Standards-Version: 3.9.8.0
 Homepage: http://nginx.org
 
