@@ -4,7 +4,7 @@ use Test::Nginx::Socket::Lua::Stream;
 
 repeat_each(2);
 
-plan tests => repeat_each() * 191;
+plan tests => repeat_each() * 219;
 
 our $HtmlDir = html_dir;
 
@@ -3074,7 +3074,65 @@ failed to setkeepalive: closed
 
 
 
-=== TEST 57: TEST 62: the upper bound of port range should be 2^16 - 1
+=== TEST 57: options_table is nil
+--- stream_server_config
+    content_by_lua_block {
+        local sock = ngx.socket.tcp()
+        local port = $TEST_NGINX_SERVER_PORT
+
+        local ok, err = sock:connect("127.0.0.1", port, nil)
+        if not ok then
+            ngx.say("failed to connect: ", err)
+            return
+        end
+
+        ngx.say("connected: ", ok)
+
+        ok, err = sock:close()
+        ngx.say("close: ", ok, " ", err)
+    }
+--- stream_response
+connected: 1
+close: 1 nil
+--- no_error_log
+[error]
+
+
+
+=== TEST 58: resolver send query failing immediately in connect()
+this case did not clear coctx->cleanup properly and would lead to memory invalid accesses.
+
+this test case requires the following iptables rule to work properly:
+
+sudo iptables -I OUTPUT 1 -p udp --dport 10086 -j REJECT
+
+--- stream_server_config
+    resolver 127.0.0.1:10086 ipv6=off;
+    resolver_timeout 10ms;
+
+    content_by_lua_block {
+        local sock = ngx.socket.tcp()
+
+        for i = 1, 3 do -- retry
+            local ok, err = sock:connect("www.google.com", 80)
+            if not ok then
+                ngx.say("failed to connect: ", err)
+            end
+        end
+
+        ngx.say("hello!")
+    }
+--- stream_response_body_like
+failed to connect: www.google.com could not be resolved(?: \(\d+: Operation timed out\))?
+failed to connect: www.google.com could not be resolved(?: \(\d+: Operation timed out\))?
+failed to connect: www.google.com could not be resolved(?: \(\d+: Operation timed out\))?
+hello!
+--- error_log eval
+qr{\[alert\] .*? send\(\) failed \(\d+: Operation not permitted\) while resolving}
+
+
+
+=== TEST 59: the upper bound of port range should be 2^16 - 1
 --- stream_server_config
     content_by_lua_block {
         local sock, err = ngx.socket.connect("127.0.0.1", 65536)
@@ -3090,7 +3148,63 @@ failed to connect: bad port number: 65536
 
 
 
-=== TEST 58: TCP socket GC'ed in preread phase without Lua content phase
+=== TEST 60: send boolean and nil
+--- stream_server_config
+    content_by_lua_block {
+        local sock = ngx.socket.tcp()
+        local port = $TEST_NGINX_SERVER_PORT
+
+        local ok, err = sock:connect("127.0.0.1", port)
+        if not ok then
+            ngx.say("failed to connect: ", err)
+            return
+        end
+
+        local function send(data)
+            local bytes, err = sock:send(data)
+            if not bytes then
+                ngx.say("failed to send request: ", err)
+                return
+            end
+        end
+
+        local req = "GET /foo HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\nTest: "
+        send(req)
+        send(true)
+        send(false)
+        send(nil)
+        send("\r\n\r\n")
+
+        while true do
+            local line, err, part = sock:receive()
+            if line then
+                ngx.say("received: ", line)
+            else
+                break
+            end
+        end
+
+        ok, err = sock:close()
+    }
+--- config
+    location /foo {
+        server_tokens off;
+        more_clear_headers Date;
+        echo $http_test;
+    }
+--- stream_response
+received: HTTP/1.1 200 OK
+received: Server: nginx
+received: Content-Type: text/plain
+received: Connection: close
+received: 
+received: truefalsenil
+--- no_error_log
+[error]
+
+
+
+=== TEST 61: TCP socket GC'ed in preread phase without Lua content phase
 --- stream_server_config
     lua_socket_connect_timeout 1s;
     resolver $TEST_NGINX_RESOLVER ipv6=off;
@@ -3124,3 +3238,291 @@ connected: 1
 --- error_log
 cleanup lua tcp socket request
 GC cycle done
+
+
+
+=== TEST 62: receiveany method in cosocket
+--- config
+    location = /foo {
+        server_tokens off;
+
+        content_by_lua_block {
+            local resp = {
+                '1',
+                '22',
+                'hello world',
+            }
+
+            local length = 0
+            for _, v in ipairs(resp) do
+                length = length + #v
+            end
+
+            -- flush http header
+            ngx.header['Content-Length'] = length
+            ngx.flush(true)
+            ngx.sleep(0.01)
+
+            -- send http body
+            for _, v in ipairs(resp) do
+                ngx.print(v)
+                ngx.flush(true)
+                ngx.sleep(0.01)
+            end
+        }
+    }
+--- stream_server_config
+    content_by_lua_block {
+        local sock = ngx.socket.tcp()
+        sock:settimeout(500)
+
+        assert(sock:connect("127.0.0.1", $TEST_NGINX_SERVER_PORT))
+        local req = {
+            'GET /foo HTTP/1.0\r\n',
+            'Host: localhost\r\n',
+            'Connection: close\r\n\r\n',
+        }
+        local ok, err = sock:send(req)
+        if not ok then
+            ngx.say("send request failed: ", err)
+            return
+        end
+
+        -- skip http header
+        while true do
+            local data, err, _ = sock:receive('*l')
+            if err then
+                ngx.say('unexpected error occurs when receiving http head: ', err)
+                return
+            end
+
+            if #data == 0 then -- read last line of head
+                break
+            end
+        end
+
+        -- receive http body
+        while true do
+            local data, err = sock:receiveany(1024)
+            if err then
+                if err ~= 'closed' then
+                    ngx.say('unexpected err: ', err)
+                end
+                break
+            end
+            ngx.say(data)
+        end
+
+        sock:close()
+    }
+--- stream_response
+1
+22
+hello world
+--- no_error_log
+[error]
+--- error_log
+lua tcp socket read any
+
+
+
+=== TEST 63: receiveany send data after read side closed
+--- stream_server_config
+    content_by_lua_block {
+        local sock = ngx.socket.tcp()
+        sock:settimeout(500)
+        assert(sock:connect("127.0.0.1", 7658))
+
+        while true do
+            local data, err = sock:receiveany(1024)
+            if err then
+                if err ~= 'closed' then
+                    ngx.say('unexpected err: ', err)
+                    break
+                end
+
+                local data = "send data after read side closed"
+                local bytes, err = sock:send(data)
+                if not bytes then
+                    ngx.say(err)
+                end
+
+                break
+            end
+            ngx.say(data)
+        end
+
+        sock:close()
+    }
+--- tcp_listen: 7658
+--- tcp_shutdown: 1
+--- tcp_query eval: "send data after read side closed"
+--- tcp_query_len: 32
+--- stream_response
+--- no_error_log
+[error]
+
+
+
+=== TEST 64: receiveany with limited, max <= 0
+--- stream_server_config
+    content_by_lua_block {
+        local sock = ngx.socket.tcp()
+        sock:settimeout(500)
+        assert(sock:connect("127.0.0.1", $TEST_NGINX_SERVER_PORT))
+
+        local function receiveany_say_err(...)
+            local ok, err = pcall(sock.receiveany, sock, ...)
+            if not ok then
+                ngx.say(err)
+            end
+        end
+
+
+        receiveany_say_err(0)
+        receiveany_say_err(-1)
+        receiveany_say_err()
+        receiveany_say_err(nil)
+    }
+--- stream_response
+bad argument #2 to '?' (bad max argument)
+bad argument #2 to '?' (bad max argument)
+expecting 2 arguments (including the object), but got 1
+bad argument #2 to '?' (bad max argument)
+--- no_error_log
+[error]
+
+
+
+=== TEST 65: receiveany with limited, max is larger than data
+--- config
+    location = /foo {
+        server_tokens off;
+
+        content_by_lua_block {
+            local resp = 'hello world'
+            local length = #resp
+
+            ngx.header['Content-Length'] = length
+            ngx.flush(true)
+            ngx.sleep(0.01)
+
+            ngx.print(resp)
+        }
+    }
+--- stream_server_config
+    content_by_lua_block {
+        local sock = ngx.socket.tcp()
+        sock:settimeout(500)
+
+        assert(sock:connect("127.0.0.1", $TEST_NGINX_SERVER_PORT))
+        local req = {
+            'GET /foo HTTP/1.0\r\n',
+            'Host: localhost\r\n',
+            'Connection: close\r\n\r\n',
+        }
+        local ok, err = sock:send(req)
+        if not ok then
+            ngx.say("send request failed: ", err)
+            return
+        end
+
+        while true do
+            local data, err, _ = sock:receive('*l')
+            if err then
+                ngx.say('unexpected error occurs when receiving http head: ', err)
+                return
+            end
+
+            if #data == 0 then -- read last line of head
+                break
+            end
+        end
+
+        local data, err = sock:receiveany(128)
+        if err then
+            if err ~= 'closed' then
+                ngx.say('unexpected err: ', err)
+            end
+        else
+            ngx.say(data)
+        end
+
+        sock:close()
+    }
+--- stream_response
+hello world
+--- no_error_log
+[error]
+--- error_log
+lua tcp socket calling receiveany() method to read at most 128 bytes
+
+
+
+=== TEST 66: receiveany with limited, max is smaller than data
+--- config
+    location = /foo {
+        server_tokens off;
+
+        content_by_lua_block {
+            local resp = 'hello world'
+            local length = #resp
+
+            ngx.header['Content-Length'] = length
+            ngx.flush(true)
+            ngx.sleep(0.01)
+
+            ngx.print(resp)
+        }
+    }
+--- stream_server_config
+    content_by_lua_block {
+        local sock = ngx.socket.tcp()
+        sock:settimeout(500)
+
+        assert(sock:connect("127.0.0.1", $TEST_NGINX_SERVER_PORT))
+        local req = {
+            'GET /foo HTTP/1.0\r\n',
+            'Host: localhost\r\n',
+            'Connection: close\r\n\r\n',
+        }
+        local ok, err = sock:send(req)
+        if not ok then
+            ngx.say("send request failed: ", err)
+            return
+        end
+
+        while true do
+            local data, err, _ = sock:receive('*l')
+            if err then
+                ngx.say('unexpected error occurs when receiving http head: ', err)
+                return
+            end
+
+            if #data == 0 then -- read last line of head
+                break
+            end
+        end
+
+        while true do
+            local data, err = sock:receiveany(7)
+            if err then
+                if err ~= 'closed' then
+                    ngx.say('unexpected err: ', err)
+                end
+                break
+
+            else
+                ngx.say(data)
+            end
+        end
+
+        sock:close()
+    }
+--- stream_response
+hello w
+orld
+--- no_error_log
+[error]
+--- error_log
+lua tcp socket calling receiveany() method to read at most 7 bytes
