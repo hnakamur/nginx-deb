@@ -1,3 +1,9 @@
+nginx (1.17.3+mod.2-1ppa2~bionic) bionic; urgency=medium
+
+  * Add nginx-1.17.3-cache_manager.patch
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 04 Sep 2019 15:57:41 +0900
+
 nginx (1.17.3+mod.2-1ppa1~bionic) bionic; urgency=medium
 
   * Add module sources
