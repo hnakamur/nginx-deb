@@ -1,3 +1,9 @@
+nginx (1.17.3+mod.2-1ppa3~bionic) bionic; urgency=medium
+
+  * Fix debian/patches/nginx-1.17.3-cache_manager.patch
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 04 Sep 2019 17:56:40 +0900
+
 nginx (1.17.3+mod.2-1ppa2~bionic) bionic; urgency=medium
 
   * Add nginx-1.17.3-cache_manager.patch
