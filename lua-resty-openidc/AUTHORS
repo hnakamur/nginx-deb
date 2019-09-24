@@ -1,0 +1,34 @@
+The primary authors of lua-resty-openidc are:
+
+	Hans Zandbelt <https://github.com/zandbelt>
+	Stefan Bodewig <https://github.com/bodewig>
+
+Thanks to the following people for contributing to lua-resty-openidc by
+reporting bugs, providing fixes, suggesting useful features or other:
+
+	Chris Johnson <https://github.com/therealcmj>
+	David Birdsong <https://github.com/davidbirdsong>
+	Steffen Hanikel <https://github.com/hanikesn>
+	Aapo Talvensaari <https://github.com/bungle>
+	Daniel Holth <https://github.com/dholth>
+	Ilya Shipitsin <https://github.com/chipitsine>
+	Chris Lunsford <https://github.com/cllunsford>
+	Iván Perdomo <https://github.com/iperdomo>
+	Robert <https://github.com/p0pr0ck5>
+	Guillaume Destuynder (kang) <https://www.insecure.ws/>
+	gonzalad <https://github.com/gonzalad>
+	Gene Wood <https://github.com/gene1wood>
+	Derek Chen <https://github.com/dereknex>
+	Peter <https://github.com/pgp44>
+	Josh Barr <https://github.com/JoshBarr>
+	Kamil Zabielski <https://github.com/kamilzabielski>
+	Venkatesh Marepalli <https://github.com/venkatmarepalli>
+	Grégoire Rolland <https://github.com/grrolland>
+	Patrice Amiel <https://github.com/pamiel>
+	Thomas Leplus <https://github.com/thomasleplus>
+	Donghang Lin <https://github.com/dhlin>
+	Arcadiy Ivanov <https://github.com/arcivanov>
+	Dmitriy Blok <https://github.com/dmitriyblok>
+	Oleander Reis <https://github.com/oleeander>
+	Michael Johansen <https://github.com/mijohansen>
+	Joshua Erney <https://github.com/JoshTheGoldfish>

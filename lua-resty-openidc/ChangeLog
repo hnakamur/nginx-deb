@@ -1,0 +1,333 @@
+07/15/2019
+- release 1.7.2
+
+07/09/2019
+- added unauth_action='deny' to reject unauthenticated requests rather
+  than start the authorization code grant flow; see #271; based on
+  suggested change by @nmaniwa
+- read introspection_endpoint from discovery document when present; see #255
+
+05/01/2019
+- performance enhancement by caching the result of ngx.req.get_headers
+  during the authenticate call.
+- added another lifecycle hook that is called when the session is
+  regenerated after a token refresh
+
+04/25/2019
+- improved error handling when starting session; see #264; thanks @vershnik
+
+03/18/2019
+- fixed accidental use of global variable err in revoke_tokens_on_logout;
+  see #253, #254; thanks @arcivanov
+- fixed a few additional cases of using global symbols detected by lualint
+
+03/15/2019
+- allow to tap into authentication workflow by providing an option
+  to specify lifecycle hooks via `opts.lifecycle`
+
+03/07/2019
+- made the checks for certain HTTP headers handle the case where
+  multiple headers exist; thanks @ci42
+
+03/06/2019
+- don't overwrite opts.discovery when an error occurs calling the
+  discovery endpoint; see #250
+
+02/18/2019
+- release 1.7.1
+
+12/17/2018
+- don't select one of the jwt token auth methods if the required key
+  material is not present; see #238
+
+11/13/2018
+- fixed a bad error return value in certain setups of
+  bearer_jwt_verify; see #234; thanks @JoshTheGoldfish
+
+11/09/2018
+- added support for the client_secret_jwt authentication method; see #229
+
+11/08/2018
+- added support for the private_key_jwt authentication method; see
+  #217; thanks @pamiel
+
+11/06/2018
+- make sure opts.discovery is resolved when "iss" is returned as part of the
+  authorization response; see #224 ; thanks @mijohansen
+
+11/03/2018
+- we no longer verify the issuer field of the discovery document points
+  to a parent URI of the discovery document's location; see #219
+
+10/19/2018
+- release 1.7.0
+
+10/18/2018
+- add token revocation support on logout (opts.revoke_tokens_on_logout)
+
+10/16/2018
+- lua-resty-openidc now creates a new session whenever the token(s)
+  are refreshed, trying to soften the impact when multiple requests
+  race to refresh the token at the same time. See #190 and #209
+
+10/11/2018
+- url-encode client_id/client_secret; closes #204 and #205; thanks @grrolland
+  https://tools.ietf.org/html/rfc6749#section-2.3.1
+- make call_userinfo_endpoint a public function; closes #207; thanks @thomasleplus
+
+10/8/2018
+- make call_token_endpoint a public function
+
+10/04/2018
+- use session.start instead of session.open; see #174; thanks @thomasleplus
+
+09/23/2018
+- added redirect_uri option that specifies an absolute URI for the
+  redirect URI. The existing redirect_uri_path option has been
+  deprecated in favor of the new option.
+
+09/17/2018
+- added an optional "request decorator" option that can be used to augment
+  the HTTP requests when lua-resty-openidc talks to the discovery,
+  token or jwks endpoints.
+- add support for Windows Integrated Authentication (WIA) with Active Directory
+  Federation Services (AD FS) on Windows Server 2016 (or newer)
+
+09/15/2018
+- add an option to disable nonce parameter for broken OpenID Connect providers
+
+09/14/2018
+- deprecate `opt.secret` in favor of `opts.public_key` and `opts.symmetric_key`; thanks @dholth
+
+09/06/2018
+- bypass introspection cache on demand with introspection_cache_ignore; thanks @dmitriyblok
+
+07/18/2018
+- extract log function and log level constant to the module level to allow customization
+
+07/05/2018
+- add customized expiration time option for discovery and jwk cache; thanks @dhlin
+- release 1.6.1
+
+06/26/2018
+- signature verification failed for RSA keys of a length different
+  from 2048 bit when the JWK used a specific format; see #170
+
+06/19/2018
+- added post_logout_redirect_uri parameter that can be used to set
+  the target after logging out of the OpenID Connect Provider ; see #168; thanks @thomasleplus
+
+06/07/2018
+- refer to updated lua-resty-jwt that supports OpenSSL 1.1.x ; see: #162; thanks @cdbattags
+- release 1.6.0
+
+05/29/2018
+- when refreshing tokens the id token is now refreshed as well (if
+  included inside the token response); see #158; thanks @grrolland
+
+05/24/2018
+- add Cache-Control no-cache header to authorization requests to avoid replays of state/nonce;
+  see zmartzone/mod_auth_openidc#321
+
+04/28/2018
+- release 1.5.4
+
+04/27/2018
+- disabled support for "none" alg tokens introduced with 1.5.2 by default.
+  If you want to enable it, you will now have to explicitly set the accept_none_alg
+  option to true.
+- id tokens using a signature algorithm not announced by the discovery
+  endpoint are now rejected.
+- you can now specify which signing algorithm you expect a bearer token to
+  use in order to avoid being tricked into accepting a rogue token signed
+  with a symmetric key when expecting an asymmetric cypher.
+- added an option to reject tokens signed by an algorithm not supported by lua-resty-jwt
+
+04/19/2018
+- added support for passing bearer token as cookie
+- added support introspection interval
+- added support for passing request cookies on introspection call
+- added passing introspection endpoint authorization method into openidc_call_token_endpoint call 
+
+04/11/2018
+- bugfix rare case where OP public key is starting with 0x80 byte, and thus resulting in
+  systematic token signature verification error with message "too long"
+
+02/08/2018
+- added functions to manually request the invalidation of the caches; see #142
+
+02/06/2018
+- added more logging that may help debugging configuration; see #140; thanks @pamiel
+
+01/30/2018
+- add support for configuring an outgoing proxy; see #139
+- release 1.5.3
+
+01/28/2018
+- correct iat checks: make sure it is not in the future rather than being too old; see #137
+
+01/06/2018
+- add support for Forwarded header; see #128
+- add debug info about reasons for re-authentication; see #130
+
+12/30/2017
+- use X-Forwarded-Host header when building the redirect URI if present. See #128
+
+12/14/2017
+- release 1.5.2
+
+12/13/2017
+- ensure we don't log nil if initial JWT verification fails
+
+12/08/2017
+- avoid putting a negative TTL into the cache; closes #127; thanks @ChristianCiach and @gwkunze
+
+12/04/2017
+- allow setting ssl_verify to "false" on userinfo endpoint call; closes #125; thanks @hugomcfonseca
+
+11/22/2017
+- avoid that lua-resty-jwt is a dependency in an OAuth 2.0 RS remote validation setup; closes #124
+- correct README.md around lua-resty-jwt requirement
+- make handling of missing `jwks_uri` more robust
+
+11/17/2017
+- added support for verifying HMAC signatures on id tokens - it has
+  already been supported for access tokens before
+- fix handling of signatures using unsupported algorithms on id
+  tokens. Such signatures will cause a warning to be logged but the id
+  tokens are considered valid. access tokens signed with an
+  unsupported algorithm are considered invalid. This is the same
+  behavior as has been present in 1.4.1. See #122
+- release 1.5.1
+
+11/15/2017
+- fix return of access_token when renew_access_token_on_expiry = false ; see #121
+
+11/14/2017
+- release 1.5.0
+
+11/13/2017
+- provided explicit control over whether the access token gets renewed
+  on expiry. If refresh fails, the user is redirected to the OP's
+  authorization endpoint.
+
+11/06/2017
+- added support for configurable network timeouts
+
+11/01/2017
+- now uses cjson.safe when decoding JSON received from external sources for improved error handling
+
+10/30/2017
+- fixed case where openidc.introspect would accept invalid tokens if they contained an exp claim
+
+10/28/2017
+- add id_token_hint when calling end_session_endpoint
+
+10/27/2017
+- ensured id_token_hint uses the correct query string separator when
+  opts.redirect_after_logout_uri is used together with redirect_after_logout_with_id_token_hint
+
+10/24/2017
+- verify RSA signatures on JWTs (id_token/access_token); thanks @venkatmarepalli
+- rely on lua-resty-jwt validators for id_token and/or JWT access_token validation
+- unify JWT access token and OIDC id_token validation
+- added many more tests
+
+10/11/2017
+- add testbed / unit tests; thanks @bodewig
+
+10/05/2017
+- check that sub is always present in the id_token
+- check that sub returned from the userinfo endpoint matches sub in the id_token
+- allow for id_tokens with alg set to "none" and no signature part
+- add more logs
+
+10/03/2017
+- ignore any configured token_endpoint_auth_method that the library doesn't support (and log an error) and
+  fall back to the first token_endpoint_auth_methods_supported the library can use; thanks @bodewig
+- release 1.4.1
+
+09/30/2017
+- add `session_contents` option to configure which information/tokens get stored
+  in the session in order to minimize the size of the session data; thanks @hanikesn
+
+09/19/2017
+- fix sample configs/spelling in README.md; thanks @kamilzabielski
+
+08/29/2017
+- add support for the display request parameter; thanks @JoshBarr
+
+08/01/2017
+- return HTTP 400 when Host header is not set; closes #68
+
+08/01/2017
+- apply iat_slack also to openidc.jwt_verify; thanks @nielsole
+- properly deal with ngx.redirect's return value; thanks @bodewig
+- fix access token cache ttl; closes #76
+- support RFC7662-style token introspection by default
+- release 1.4.0
+
+07/03/2017
+- adding option to add id_token_hint to op logout request; thanks @pgp44
+
+07/01/2017
+- fix `openidc_call_token_endpoint` when token validation fails; thanks @dereknex
+
+06/01/2017
+- make sure openidc_discover is called before refreshing the access token; thanks @gonzalad
+- add `force_reauthorize` option that forces the auth flow to be executed; thanks @bodewig
+
+05/31/2017
+- allow optional claim specs when verifying JWT access tokens; thanks @bodewig
+- return the raw bearer token from `openidc.bearer_jwt_verify`; thanks @bodewig
+- release 1.3.2
+
+05/23/2017
+- add support for passing session options to resty.session; closes #56; thanks @gene1wood
+
+05/18/2017
+- add unauth_action "pass" option to .authenticate(); closes #53; thanks @dholth
+
+05/14/2017
+- renew access token on expiration with refresh token grant; thanks @gonzalad
+- use ngx.time instead of os.time, everywhere now
+
+04/29/2017
+- support for prompt parameter during authorization, returning session data, and logout url override thanks @gdestuynder
+
+03/27/2017
+- avoid crashes when no session is found upon callback to the redirect_uri; may address #43
+- release 1.3.1
+
+02/28/2017
+- add dist.ini for OpenResty OPM; should address #38
+
+02/13/2017
+- support RFC 7662 for token introspection: use exp for TTL cache control closes #35; thanks @iperdomo
+- add @iperdomo to AUTHORS
+
+02/09/2017
+- change rockspec so all newer dependencies/Lua versions are allowed instead of a single static version
+
+02/09/2017
+- merge $24; thanks @hanikesn :
+  - feature JWT validation through discovery
+  - allow user-mode verification of tokens via separate function
+  - improved handling of invalid JWT Tokens
+- release 1.3.0
+
+11/18/2016
+- make the compact serialized form of the id_token available in the session data in enc_id_token; #closes #28
+- release 1.2.3
+
+11/17/2016
+- validate discovery url against issuer field; closes #25
+- release 1.2.2
+
+10/12/2016
+- document that we can luarocks for installation
+
+8/31/2016
+- add ChangeLog
+- change rockspec so it installs as resty.openidc; closes #20; thanks @dholth
+- release 1.2.1-0
