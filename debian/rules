@@ -51,6 +51,7 @@ config.env.%:
 	cp -Pa $(CURDIR)/redis2-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/set-misc-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/srcache-nginx-module $(BUILDDIR_$*)/
+	cp -Pa $(CURDIR)/nginx-sxg-module $(BUILDDIR_$*)/
 	touch $@
 
 config.status.nginx: config.env.nginx
@@ -116,6 +117,7 @@ config.status.nginx: config.env.nginx
 		--add-dynamic-module=./redis2-nginx-module \
 		--add-dynamic-module=./set-misc-nginx-module \
 		--add-dynamic-module=./srcache-nginx-module \
+		--add-dynamic-module=./nginx-sxg-module \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)"
 	touch $@
@@ -183,6 +185,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--add-dynamic-module=./redis2-nginx-module \
 		--add-dynamic-module=./set-misc-nginx-module \
 		--add-dynamic-module=./srcache-nginx-module \
+		--add-dynamic-module=./nginx-sxg-module \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)" \
 		--with-debug
