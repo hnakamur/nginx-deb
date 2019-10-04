@@ -1,4 +1,4 @@
-nginx (1.17.4+mod.2-1ppa1~bionic) bionic; urgency=medium
+nginx (1.17.4+mod.2-1ppa1~testing1~bionic) bionic; urgency=medium
 
   * Add ngx-svg-module and also update modules
   * Add ngx-sxg-module to download modules script
