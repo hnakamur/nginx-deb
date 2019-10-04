@@ -8,3 +8,4 @@ nginx-1.11.2-ssl_cert_cb_yield.patch
 ngx_upstream_jdomain-dynamic_module.patch
 fix-luajit-ffi-detection.patch
 nginx-1.17.3-cache_manager.patch
+dont_require_pcre_version_for_pcre_dynamic_link.patch

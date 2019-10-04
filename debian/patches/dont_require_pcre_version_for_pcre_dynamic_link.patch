@@ -1,0 +1,42 @@
+Description: Do not require pcre_version if dynamic link pcre
+ Do not require pcre_version since we link pcre dynamically.
+ .
+ nginx (1.17.4+mod.2-1ppa1~bionic) bionic; urgency=medium
+ .
+Author: Hiroaki Nakamura <hnakamur@gmail.com>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: https://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: 2019-10-04
+
+--- nginx-1.17.4+mod.2.orig/lua-nginx-module/config
++++ nginx-1.17.4+mod.2/lua-nginx-module/config
+@@ -489,7 +489,7 @@ fi
+ 
+ # ----------------------------------------
+ 
+-if [ $USE_PCRE = YES -o $PCRE != NONE ] && [ $PCRE != NO -a $PCRE != YES ]; then
++if [ $USE_PCRE = YES -a $PCRE != NONE ]; then
+     # force pcre_version symbol to be required when PCRE is statically linked
+     case "$NGX_PLATFORM" in
+         Darwin:*)
+--- nginx-1.17.4+mod.2.orig/stream-lua-nginx-module/config
++++ nginx-1.17.4+mod.2/stream-lua-nginx-module/config
+@@ -378,7 +378,7 @@ ngx_feature_test='struct sigaction act;
+ 
+ # ----------------------------------------
+ 
+-if [ $USE_PCRE = YES -o $PCRE != NONE ] && [ $PCRE != NO -a $PCRE != YES ]; then
++if [ $USE_PCRE = YES -a $PCRE != NONE ]; then
+     # force pcre_version symbol to be required when PCRE is statically linked
+     case "$NGX_PLATFORM" in
+         Darwin:*)
