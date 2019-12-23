@@ -16,7 +16,8 @@ Build-Depends: debhelper (>= 9~),
                libgeoip-dev,
                libmhash-dev,
                libmaxminddb-dev,
-               libsxg-dev
+               libsxg-dev,
+               libbrotli-dev
 Depends: luajit,
          libmhash2
 Recommends: libgeoip1,

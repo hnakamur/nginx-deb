@@ -52,6 +52,7 @@ config.env.%:
 	cp -Pa $(CURDIR)/set-misc-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/srcache-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/nginx-sxg-module $(BUILDDIR_$*)/
+	cp -Pa $(CURDIR)/ngx_brotli $(BUILDDIR_$*)/
 	touch $@
 
 config.status.nginx: config.env.nginx
@@ -102,6 +103,7 @@ config.status.nginx: config.env.nginx
 		--with-ipv6 \
 		--add-module=./lua-nginx-module \
 		--add-module=./ngx_devel_kit \
+		--add-module=./ngx_brotli \
 		--add-dynamic-module=./echo-nginx-module \
 		--add-dynamic-module=./headers-more-nginx-module \
 		--add-dynamic-module=./lua-upstream-nginx-module \
@@ -170,6 +172,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--with-ipv6 \
 		--add-module=./lua-nginx-module \
 		--add-module=./ngx_devel_kit \
+		--add-module=./ngx_brotli \
 		--add-dynamic-module=./echo-nginx-module \
 		--add-dynamic-module=./headers-more-nginx-module \
 		--add-dynamic-module=./lua-upstream-nginx-module \
