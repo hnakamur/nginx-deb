@@ -1,3 +1,58 @@
+nginx (1.17.9+mod.1-1ppa1~bionic) bionic; urgency=medium
+
+  * New upstream version 1.17.9
+  * Add module sources
+  * openresty/echo-nginx-module a47a9817660db383a996f4683f2375a8735140a5
+  * openresty/headers-more-nginx-module 743a4bb1a253325d17a4f4ce8ee61ea0d8e0cc19
+  * openresty/lua-nginx-module 4c4bb0fcbd12fc79e5adc5fad5d454dc03be875f
+  * openresty/lua-upstream-nginx-module 2f012de74710da7750ed56ed3cb53ded2d62fc12
+  * openresty/memc-nginx-module dfbed06016b73e3e84cd961735a352e4f5477865
+  * openresty/redis2-nginx-module cc146f37440f798ffc41c3cb792eca3c60bc62d3
+  * openresty/set-misc-nginx-module 5cc144d7b3387f4bf90ad92525985c835255debd
+  * openresty/srcache-nginx-module 824f691819a587910b72c19c6374c79d61630594
+  * openresty/stream-lua-nginx-module d987a0cb2f38eae7730be60bd2ddb7dcfd2335b4
+  * openresty/lua-resty-balancer 3807cd5501f3702f0d24bdba465d98e32d29c219
+  * openresty/lua-resty-core bdcc16bbd157dc70a0944f66f622899092f49a41
+  * openresty/lua-resty-dns cddf8cd81cda5ff94e5aab26bb622f0384d0324a
+  * openresty/lua-resty-lock 987b0e9c6748e2af0f4300309ab8c94df5be9692
+  * openresty/lua-resty-limit-traffic 2c5a23196360d533883cbfa03b3543fc7dfba4d5
+  * openresty/lua-resty-lrucache b2035269ac353444ac65af3969692bcae4fc1605
+  * openresty/lua-resty-memcached fe57a4ad265deeaa3a7ce57cc77c2c074f2bd48c
+  * openresty/lua-resty-memcached-shdict 32374a1a286506cf4cf9c18a8c1bf01bd1554c21
+  * openresty/lua-resty-mysql 356da402ac76703aebb475eb2568f81960a8d2cd
+  * openresty/lua-resty-redis 057093e8f8c33974c3acdc941404158cb6a2c2a2
+  * openresty/lua-resty-shdict-simple 4d27246b16f86de49e6da8b8a6136cddfe7550b4
+  * openresty/lua-resty-shell ea23b3d6d4a4b3c475a3e0b530469343694e775c
+  * openresty/lua-resty-signal 6b1bf606563c18eb4a25a7f36e9e2337af9217c0
+  * openresty/lua-resty-string 9a543f8531241745f8814e8e02475351042774ec
+  * openresty/lua-resty-upload 8f4f0f8cb1edc97fb39c16d256968e5b1a18f9ea
+  * openresty/lua-resty-upstream-healthcheck 26bad5df8131d93c6f06011cce82b80929ad8340
+  * openresty/lua-resty-websocket 739183cd638eb069af2686682a3810c28d822e82
+  * cloudflare/lua-resty-cookie c54865bdcfc3c42cbd6dbbceb654ba73871d07f6
+  * zmartzone/lua-resty-openidc 7d3cbe555f53a1a1378cdd9efdd4b7a6cda06d9f
+  * bungle/lua-resty-session 0a82227cf079f6c34688c33d542306c59f04c976
+  * cdbattags/lua-resty-jwt 425261aa15ea06a9dfbc6ebc57996348d71cbf14
+  * jkeys089/lua-resty-hmac 5f60e1a28b9fdd7939f0e1738171f0ca5fe22978
+  * pintsized/lua-resty-http 41b2e822ce5c19f64e293b7dc2d5d244e511615d
+  * FRiCKLE/ngx_cache_purge 331fe43e8d9a3d1fa5e0c9fec7d3201d431a9177
+  * arut/nginx-rtmp-module 791b6136f02bc9613daf178723ac09f4df5a3bbf
+  * arut/nginx-dav-ext-module f5e30888a256136d9c550bf1ada77d6ea78a48af
+  * bpaquet/ngx_http_enhanced_memcached_module b58a4500db3c4ee274be54a18abc767219dcfd36
+  * replay/ngx_http_secure_download f379a1acf2a76f63431a12fa483d9e22e718400b
+  * simplresty/ngx_devel_kit a22dade76c838e5f377d58d007f65d35b5ce1df3
+  * wandenberg/nginx-sorted-querystring-module e5bbded07fd67e2977edc2bc145c45a7b3fc4d26
+  * pandax381/ngx_http_pipelog_module 68b5f4b6553e1588c42d2cf021aa8b5f7bf268fb
+  * nginx-shib/nginx-http-shibboleth cb0e0d7f7a587f3d1b4c2e5d99e9e561bee089e5
+  * hnakamur/nginx-lua-saml-service-provider 90b79233bfc28dd48ad8f2d38a8d547d182f1a62
+  * hnakamur/nginx-lua-session 00cfbbf018c6b8b74614e6fe3dc350b29a5c6ae8
+  * hamishforbes/lua-ffi-zlib 1fb69ca505444097c82d2b72e87904f3ed923ae9
+  * Phrogz/SLAXML 108970cbcb4370365e79c619b0f06099c9ec9754
+  * leev/ngx_http_geoip2_module 1cabd8a1f68ea3998f94e9f3504431970f848fbf
+  * e98cuenc/ngx_upstream_jdomain a5a8e07f76cbe82b0792f8e3091e011c0c12f230
+  * google/nginx-sxg-module 9421d6ce6720be4c57f0c4251c6c164a68ec4a09
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 04 Mar 2020 01:02:41 +0900
+
 nginx (1.17.8+mod.1-1ppa1~bionic) bionic; urgency=medium
 
   * New upstream version 1.17.8
