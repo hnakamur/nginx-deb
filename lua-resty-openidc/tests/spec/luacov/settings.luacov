@@ -1,5 +1,0 @@
-modules = {
-  ["resty.openidc"] = "/usr/local/openresty/lualib/resty/openidc.lua"
-}
-statsfile = "/spec/luacov/luacov.stats.out"
-reportfile = "/spec/luacov/luacov.report.out"
