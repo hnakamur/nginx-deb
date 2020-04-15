@@ -18,9 +18,9 @@ Forwarded: <no|not-needed|url proving that it has been forwarded>
 Reviewed-By: <name and email of someone who approved the patch>
 Last-Update: 2019-10-04
 
---- nginx-1.17.4+mod.2.orig/lua-nginx-module/config
-+++ nginx-1.17.4+mod.2/lua-nginx-module/config
-@@ -489,7 +489,7 @@ fi
+--- a/lua-nginx-module/config
++++ b/lua-nginx-module/config
+@@ -495,7 +495,7 @@
  
  # ----------------------------------------
  
@@ -29,9 +29,9 @@ Last-Update: 2019-10-04
      # force pcre_version symbol to be required when PCRE is statically linked
      case "$NGX_PLATFORM" in
          Darwin:*)
---- nginx-1.17.4+mod.2.orig/stream-lua-nginx-module/config
-+++ nginx-1.17.4+mod.2/stream-lua-nginx-module/config
-@@ -378,7 +378,7 @@ ngx_feature_test='struct sigaction act;
+--- a/stream-lua-nginx-module/config
++++ b/stream-lua-nginx-module/config
+@@ -404,7 +404,7 @@
  
  # ----------------------------------------
  
