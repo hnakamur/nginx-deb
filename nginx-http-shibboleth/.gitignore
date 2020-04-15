@@ -1,0 +1,4 @@
+*.swp
+t/servroot
+nginx-*
+perl5/
