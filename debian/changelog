@@ -1,3 +1,9 @@
+nginx (1.17.10+mod.2-1ppa1~focal) focal; urgency=medium
+
+  * Port to Ubuntu 20.04 LTS. 
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Fri, 24 Apr 2020 21:43:59 +0900
+
 nginx (1.17.10+mod.2-1ppa1~bionic) bionic; urgency=medium
 
   * Update modules
