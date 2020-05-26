@@ -372,9 +372,9 @@ everything is awesome~ :p
             jwt:set_alg_whitelist({ RS256 = 1 })
             jwt:set_x5u_content_retriever(get_public_key)
 
-            local jwt_token = "eyJ4NXUiOiJodHRwczpcL1wvdGVzdFwvdXJsIiwiYWxnIjoiUlMyNTYiLCJ0eXAiOiJKV1QifQ."
+            local jwt_token = "eyJ4NXUiOiJodHRwczovL3Rlc3QvdXJsIiwiYWxnIjoiUlMyNTYiLCJ0eXAiOiJKV1QifQ."
                              .."eyJmb28iOiJiYXIiLCJleHAiOjk5OTk5OTk5OTl9."
-                             .."WOPIUGsi6bITvoqdpIlvQa86QLUKKuhs-LDn-7Pn4Q7RB3JJqICZdGLk_jW8rUhA7uUxepPepHoG1xSX19qAt-96Ult91gIuLNXjf58pJXG-iXcmYUKHgZ3jEk5udN90sKeuTvWcn7aNAbMFZMz686J_GRGC4FubKrDgzXfFwlXpN7klSCDxgh73O4GmG8nJPRGPp3Aud5hAxoMRwA3gJ86IbL9fEYk_v9l0Rc0zA7A2dL7vRa17Gm9EDLXQsUU1eiIpZuahRACPnCu9v9UX4z7jSWv5VKmJ2kjACOPwIZ3fpBxnKZ3Z-WVKLVgH-hhCRNFYRsxY0xODNjw-4U0mWw"
+                             .."i1zf3cgIHPb7sod4zByDTexOjMixOYrcdO85BXP7MRwevFIfXy-lMpLImY1XHrmBH9v4zeoEClbV0GEXcuRovKW_pef600F6ooKYaaINsjyDsrLZ9rBU9TntzeIcnDUs7N2Ph1RvFfipvIrzQcij8XvignxvfgKzsokBlY6_yOJ7PRVnY3puLGPMiCdpbODhGgYlOi-En2BUtoMOZHkROOSuIUBm6rHyfDE_R5r5MDZQSTSIC1JgrTHbF3yZZKy7clYKO6K7naPYxO9JtgF-RfRYxoFWna1EfGMZM6TWIoFXq6kMIPspkR7QeL6GqMkrMC8KJL3SSzPVJKi1TiYYAg"
             
             local jwt_obj = jwt:verify(nil, jwt_token)
             ngx.say(jwt_obj["verified"])
@@ -638,13 +638,13 @@ test
             jwt:set_alg_whitelist({ RS256 = 1 })
             jwt:set_x5u_content_retriever(get_public_key)
 
-             local jwt_token = "eyJ4NWMiOlsiTUlJRVB6Q0NBeWVnQXdJQkFnSVVmNlREQ0xWK25tT1ZOTnBUc2NicjBrVEQwdnd3RFFZSktvWklodmNOQVFFTEJRQXdkekVMTUFrR0ExVUVCaE1DVlZNeEVUQVBCZ05WQkFnVENFNWxkeUJaYjNKck1SRXdEd1lEVlFRSEV3aE9aWGNnV1c5eWF6RU1NQW9HQTFVRUNoTURTbGRVTVJJd0VBWURWUVFMRXdsWFQxSk1SRmRKUkVVeElEQWVCZ05WQkFNVEYyOXdaVzV5WlhOMGVTMXFkM1F0ZEdWemRDMWpaWEowTUI0WERURTVNRFF3TlRJek1EZ3dNRm9YRFRJ"
-             .. "d01EUXdOREl6TURnd01Gb3dlakVMTUFrR0ExVUVCaE1DVlZNeEV6QVJCZ05WQkFnVENsZGhjMmhwYm1kMGIyNHhFREFPQmdOVkJBY1RCMU5sWVhSMGJHVXhEREFLQmdOVkJBb1RBMHBYVkRFV01CUUdBMVVFQ3hNTlRtOTBJRmR2Y214a2QybGtaVEVlTUJ3R0ExVUVBeE1WZEdWemRHbHVaeTVxZDNRdWQyOXliR1IzYVdSbE1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBcU5CNzRJRFpPRkJ3SEJCK3o4dDR6NDVPMVBOQVpqXC9DSklLT1hKMDVuaVFDb"
-             .. "jBpdUxrNUpHNmY0a2RyRFRjNVJiTHJ0bHRhZ3ZIbnNQR0ZXVjQzZ1RwNVF2WjJYT2FrUFU0MDE4RHQrZndDTm5UOE9zZllhaUdqdEJ2VWhTOE9KekxteXRNYmQ1eGl0Uzd2anVEQlQwb1IzK2o2SlpRVmZ6ekFhS2Q1T0RJN2ltWUJ5ejJRMytPWFBPQkUxdHNhdDhPVU9TeXo3anBLcVwvUkpYK2RnOHFGSnBaUnBhYnJMeDhFQXBDMTFlck11M2Zyc3pGOVJWdXBSczAzeFVaWGxyV0kwT21Md3g3UkJyelVXdDdPOXdzczVucGJFRFUwY1hodHVRVHNmc3dJVWJ6a1NxRU84aTJIRGUxVkFr"
-             .. "Tm5hdGxNdzk4Q2VrZ3k3SVowTzJVcFJlK3dJREFRQUJvNEdcL01JRzhNQTRHQTFVZER3RUJcL3dRRUF3SUZvREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSUt3WUJCUVVIQXdJd0RBWURWUjBUQVFIXC9CQUl3QURBZEJnTlZIUTRFRmdRVVNMSllRRUlZQm54R2JoQm9oZGFlMzluZUs3a3dId1lEVlIwakJCZ3dGb0FVcXhTMytBZEVITlBIVHd2b2dUV1NTXC9GaVlBMHdQUVlEVlIwUkJEWXdOSUlWZEdWemRHbHVaeTVxZDNRdWQyOXliR1IzYVdSbGdodHNiMk5oYkM1MFpYTjBh"
-             .. "VzVuTG1wM2RDNTNiM0pzWkhkcFpHVXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBSVMydzlvNFA2bkQ3VCt6ZlM1QVhlQVJXWENDZ1pReFhNbzhHT0JlVjMxS3U0TzcydmRNRmtSRnE3SFpBRFBYak9nWFBySFMrbndpVkxKMnZ5UGRwNU1ZME0wSGoxYmJtSEgxbFZWUXVwb2lIdCs0a3dJZUVjUENOTW54WUpoY1wvbkQrVnVkUFBaenpGQ1l5dFlmZ0R4Sk9STG9lalJzWGRFWStLOUxsNkJ2bDdUSFB2SjZ5UDNHaFd1UmNCXC80RVVSYXpSZWwxNUhTWFIxNXJPdWVrd20xNkZYcTJWMERsb" 
-             .. "kNlK0lFek5ZR2hPTG9FaVowNjBGY2NIa2N1QWp6Zk8yQkp4SGZzRVNSOG1uN1dNRmx4MUxOeVlDRk9NMzZWdlwvUDFnVFwvbzZXN3d4M1FCQzBMN0hvSVRTQ3FBaUVyQmI5bXN3dFVtWTVVb29cL21MRk1kWUpPZms9Il0sImFsZyI6IlJTMjU2IiwidHlwIjoiSldUIn0.eyJmb28iOiJiYXIiLCJleHAiOjk5OTk5OTk5OTl9.I8ctJVjeQdmdEEgGIpulPgZc9bWPd9qxBCHBmz5p_QsgEoKSopNVI2WFralzrQ-J-dGIusQ35hpOl90fXXSBvdxCd_FSvtXfmSi1FpvifDOBYdp1nwoisAVqV8"
-             .. "U5G8TfX5GZqpVeda6KtsqhoPgzib1UVBu9JLmSBl3k4xtmmW6EL1ZUUz_Br0peXjj5LI9mUPgTyZFRb-gaDQ6qtso58gGoA2t0mB0fE6VXNP1MbELdkhqcDHP-ePNLsW-3EeQ5GLu38stXiEQYgCZs8X42EmfDt4FqvrLMDCrIpD8HK7Oqjl0lW4XX8OAXsCw8CBeIfj1TrovVg2iYRu7LZbiF7A"
+             local jwt_token = "eyJ4NWMiOlsiTUlJRU5UQ0NBeDJnQXdJQkFnSVVha3NvTmxjaXBQQlEwWldyMEE2TGoyUzYyR0F3RFFZSktvWklodmNOQVFFTEJRQXdkekVMTUFrR0ExVUVCaE1DVlZNeEVUQVBCZ05WQkFnVENFNWxkeUJaYjNKck1SRXdEd1lEVlFRSEV3aE9aWGNnV1c5eWF6RU1NQW9HQTFVRUNoTURTbGRVTVJJd0VBWURWUVFMRXdsWFQxSk1SRmRKUkVVeElEQWVCZ05WQkFNVEYyOXdaVzV5WlhOMGVTMXFkM1F0ZEdWemRDMWpaWEowTUI0WERUSXdNRFV4TkRFd05UUXdNRm9YRFRN"
+             .. "d01EVXhNakV3TlRRd01Gb3dlakVMTUFrR0ExVUVCaE1DVlZNeEV6QVJCZ05WQkFnVENsZGhjMmhwYm1kMGIyNHhFREFPQmdOVkJBY1RCMU5sWVhSMGJHVXhEREFLQmdOVkJBb1RBMHBYVkRFV01CUUdBMVVFQ3hNTlRtOTBJRmR2Y214a2QybGtaVEVlTUJ3R0ExVUVBeE1WZEdWemRHbHVaeTVxZDNRdWQyOXliR1IzYVdSbE1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBdGVOVERHNHVUeXRzT01LL0xoYm9TVmdoRVZlakRJU2tnemgwS1NOTjFsWjMzR"
+             .. "21YTk5McVAvdGhwbU9kNnU2SGQxUDFyUVYzbGIyTHlxYjcwNHpsM2F0WUl3aG1JTDljREJBVkpkc1dIbXFtbXlCYm1nTXhzdGh1RkdPSjJrV3hSeUlzVEQ3dXoyWEJnQ09XWWJUVWcrUGNwbGt6aFdjYUtjalNZcXIxc2FwUXBRUURDTHBpdG9jeDZ2QUtmRXExZjVIRFVpc2VCWmx4RURBUmpxbnVzTTZKRU5mQkpTb0g5cnY5aS93MGo4YmhGMUVQMHl5ZXc4aFk2aXJzSVBITEhEYmoyQkMrTk1FWlF1QS9aTGl4aEgrckpQUk5IL1dpYkZ3Tk1FWU5Fb2tMeEY4b2RoVUNIQ2pJTFdFK3B6"
+             .. "c25ub3FHUEE2NGlmNGJYTlVENjZoMHlRSURBUUFCbzRHMU1JR3lNQTRHQTFVZER3RUIvd1FFQXdJRm9EQVRCZ05WSFNVRUREQUtCZ2dyQmdFRkJRY0RBakFNQmdOVkhSTUJBZjhFQWpBQU1CMEdBMVVkRGdRV0JCUXRpUEs5NnVHZ01CNGFSZGxjSmI1dXlqV0kwREFmQmdOVkhTTUVHREFXZ0JTckZMZjRCMFFjMDhkUEMraUJOWkpMOFdKZ0RUQTlCZ05WSFJFRU5qQTBnaFYwWlhOMGFXNW5MbXAzZEM1M2IzSnNaSGRwWkdXQ0cyeHZZMkZzTG5SbGMzUnBibWN1YW5kMExuZHZjbXhrZDJs"
+             .. "a1pUQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFPUWZZV3VrUy9LMDBSLzdHSVZnMDFoakM1b1k4TnE0MHN0blRyZGlJcFBLd2NLRldoSnFBZ1JLbnE5YWVlSFNTRDYzWFMyazY3dmFYS1Ayc2ZYcjQweVl4SXpvbDlYOEw1cmRRT3ZVR2dySXZ0VlBqL3NGMFc5T1BJQkFNMWh3TEJtNmZldzQ4d25lWUl2aTFGdTBuZzdDQ2wxUkNhWFQ1S2UyR3ZWdUtwaUswVmMwLzRVaWQ1dDY3Z0NYRGM0M2lQTVk1bnR4eFZQdDdMdlZmUHRqaG03M0t0Qkcwd0gxWkhaSWFCQkVIdSs4WEhZN1hnNUFLb"
+             .. "XF4OTgzRE1UUy9ja1ozdzA3OUxMNlhiMURuL2hnMm1QOVYxOC9XODkzbWhkb1FweHhOK2lyWHFTUVNFTml1TGVUNGZpZHZZY1FzZy82OXBZbEVjZXNvUnN2ZExESUl5T0E9PSUiXSwiYWxnIjoiUlMyNTYiLCJ0eXAiOiJKV1QifQ.eyJmb28iOiJiYXIiLCJleHAiOjk5OTk5OTk5OTl9.OJpx-3C4Yyt88J2gic38eupMZa4E1pggGBmatINzgPg_AtFQdF8X19miWtvZpDIis08SvTCN2u6f9vs1M7MAtlBoENU4S3gFwu3n8zdNExzR8idioSFYXGWmU_Ow87iF4ELdY7SdYmTPW2U5xVQ1yMG"
+             .. "pK5qu9LqzEc-jT01SWfFFMkl9tDUftM525wtw6iAqSiZXOJmUGOCz4iHeef46x9huKiWQnptEjHesD3VQ5JeruRhzBFIbtkECT2y21IqtLq5KPSF1DHJJi0btMKMLMW7UmzVLDx_-3LdZqYNGhL13MSRCgHRTmpLn8EARGXlfmSNE0W4F9DBJBImBmE6I5w"
             
             local jwt_obj = jwt:verify(nil, jwt_token)
             ngx.say(jwt_obj["verified"])
@@ -658,5 +658,149 @@ GET /t
 true
 everything is awesome~ :p
 bar
+--- no_error_log
+[error]
+
+=== TEST 22: Verify valid ES256 signed jwt using a EC public key
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        content_by_lua '
+            local jwt = require "resty.jwt"
+
+            local public_key = [[
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEm9ehYHp34sZPfZoxJlotxG/LF02e
+ZPmM51hCYIL1jn50e30i8KqEL6y6wl06z6P4co0uew5CzD7JlOQlLB+Ryg==
+-----END PUBLIC KEY-----
+                ]]
+
+            jwt:set_alg_whitelist({ ES256 = 1 })
+            local jwt_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNDYxOTE0MDE3fQ.U38g80dOEKrGQG08KDRY_XWXvolBAhz6G16QZqgePFQljooqsZXw9sIyH6hXFpsAxQbupQBqgUAw6IwUqbAXzg"
+
+            local jwt_obj = jwt:verify(public_key, jwt_token)
+            ngx.say(jwt_obj["verified"])
+            ngx.say(jwt_obj["reason"])
+            ngx.say(jwt_obj["payload"]["iss"])
+        ';
+    }
+--- request
+GET /t
+--- response_body
+true
+everything is awesome~ :p
+test
+--- no_error_log
+[error]
+
+=== TEST 23: Verify valid ES512 signed jwt using a EC public key
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        content_by_lua '
+            local jwt = require "resty.jwt"
+
+            local public_key = [[
+-----BEGIN PUBLIC KEY-----
+MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQAzE6rnNYfoYsMYUsnxzVLBibikcwI
+Aq5VF6sC4BPp7t7rZS9TX7++qA8x5Ei7qymKkDFA7FGUA7E2d2RL4/hpkSYAATT6
+qxZbOj7Qt45Z8AniV91dgv5lDjka+5x4BrL69Ei0V4cRltmx5DSCECgEZZ//BBIu
+Eag64WAkW49U6jtXBUU=
+-----END PUBLIC KEY-----
+                ]]
+
+            jwt:set_alg_whitelist({ ES512 = 1 })
+            local jwt_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzUxMiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNDYxOTE0MDE3fQ.AP-jED-M8AYCmiDxQ4ZwMQgsd4gH7BMvscgdM8RgJQsjFFsIOkdsUenvBxSQR7YOdEp4k3YpZjoxhDzN41mdSKWiAGFcvBU2_yFdjp39PUAbTBI8gl_ORzctr-IpkR8NUo5ZhF6-ggqKLox1QQ-7_8iYiLpyxde51PDZBjq9EAuqU9Ci"
+
+            local jwt_obj = jwt:verify(public_key, jwt_token)
+            ngx.say(jwt_obj["verified"])
+            ngx.say(jwt_obj["reason"])
+            ngx.say(jwt_obj["payload"]["iss"])
+        ';
+    }
+--- request
+GET /t
+--- response_body
+true
+everything is awesome~ :p
+test
+--- no_error_log
+[error]
+
+=== TEST 24: Fail to verify ES512 signed using a EC public key wrong pubkey
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        content_by_lua '
+            local jwt = require "resty.jwt"
+
+            local public_key = [[
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEm9ehYHp34sZPfZoxJlotxG/LF02e
+ZPmM51hCYIL1jn50e30i8KqEL6y6wl06z6P4co0uew5CzD7JlOQlLB+Ryg==
+-----END PUBLIC KEY-----
+                ]]
+
+            jwt:set_alg_whitelist({ ES512 = 1 })
+            local jwt_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzUxMiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNDYxOTE0MDE3fQ.AP-jED-M8AYCmiDxQ4ZwMQgsd4gH7BMvscgdM8RgJQsjFFsIOkdsUenvBxSQR7YOdEp4k3YpZjoxhDzN41mdSKWiAGFcvBU2_yFdjp39PUAbTBI8gl_ORzctr-IpkR8NUo5ZhF6-ggqKLox1QQ-7_8iYiLpyxde51PDZBjq9EAuqU9Ci"
+
+            local jwt_obj = jwt:verify(public_key, jwt_token)
+            ngx.say(jwt_obj["verified"])
+            ngx.say(jwt_obj["reason"])
+            ngx.say(jwt_obj["payload"]["iss"])
+        ';
+    }
+--- request
+GET /t
+--- response_body
+false
+signature length != 2 * order length
+test
+--- no_error_log
+[error]
+
+=== TEST 25: Verify valid RS512 signed jwt using a rsa public key
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        content_by_lua '
+            local jwt = require "resty.jwt"
+
+            local public_key = [[
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAteNTDG4uTytsOMK/Lhbo
+SVghEVejDISkgzh0KSNN1lZ33GmXNNLqP/thpmOd6u6Hd1P1rQV3lb2Lyqb704zl
+3atYIwhmIL9cDBAVJdsWHmqmmyBbmgMxsthuFGOJ2kWxRyIsTD7uz2XBgCOWYbTU
+g+PcplkzhWcaKcjSYqr1sapQpQQDCLpitocx6vAKfEq1f5HDUiseBZlxEDARjqnu
+sM6JENfBJSoH9rv9i/w0j8bhF1EP0yyew8hY6irsIPHLHDbj2BC+NMEZQuA/ZLix
+hH+rJPRNH/WibFwNMEYNEokLxF8odhUCHCjILWE+pzsnnoqGPA64if4bXNUD66h0
+yQIDAQAB
+-----END PUBLIC KEY-----
+                ]]
+
+            jwt:set_alg_whitelist({ RS512 = 1 })
+            local jwt_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiJ9."
+              .. "eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNDYxOTE0MDE3fQ."
+              .. "YShbEh4rqjAwMYV-AqqR09qqerdjbXBKwx0jD31Pinoiupo_"
+              .. "eg8VLNYDjax5LMR2o2cbTn4wCYxdjQA74ynPT4VnQJydL90"
+              .. "2VMIIIhazQs8GDfN8sqOQcn_kDCjkb5dEYAPEplFjtImGl0"
+              .. "jN1AqiTI5H9Xe4F-G1vdmf_ob-ilMh71oiwYei6mhp29KTZ"
+              .. "47s6Ql43ZL9A6qMcNapl52OEWM0JeYURE7wS7a4ExEyI-F4"
+              .. "uvbRtq0M4bdpQdsrCYayTqf0Cn1aAYobqKx-cIKYRhEa6Kd"
+              .. "xcRPxKncRYbB91emgnvLGulFfL_Aw42e3zH1nDqFGWS35RY"
+              .. "M49O6rayMVAA"
+
+            local jwt_obj = jwt:verify(public_key, jwt_token)
+            ngx.say(jwt_obj["verified"])
+            ngx.say(jwt_obj["reason"])
+            ngx.say(jwt_obj["payload"]["iss"])
+        ';
+    }
+--- request
+GET /t
+--- response_body
+true
+everything is awesome~ :p
+test
 --- no_error_log
 [error]

@@ -1,11 +1,95 @@
-local redis        = require "resty.redis"
+local setmetatable  = setmetatable
+local tonumber      = tonumber
+local type          = type
+local reverse       = string.reverse
+local gmatch        = string.gmatch
+local find          = string.find
+local byte          = string.byte
+local sub           = string.sub
+local concat        = table.concat
+local sleep         = ngx.sleep
+local null          = ngx.null
+local var           = ngx.var
 
-local setmetatable = setmetatable
-local tonumber     = tonumber
-local concat       = table.concat
-local sleep        = ngx.sleep
-local null         = ngx.null
-local var          = ngx.var
+local LB = byte("[")
+local RB = byte("]")
+
+local function parse_cluster_nodes(nodes)
+    if not nodes or nodes == "" then
+        return nil
+    end
+
+    if type(nodes) == "table" then
+        return nodes
+    end
+
+    local addrs
+    local i
+    for node in gmatch(nodes, "%S+") do
+        local ip   = node
+        local port = 6379
+        local pos = find(reverse(ip), ":", 2, true)
+        if pos then
+            local p = tonumber(sub(ip, -pos + 1), 10)
+            if p >= 1 and p <= 65535 then
+                local addr = sub(ip, 1, -pos - 1)
+                if find(addr, ":", 1, true) then
+                    if byte(addr, -1) == RB then
+                        ip   = addr
+                        port = p
+                    end
+
+                else
+                    ip   = addr
+                    port = p
+                end
+            end
+        end
+
+        if byte(ip, 1, 1) == LB then
+            ip = sub(ip, 2)
+        end
+
+        if byte(ip, -1) == RB then
+            ip = sub(ip, 1, -2)
+        end
+
+        if not addrs then
+            i = 1
+            addrs = {{
+              ip   = ip,
+              port = port,
+            }}
+        else
+            i = i + 1
+            addrs[i] = {
+                ip   = ip,
+                port = port,
+            }
+        end
+    end
+
+    if not i then
+        return
+    end
+
+    return addrs
+end
+
+local redis_single = require "resty.redis"
+local redis_cluster
+do
+    local pcall   = pcall
+    local require = require
+    local ok
+    ok, redis_cluster = pcall(require, "resty.rediscluster")
+    if not ok then
+        ok, redis_cluster = pcall(require, "rediscluster")
+        if not ok then
+            redis_cluster = nil
+        end
+    end
+end
 
 local UNLOCK = [[
 if redis.call("GET", KEYS[1]) == ARGV[1] then
@@ -20,72 +104,143 @@ local function enabled(value)
     return value == true or (value == "1" or value == "true" or value == "on")
 end
 
+local function ifnil(value, default)
+    if value == nil then
+        return default
+    end
+
+    return enabled(value)
+end
+
 local defaults = {
-    prefix       = var.session_redis_prefix                      or "sessions",
-    database     = tonumber(var.session_redis_database,     10)  or 0,
-    socket       = var.session_redis_socket,
-    host         = var.session_redis_host                        or "127.0.0.1",
-    port         = tonumber(var.session_redis_port,         10)  or 6379,
-    auth         = var.session_redis_auth,
-    uselocking   = enabled(var.session_redis_uselocking          or true),
-    spinlockwait = tonumber(var.session_redis_spinlockwait, 10)  or 150,
-    maxlockwait  = tonumber(var.session_redis_maxlockwait,  10)  or 30,
+    prefix          = var.session_redis_prefix                         or "sessions",
+    socket          = var.session_redis_socket,
+    host            = var.session_redis_host                           or "127.0.0.1",
+    auth            = var.session_redis_auth,
+    server_name     = var.session_redis_server_name,
+    ssl             = enabled(var.session_redis_ssl)                   or false,
+    ssl_verify      = enabled(var.session_redis_ssl_verify)            or false,
+    uselocking      = enabled(var.session_redis_uselocking             or true),
+    port            = tonumber(var.session_redis_port,            10)  or 6379,
+    database        = tonumber(var.session_redis_database,        10)  or 0,
+    connect_timeout = tonumber(var.session_redis_connect_timeout, 10),
+    read_timeout    = tonumber(var.session_redis_read_timeout,    10),
+    send_timeout    = tonumber(var.session_redis_send_timeout,    10),
+    spinlockwait    = tonumber(var.session_redis_spinlockwait,    10)  or 150,
+    maxlockwait     = tonumber(var.session_redis_maxlockwait,     10)  or 30,
     pool = {
-        timeout  = tonumber(var.session_redis_pool_timeout, 10),
-        size     = tonumber(var.session_redis_pool_size,    10)
+        name        = var.session_redis_pool_name,
+        timeout     = tonumber(var.session_redis_pool_timeout,    10),
+        size        = tonumber(var.session_redis_pool_size,       10),
+        backlog     = tonumber(var.session_redis_pool_backlog,    10),
     },
-    ssl          = enabled(var.session_redis_ssl)                or false,
-    ssl_verify   = enabled(var.session_redis_ssl_verify)         or false,
-    server_name  = var.session_redis_server_name,
 }
+
+
+if redis_cluster then
+    defaults.cluster = {
+        name            = var.session_redis_cluster_name,
+        dict            = var.session_redis_cluster_dict,
+        maxredirections = tonumber(var.session_redis_cluster_maxredirections, 10),
+        nodes           = parse_cluster_nodes(var.session_redis_cluster_nodes),
+    }
+end
 
 local storage = {}
 
 storage.__index = storage
 
 function storage.new(session)
-    local config = session.redis or defaults
-    local pool   = config.pool   or defaults.pool
-
-    local locking = enabled(config.uselocking)
-    if locking == nil then
-        locking = defaults.uselocking
-    end
+    local config  = session.redis         or defaults
+    local pool    = config.pool           or defaults.pool
+    local cluster = config.cluster        or defaults.cluster
+    local locking = ifnil(config.uselocking, defaults.uselocking)
 
     local self = {
-        redis         = redis:new(),
-        auth          = config.auth                       or defaults.auth,
-        prefix        = config.prefix                     or defaults.prefix,
-        database      = tonumber(config.database,     10) or defaults.database,
-        uselocking    = locking,
-        spinlockwait  = tonumber(config.spinlockwait, 10) or defaults.spinlockwait,
-        maxlockwait   = tonumber(config.maxlockwait,  10) or defaults.maxlockwait,
-        pool = {
-            timeout   = tonumber(pool.timeout,        10) or defaults.pool.timeout,
-            size      = tonumber(pool.size,           10) or defaults.pool.size,
-        },
-        connect_opts = {
-          ssl         = config.ssl                        or defaults.ssl,
-          ssl_verify  = config.ssl_verify                 or defaults.ssl_verify,
-          server_name = config.server_name                or defaults.server_name,
-        },
+        prefix          = config.prefix                     or defaults.prefix,
+        uselocking      = locking,
+        spinlockwait    = tonumber(config.spinlockwait, 10) or defaults.spinlockwait,
+        maxlockwait     = tonumber(config.maxlockwait,  10) or defaults.maxlockwait,
     }
 
-    local socket = config.socket or defaults.socket
-    if socket and socket ~= "" then
-        self.socket = socket
+    local auth = config.auth or defaults.auth
+    if auth == "" then
+        auth = nil
+    end
+
+    local connect_timeout = tonumber(config.connect_timeout, 10) or defaults.connect_timeout
+
+    local cluster_nodes
+    if redis_cluster then
+        cluster_nodes = parse_cluster_nodes(cluster.nodes or defaults.cluster.nodes)
+    end
+
+    if cluster_nodes then
+        self.redis = redis_cluster:new({
+            name               = cluster.name                          or defaults.cluster.name,
+            dict_name          = cluster.dict                          or defaults.cluster.dict,
+            auth               = auth,
+            connection_timout  = connect_timeout, -- typo in library
+            connection_timeout = connect_timeout,
+            keepalive_timeout  = tonumber(pool.timeout,            10) or defaults.pool.timeout,
+            keepalive_cons     = tonumber(pool.size,               10) or defaults.pool.size,
+            max_redirection    = tonumber(cluster.maxredirections, 10) or defaults.cluster.maxredirections,
+            serv_list          = cluster_nodes,
+        })
+        self.cluster = true
+
     else
-        self.host = config.host or defaults.host
-        self.port = config.port or defaults.port
+        local redis = redis_single:new()
+
+        if redis.set_timeouts then
+            local send_timeout = tonumber(config.send_timeout, 10) or defaults.send_timeout
+            local read_timeout = tonumber(config.read_timeout, 10) or defaults.read_timeout
+
+            if connect_timeout then
+                if send_timeout and read_timeout then
+                    redis:set_timeouts(connect_timeout, send_timeout, read_timeout)
+                else
+                    redis:set_timeout(connect_timeout)
+                end
+            end
+
+        elseif redis.set_timeout and connect_timeout then
+            redis:set_timeout(connect_timeout)
+        end
+
+        self.redis           = redis
+        self.auth            = auth
+        self.database        = tonumber(config.database,     10) or defaults.database
+        self.pool_timeout    = tonumber(pool.timeout,        10) or defaults.pool.timeout
+        self.connect_opts    = {
+            pool             = pool.name                         or defaults.pool.name,
+            pool_size        = tonumber(pool.size,           10) or defaults.pool.size,
+            backlog          = tonumber(pool.backlog,        10) or defaults.pool.backlog,
+            server_name      = config.server_name                or defaults.server_name,
+            ssl              = ifnil(config.ssl,                    defaults.ssl),
+            ssl_verify       = ifnil(config.ssl_verify,             defaults.ssl_verify),
+        }
+
+        local socket = config.socket or defaults.socket
+        if socket and socket ~= "" then
+            self.socket = socket
+        else
+            self.host = config.host or defaults.host
+            self.port = config.port or defaults.port
+        end
     end
 
     return setmetatable(self, storage)
 end
 
 function storage:connect()
+    if self.cluster then
+        return true -- cluster handles this on its own
+    end
+
     local ok, err
     if self.socket then
-        ok, err = self.redis:connect(self.socket)
+        ok, err = self.redis:connect(self.socket, self.connect_opts)
     else
         ok, err = self.redis:connect(self.host, self.port, self.connect_opts)
     end
@@ -94,34 +249,30 @@ function storage:connect()
         return nil, err
     end
 
-    if self.auth and self.auth ~= "" and self.redis:get_reused_times() == 0 then
+    if self.auth and self.redis:get_reused_times() == 0 then
         ok, err = self.redis:auth(self.auth)
         if not ok then
+            self.redis:close()
             return nil, err
         end
     end
 
     if self.database ~= 0 then
         ok, err = self.redis:select(self.database)
+        if not ok then
+            self.redis:close()
+        end
     end
 
     return ok, err
 end
 
 function storage:set_keepalive()
-    local pool    = self.pool
-    local timeout = pool.timeout
-    local size    = pool.size
-
-    if timeout and size then
-        return self.redis:set_keepalive(timeout, size)
+    if self.cluster then
+        return true -- cluster handles this on its own
     end
 
-    if timeout then
-        return self.redis:set_keepalive(timeout)
-    end
-
-    return self.redis:set_keepalive()
+    return self.redis:set_keepalive(self.pool_timeout)
 end
 
 function storage:key(id)

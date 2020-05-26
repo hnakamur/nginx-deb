@@ -1,7 +1,6 @@
 -- Copyright (C) Yichun Zhang (agentzh), CloudFlare Inc.
 
 
-local sub = string.sub
 local escape_uri = ngx.escape_uri
 local unescape_uri = ngx.unescape_uri
 local match = string.match
@@ -10,11 +9,10 @@ local strlen = string.len
 local concat = table.concat
 local setmetatable = setmetatable
 local type = type
-local error = error
 
 
 local _M = {
-    _VERSION = '0.13'
+    _VERSION = '0.15'
 }
 
 
@@ -290,7 +288,7 @@ function _M.gets(self, key)
 
     local bytes, err = sock:send("gets " .. self.escape_key(key) .. "\r\n")
     if not bytes then
-        return nil, nil, err
+        return nil, nil, nil, err
     end
 
     local line, err = sock:receive()

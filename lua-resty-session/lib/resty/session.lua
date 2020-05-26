@@ -14,6 +14,7 @@ local ceil         = math.ceil
 local max          = math.max
 local find         = string.find
 local gsub         = string.gsub
+local byte         = string.byte
 local sub          = string.sub
 local type         = type
 local pcall        = pcall
@@ -21,6 +22,8 @@ local tonumber     = tonumber
 local setmetatable = setmetatable
 local getmetatable = getmetatable
 local bytes        = random.bytes
+
+local UNDERSCORE = byte("_")
 
 local COOKIE_PARTS = {
     DEFAULT = {
@@ -68,6 +71,53 @@ local function prequire(prefix, package, default)
     end
 
     return module, package
+end
+
+local function is_session_cookie(cookie, name, name_len)
+    if not cookie or cookie == "" then
+        return false, nil
+    end
+
+    cookie = gsub(cookie, "^%s+", "")
+    if cookie == "" then
+        return false, nil
+    end
+
+    cookie = gsub(cookie, "%s+$", "")
+    if cookie == "" then
+        return false, nil
+    end
+
+    local eq_pos = find(cookie, "=", 1, true)
+    if not eq_pos then
+        return false, cookie
+    end
+
+    local cookie_name = sub(cookie, 1, eq_pos - 1)
+    if cookie_name == "" then
+        return false, cookie
+    end
+
+    cookie_name = gsub(cookie_name, "%s+$", "")
+    if cookie_name == "" then
+        return false, cookie
+    end
+
+    if cookie_name ~= name then
+        if find(cookie_name, name, 1, true) ~= 1 then
+            return false, cookie
+        end
+
+        if byte(cookie_name, name_len + 1) ~= UNDERSCORE then
+            return false, cookie
+        end
+
+        if not tonumber(sub(cookie_name, name_len + 2), 10) then
+            return false, cookie
+        end
+    end
+
+    return true, cookie
 end
 
 local function set_cookie(session, value, expires)
@@ -300,17 +350,18 @@ local function init()
         cipher         = var.session_cipher                        or "aes",
         hmac           = var.session_hmac                          or "sha1",
         cookie         = {
-            persistent = enabled(var.session_cookie_persistent     or false),
-            discard    = tonumber(var.session_cookie_discard,  10) or 10,
-            renew      = tonumber(var.session_cookie_renew,    10) or 600,
-            lifetime   = tonumber(var.session_cookie_lifetime, 10) or 3600,
-            idletime   = tonumber(var.session_cookie_idletime, 10) or 0,
             path       = var.session_cookie_path                   or "/",
             domain     = var.session_cookie_domain,
             samesite   = var.session_cookie_samesite               or "Lax",
             secure     = enabled(var.session_cookie_secure),
             httponly   = enabled(var.session_cookie_httponly       or true),
-            maxsize    = var.session_cookie_maxsize                or 4000
+            persistent = enabled(var.session_cookie_persistent     or false),
+            discard    = tonumber(var.session_cookie_discard,  10) or 10,
+            renew      = tonumber(var.session_cookie_renew,    10) or 600,
+            lifetime   = tonumber(var.session_cookie_lifetime, 10) or 3600,
+            idletime   = tonumber(var.session_cookie_idletime, 10) or 0,
+            maxsize    = tonumber(var.session_cookie_maxsize,  10) or 4000,
+
         }, check       = {
             ssi        = enabled(var.session_check_ssi             or false),
             ua         = enabled(var.session_check_ua              or true),
@@ -322,7 +373,7 @@ local function init()
 end
 
 local session = {
-    _VERSION = "3.1"
+    _VERSION = "3.5"
 }
 
 session.__index = session
@@ -476,19 +527,19 @@ function session.new(opts)
             path       = path,
             domain     = domain,
             secure     = secure,
-            discard    = cookie.discard        or defaults.cookie.discard,
-            renew      = cookie.renew          or defaults.cookie.renew,
-            lifetime   = cookie.lifetime       or defaults.cookie.lifetime,
-            idletime   = cookie.idletime       or defaults.cookie.idletime,
-            samesite   = cookie.samesite       or defaults.cookie.samesite,
-            maxsize    = cookie.maxsize        or defaults.cookie.maxsize,
-            httponly   = ifnil(cookie.httponly,   defaults.cookie.httponly),
-            persistent = ifnil(cookie.persistent, defaults.cookie.persistent),
+            samesite   = cookie.samesite                  or defaults.cookie.samesite,
+            httponly   = ifnil(cookie.httponly,              defaults.cookie.httponly),
+            persistent = ifnil(cookie.persistent,            defaults.cookie.persistent),
+            discard    = tonumber(cookie.discard,  10)    or defaults.cookie.discard,
+            renew      = tonumber(cookie.renew,    10)    or defaults.cookie.renew,
+            lifetime   = tonumber(cookie.lifetime, 10)    or defaults.cookie.lifetime,
+            idletime   = tonumber(cookie.idletime, 10)    or defaults.cookie.idletime,
+            maxsize    = tonumber(cookie.maxsize,  10)    or defaults.cookie.maxsize,
         }, check = {
-            ssi        = ifnil(check.ssi,         defaults.check.ssi),
-            ua         = ifnil(check.ua,          defaults.check.ua),
-            scheme     = ifnil(check.scheme,      defaults.check.scheme),
-            addr       = ifnil(check.addr,        defaults.check.addr),
+            ssi        = ifnil(check.ssi,                    defaults.check.ssi),
+            ua         = ifnil(check.ua,                     defaults.check.ua),
+            scheme     = ifnil(check.scheme,                 defaults.check.scheme),
+            addr       = ifnil(check.addr,                   defaults.check.addr),
         }
     }
     if self.cookie.idletime > 0 and self.cookie.discard > self.cookie.idletime then
@@ -649,56 +700,50 @@ end
 
 function session:hide()
     local cookies = var.http_cookie
-    if not cookies then
+    if not cookies or cookies == "" then
         return
     end
 
     local results = {}
     local name = self.name
     local name_len = #name
+    local found
     local i = 1
     local j = 0
-    local sc_pos = find(cookies, ";", 1, true)
+    local sc_pos = find(cookies, ";", i, true)
     while sc_pos do
-        local cookie = sub(cookies, i, sc_pos - 1)
-        local eq_pos = find(cookie, "=", 1, true)
-        if eq_pos then
-            local cookie_name = gsub(sub(cookie, 1, eq_pos - 1), "^%s+", "")
-            if cookie_name ~= name and cookie_name ~= "" then
-                if sub(cookie_name, 1, name_len)                ~= name
-                or sub(cookie_name, name_len + 1, name_len + 1) ~= "_"
-                or tonumber(sub(cookie_name, name_len + 2), 10) == nil
-                then
-                    j = j + 1
-                    results[j] = cookie
-                end
-            end
+        local isc, cookie = is_session_cookie(sub(cookies, i, sc_pos - 1), name, name_len)
+        if isc then
+            found = true
+        elseif cookie then
+            j = j + 1
+            results[j] = cookie
         end
+
         i = sc_pos + 1
         sc_pos = find(cookies, ";", i, true)
     end
 
-    local cookie = sub(cookies, i)
-    if cookie and cookie ~= "" then
-        local eq_pos = find(cookie, "=", 1, true)
-        if eq_pos then
-            local cookie_name = gsub(sub(cookie, 1, eq_pos - 1), "^%s+", "")
-            if cookie_name ~= name and cookie_name ~= "" then
-                if sub(cookie_name, 1, name_len)                ~= name
-                or sub(cookie_name, name_len + 1, name_len + 1) ~= "_"
-                or tonumber(sub(cookie_name, name_len + 2), 10) == nil
-                then
-                    j = j + 1
-                    results[j] = cookie
-                end
-            end
+    local isc, cookie
+    if i == 1 then
+        isc, cookie = is_session_cookie(cookies, name, name_len)
+    else
+        isc, cookie = is_session_cookie(sub(cookies, i), name, name_len)
+    end
+
+    if not isc and cookie then
+        if not found then
+            return
         end
+
+        j = j + 1
+        results[j] = cookie
     end
 
     if j == 0 then
         clear_header("Cookie")
     else
-        set_header("Cookie", concat(results, "; ", 1, j))
+        set_header("Cookie", results)
     end
 end
 
