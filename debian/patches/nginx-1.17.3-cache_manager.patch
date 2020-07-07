@@ -22,7 +22,7 @@
  #endif
  
        ngx_null_command
-@@ -4365,3 +4373,103 @@
+@@ -4428,3 +4436,103 @@
  
      v->uri = u->uri;
  }
@@ -128,7 +128,7 @@
 +}
 --- a/src/http/ngx_http_cache.h
 +++ b/src/http/ngx_http_cache.h
-@@ -176,6 +176,8 @@
+@@ -177,6 +177,8 @@
      ngx_uint_t                       manager_files;
      ngx_msec_t                       manager_sleep;
      ngx_msec_t                       manager_threshold;
@@ -178,7 +178,7 @@
      }
  
      for ( ;; ) {
-@@ -2312,6 +2317,8 @@
+@@ -2324,6 +2329,8 @@
      ngx_int_t               loader_files, manager_files;
      ngx_msec_t              loader_sleep, manager_sleep, loader_threshold,
                              manager_threshold;
@@ -187,7 +187,7 @@
      ngx_uint_t              i, n, use_temp_path;
      ngx_array_t            *caches;
      ngx_http_file_cache_t  *cache, **ce;
-@@ -2337,6 +2344,8 @@
+@@ -2349,6 +2356,8 @@
      manager_files = 100;
      manager_sleep = 50;
      manager_threshold = 200;
@@ -196,7 +196,7 @@
  
      name.len = 0;
      size = 0;
-@@ -2560,6 +2569,42 @@
+@@ -2596,6 +2605,42 @@
              continue;
          }
  
@@ -239,7 +239,7 @@
          ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                             "invalid parameter \"%V\"", &value[i]);
          return NGX_CONF_ERROR;
-@@ -2583,6 +2628,8 @@
+@@ -2619,6 +2664,8 @@
      cache->manager_files = manager_files;
      cache->manager_sleep = manager_sleep;
      cache->manager_threshold = manager_threshold;
