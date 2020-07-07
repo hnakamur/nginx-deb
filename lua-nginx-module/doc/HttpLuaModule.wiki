@@ -15,8 +15,8 @@ Production ready.
 = Version =
 
 This document describes ngx_lua
-[https://github.com/openresty/lua-nginx-module/tags v0.10.16], which is not
-released yet.
+[https://github.com/openresty/lua-nginx-module/tags v0.10.17], which was released
+on 3 July, 2020.
 
 = Synopsis =
 <geshi lang="nginx">
@@ -1110,7 +1110,7 @@ Usually you can pre-load Lua modules at server start-up by means of this hook an
         location = /api {
             content_by_lua_block {
                 -- the following require() will just  return
-                -- the alrady loaded module from package.loaded:
+                -- the already loaded module from package.loaded:
                 ngx.say(require "cjson".encode{dog = 5, cat = 6})
             }
         }
@@ -1224,6 +1224,8 @@ This hook is often used to create per-worker reoccurring timers (via the [[#ngx.
                     return
                 end
             end
+
+            -- do something in timer
         end
 
         local hdl, err = new_timer(delay, check)
@@ -1231,6 +1233,8 @@ This hook is often used to create per-worker reoccurring timers (via the [[#ngx.
             log(ERR, "failed to create timer: ", err)
             return
         end
+
+        -- other job in init_worker_by_lua
     ';
 </geshi>
 
@@ -1549,7 +1553,7 @@ can be implemented in ngx_lua as:
 
 Just as any other rewrite phase handlers, [[#rewrite_by_lua|rewrite_by_lua]] also runs in subrequests.
 
-Note that when calling <code>ngx.exit(ngx.OK)</code> within a [[#rewrite_by_lua|rewrite_by_lua]] handler, the Nginx request processing control flow will still continue to the content handler. To terminate the current request from within a [[#rewrite_by_lua|rewrite_by_lua]] handler, calling [[#ngx.exit|ngx.exit]] with status >= 200 (<code>ngx.HTTP_OK</code>) and status < 300 (<code>ngx.HTTP_SPECIAL_RESPONSE</code>) for successful quits and <code>ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)</code> (or its friends) for failures.
+Note that when calling <code>ngx.exit(ngx.OK)</code> within a [[#rewrite_by_lua|rewrite_by_lua]] handler, the Nginx request processing control flow will still continue to the content handler. To terminate the current request from within a [[#rewrite_by_lua|rewrite_by_lua]] handler, call [[#ngx.exit|ngx.exit]] with status >= 200 (<code>ngx.HTTP_OK</code>) and status < 300 (<code>ngx.HTTP_SPECIAL_RESPONSE</code>) for successful quits and <code>ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)</code> (or its friends) for failures.
 
 If the [[HttpRewriteModule]]'s [[HttpRewriteModule#rewrite|rewrite]] directive is used to change the URI and initiate location re-lookups (internal redirections), then any [[#rewrite_by_lua|rewrite_by_lua]] or [[#rewrite_by_lua_file|rewrite_by_lua_file]] code sequences within the current location will not be executed. For example,
 
@@ -1677,7 +1681,7 @@ can be implemented in ngx_lua as:
 
 As with other access phase handlers, [[#access_by_lua|access_by_lua]] will ''not'' run in subrequests.
 
-Note that when calling <code>ngx.exit(ngx.OK)</code> within a [[#access_by_lua|access_by_lua]] handler, the Nginx request processing control flow will still continue to the content handler. To terminate the current request from within a [[#access_by_lua|access_by_lua]] handler, calling [[#ngx.exit|ngx.exit]] with status >= 200 (<code>ngx.HTTP_OK</code>) and status < 300 (<code>ngx.HTTP_SPECIAL_RESPONSE</code>) for successful quits and <code>ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)</code> (or its friends) for failures.
+Note that when calling <code>ngx.exit(ngx.OK)</code> within a [[#access_by_lua|access_by_lua]] handler, the Nginx request processing control flow will still continue to the content handler. To terminate the current request from within a [[#access_by_lua|access_by_lua]] handler, call [[#ngx.exit|ngx.exit]] with status >= 200 (<code>ngx.HTTP_OK</code>) and status < 300 (<code>ngx.HTTP_SPECIAL_RESPONSE</code>) for successful quits and <code>ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)</code> (or its friends) for failures.
 
 Starting from the <code>v0.9.20</code> release, you can use the [[#access_by_lua_no_postpone|access_by_lua_no_postpone]]
 directive to control when to run this handler inside the "access" request-processing phase
@@ -3344,7 +3348,7 @@ in gzipped responses that cannot be handled properly in Lua code. Original reque
 
 When the <code>body</code> option is not specified and the <code>always_forward_body</code> option is false (the default value), the <code>POST</code> and <code>PUT</code> subrequests will inherit the request bodies of the parent request (if any).
 
-There is a hard-coded upper limit on the number of concurrent subrequests possible for every main request. In older versions of Nginx, the limit was <code>50</code> concurrent subrequests and in more recent versions, Nginx <code>1.1.x</code> onwards, this was increased to <code>200</code> concurrent subrequests. When this limit is exceeded, the following error message is added to the <code>error.log</code> file:
+There is a hard-coded upper limit on the number of subrequests possible for every main request. In older versions of Nginx, the limit was <code>50</code> concurrent subrequests and in more recent versions, Nginx <code>1.9.5</code> onwards, the same limit is changed to limit the depth of recursive subrequests. When this limit is exceeded, the following error message is added to the <code>error.log</code> file:
 
 <geshi lang="text">
     [error] 13983#0: *1 subrequests cycle while processing "/uri"
@@ -3681,7 +3685,7 @@ See also [[#ngx.req.get_method|ngx.req.get_method]].
 
 == ngx.req.set_uri ==
 
-'''syntax:''' ''ngx.req.set_uri(uri, jump?)''
+'''syntax:''' ''ngx.req.set_uri(uri, jump?, binary?)''
 
 '''context:''' ''set_by_lua*, rewrite_by_lua*, access_by_lua*, content_by_lua*, header_filter_by_lua*, body_filter_by_lua*''
 
@@ -3767,6 +3771,18 @@ or
     ngx.req.set_uri("/foo", true)
 </geshi>
 
+Starting from <code>0.10.16</code> of this module, this function accepts an
+optional boolean <code>binary</code> argument to allow arbitrary binary URI
+data. By default, this <code>binary</code> argument is false and this function
+will throw out a Lua error such as the one below when the <code>uri</code>
+argument contains any control characters (ASCII Code 0 ~ 0x08, 0x0A ~ 0x1F and 0x7F).
+
+<geshi lang="text">
+    [error] 23430#23430: *1 lua entry thread aborted: runtime error:
+    content_by_lua(nginx.conf:44):3: ngx.req.set_uri unsafe byte "0x00"
+    in "\x00foo" (maybe you want to set the 'binary' argument?)
+</geshi>
+
 This interface was first introduced in the <code>v0.3.1rc14</code> release.
 
 == ngx.req.set_uri_args ==
@@ -3787,7 +3803,12 @@ or a Lua table holding the query arguments' key-value pairs, as in
     ngx.req.set_uri_args({ a = 3, b = "hello world" })
 </geshi>
 
-where in the latter case, this method will escape argument keys and values according to the URI escaping rule.
+In the former case, i.e., when the whole query-string is provided directly,
+the input Lua string should already be well-formed with the URI encoding.
+For security considerations, this method will automatically escape any control and
+whitespace characters (ASCII code 0x00 ~ 0x20 and 0x7F) in the Lua string.
+
+In the latter case, this method will escape argument keys and values according to the URI escaping rule.
 
 Multi-value arguments are also supported:
 
@@ -4075,6 +4096,11 @@ The <code>__index</code> metamethod will not be added when the <code>raw</code> 
 
 Set the current request's request header named <code>header_name</code> to value <code>header_value</code>, overriding any existing ones.
 
+The input Lua string `header_name` and `header_value` should already be well-formed with the URI encoding.
+For security considerations, this method will automatically escape " ", """, "(", ")", ",", "/", ":", ";", "?",
+"<", "=", ">", "?", "@", "[", "]", "\", "{", "}", 0x00-0x1F, 0x7F-0xFF in `header_name` and automatically escape
+"0x00-0x08, 0x0A-0x0F, 0x7F in `header_value`.
+
 By default, all the subrequests subsequently initiated by [[#ngx.location.capture|ngx.location.capture]] and [[#ngx.location.capture_multi|ngx.location.capture_multi]] will inherit the new header.
 
 Here is an example of setting the <code>Content-Type</code> header:
@@ -4316,7 +4342,7 @@ See also [[#ngx.req.init_body|ngx.req.init_body]].
 
 '''context:''' ''rewrite_by_lua*, access_by_lua*, content_by_lua*''
 
-Returns a read-only cosocket object that wraps the downstream connection. Only [[#tcpsock:receive|receive]] and [[#tcpsock:receiveuntil|receiveuntil]] methods are supported on this object.
+Returns a read-only cosocket object that wraps the downstream connection. Only [[#tcpsock:receive|receive]], [[#tcpsock:receiveany|receiveany]] and [[#tcpsock:receiveuntil|receiveuntil]] methods are supported on this object.
 
 In case of error, <code>nil</code> will be returned as well as a string describing the error.
 
@@ -4325,7 +4351,7 @@ The socket object returned by this method is usually used to read the current re
 If any request body data has been pre-read into the Nginx core request header buffer, the resulting cosocket object will take care of this to avoid potential data loss resulting from such pre-reading.
 Chunked request bodies are not yet supported in this API.
 
-Since the <code>v0.9.0</code> release, this function accepts an optional boolean <code>raw</code> argument. When this argument is <code>true</code>, this function returns a full-duplex cosocket object wrapping around the raw downstream connection socket, upon which you can call the [[#tcpsock:receive|receive]], [[#tcpsock:receiveuntil|receiveuntil]], and [[#tcpsock:send|send]] methods.
+Since the <code>v0.9.0</code> release, this function accepts an optional boolean <code>raw</code> argument. When this argument is <code>true</code>, this function returns a full-duplex cosocket object wrapping around the raw downstream connection socket, upon which you can call the [[#tcpsock:receive|receive]], [[#tcpsock:receiveany|receiveany]], [[#tcpsock:receiveuntil|receiveuntil]], and [[#tcpsock:send|send]] methods.
 
 When the <code>raw</code> argument is <code>true</code>, it is required that no pending data from any previous [[#ngx.say|ngx.say]], [[#ngx.print|ngx.print]], or [[#ngx.send_headers|ngx.send_headers]] calls exists. So if you have these downstream output calls previously, you should call [[#ngx.flush|ngx.flush(true)]] before calling <code>ngx.req.socket(true)</code> to ensure that there is no pending output data. If the request body has not been read yet, then this "raw socket" can also be used to read the request body.
 
@@ -4672,11 +4698,19 @@ This method was introduced in the <code>0.5.0rc30</code> release.
 
 == ngx.escape_uri ==
 
-'''syntax:''' ''newstr = ngx.escape_uri(str)''
+'''syntax:''' ''newstr = ngx.escape_uri(str, type?)''
 
 '''context:''' ''init_by_lua*, init_worker_by_lua*, set_by_lua*, rewrite_by_lua*, access_by_lua*, content_by_lua*, header_filter_by_lua*, body_filter_by_lua*, log_by_lua*, ngx.timer.*, balancer_by_lua*, ssl_certificate_by_lua*, ssl_session_fetch_by_lua*, ssl_session_store_by_lua*''
 
-Escape <code>str</code> as a URI component.
+Since `v0.10.16`, this function accepts an optional <code>type</code> argument.
+It accepts the following values (defaults to `2`):
+
+* `0`: escapes <code>str</code> as a full URI. And the characters
+<code> </code> (space), <code>#</code>, <code>%</code>,
+`?`, 0x00 ~ 0x1F, 0x7F ~ 0xFF will be escaped.
+* `2`: escape <code>str</code> as a URI component. All characters except
+alphabetic characters, digits, <code>-</code>, <code>.</code>, <code>_</code>,
+<code>~</code> will be encoded as `%XX`.
 
 == ngx.unescape_uri ==
 
@@ -5296,13 +5330,13 @@ When the <code>replace</code> is a string, then it is treated as a special templ
 
 <geshi lang="lua">
     local newstr, n, err = ngx.re.sub("hello, 1234", "([0-9])[0-9]", "[$0][$1]")
-    if newstr then
-        -- newstr == "hello, [12][1]34"
-        -- n == 1
-    else
+    if not newstr then
         ngx.log(ngx.ERR, "error: ", err)
         return
     end
+
+    -- newstr == "hello, [12][1]34"
+    -- n == 1
 </geshi>
 
 where <code>$0</code> referring to the whole substring matched by the pattern and <code>$1</code> referring to the first parenthesized capturing substring.
@@ -5311,16 +5345,16 @@ Curly braces can also be used to disambiguate variable names from the background
 
 <geshi lang="lua">
     local newstr, n, err = ngx.re.sub("hello, 1234", "[0-9]", "${0}00")
-        -- newstr == "hello, 100234"
-        -- n == 1
+    -- newstr == "hello, 100234"
+    -- n == 1
 </geshi>
 
 Literal dollar sign characters (<code>$</code>) in the <code>replace</code> string argument can be escaped by another dollar sign, for instance,
 
 <geshi lang="lua">
     local newstr, n, err = ngx.re.sub("hello, 1234", "[0-9]", "$$")
-        -- newstr == "hello, $234"
-        -- n == 1
+    -- newstr == "hello, $234"
+    -- n == 1
 </geshi>
 
 Do not use backlashes to escape dollar signs; it will not work as expected.
@@ -5331,9 +5365,10 @@ When the <code>replace</code> argument is of type "function", then it will be in
     local func = function (m)
         return "[" .. m[0] .. "][" .. m[1] .. "]"
     end
+
     local newstr, n, err = ngx.re.sub("hello, 1234", "( [0-9] ) [0-9]", func, "x")
-        -- newstr == "hello, [12][1]34"
-        -- n == 1
+    -- newstr == "hello, [12][1]34"
+    -- n == 1
 </geshi>
 
 The dollar sign characters in the return value of the <code>replace</code> function argument are not special at all.
@@ -5354,13 +5389,13 @@ Here is some examples:
 
 <geshi lang="lua">
     local newstr, n, err = ngx.re.gsub("hello, world", "([a-z])[a-z]+", "[$0,$1]", "i")
-    if newstr then
-        -- newstr == "[hello,h], [world,w]"
-        -- n == 2
-    else
+    if not newstr then
         ngx.log(ngx.ERR, "error: ", err)
         return
     end
+
+    -- newstr == "[hello,h], [world,w]"
+    -- n == 2
 </geshi>
 
 <geshi lang="lua">
@@ -5368,8 +5403,8 @@ Here is some examples:
         return "[" .. m[0] .. "," .. m[1] .. "]"
     end
     local newstr, n, err = ngx.re.gsub("hello, world", "([a-z])[a-z]+", func, "i")
-        -- newstr == "[hello,h], [world,w]"
-        -- n == 2
+    -- newstr == "[hello,h], [world,w]"
+    -- n == 2
 </geshi>
 
 This method requires the PCRE library enabled in Nginx ([[#Special Escaping Sequences|Known Issue With Special Escaping Sequences]]).
@@ -5527,6 +5562,10 @@ The optional <code>exptime</code> argument specifies expiration time (in seconds
 The optional <code>flags</code> argument specifies a user flags value associated with the entry to be stored. It can also be retrieved later with the value. The user flags is stored as an unsigned 32-bit integer internally. Defaults to <code>0</code>. The user flags argument was first introduced in the <code>v0.5.0rc2</code> release.
 
 When it fails to allocate memory for the current key-value item, then <code>set</code> will try removing existing items in the storage according to the Least-Recently Used (LRU) algorithm. Note that, LRU takes priority over expiration time here. If up to tens of existing items have been removed and the storage left is still insufficient (either due to the total capacity limit specified by [[#lua_shared_dict|lua_shared_dict]] or memory segmentation), then the <code>err</code> return value will be <code>no memory</code> and <code>success</code> will be <code>false</code>.
+
+If the sizes of items in the dictionary are not multiples or even powers of a certain value (like 2), it is easier to encounter <code>no memory</code> error because of memory fragmentation. It is recommended to use different dictionaries for different sizes of items.
+
+When you encounter <code>no memory</code> error, you can also evict more least-recently-used items by retrying this method call more times to to make room for the current item.
 
 If this method succeeds in storing the current item by forcibly removing other not-yet-expired items in the dictionary via LRU, the <code>forcible</code> return value will be <code>true</code>. If it stores the item without forcibly removing other valid items, then the return value <code>forcible</code> will be <code>false</code>.
 
@@ -5815,7 +5854,7 @@ See also [[#ngx.shared.DICT|ngx.shared.DICT]].
 
 '''context:''' ''init_by_lua*, set_by_lua*, rewrite_by_lua*, access_by_lua*, content_by_lua*, header_filter_by_lua*, body_filter_by_lua*, log_by_lua*, ngx.timer.*, balancer_by_lua*, ssl_certificate_by_lua*, ssl_session_fetch_by_lua*, ssl_session_store_by_lua*''
 
-Flushes out all the items in the dictionary. This method does not actuall free up all the memory blocks in the dictionary but just marks all the existing items as expired.
+Flushes out all the items in the dictionary. This method does not actually free up all the memory blocks in the dictionary but just marks all the existing items as expired.
 
 This feature was first introduced in the <code>v0.5.0rc17</code> release.
 
@@ -5984,6 +6023,9 @@ Since the <code>v0.7.18</code> release, connecting to a datagram unix domain soc
         ngx.say("failed to connect to the datagram unix domain socket: ", err)
         return
     end
+
+    -- do something after connect
+    -- such as sock:send or sock:receive
 </geshi>
 
 assuming the datagram service is listening on the unix domain socket file <code>/tmp/some-datagram-service.sock</code> and the client socket will use the "autobind" feature on Linux.
@@ -6163,6 +6205,9 @@ Connecting to a Unix Domain Socket file is also possible:
         ngx.say("failed to connect to the memcached unix domain socket: ", err)
         return
     end
+
+    -- do something after connect
+    -- such as sock:send or sock:receive
 </geshi>
 
 assuming memcached (or something else) is listening on the unix domain socket file <code>/tmp/memcached.sock</code>.
@@ -6652,7 +6697,7 @@ All the Lua code chunks running by [[#rewrite_by_lua|rewrite_by_lua]], [[#access
 By default, the corresponding Nginx handler (e.g., [[#rewrite_by_lua|rewrite_by_lua]] handler) will not terminate until
 
 # both the "entry thread" and all the user "light threads" terminates,
-# a "light thread" (either the "entry thread" or a user "light thread" aborts by calling [[#ngx.exit|ngx.exit]], [[#ngx.exec|ngx.exec]], [[#ngx.redirect|ngx.redirect]], or [[#ngx.req.set_uri|ngx.req.set_uri(uri, true)]], or
+# a "light thread" (either the "entry thread" or a user "light thread") aborts by calling [[#ngx.exit|ngx.exit]], [[#ngx.exec|ngx.exec]], [[#ngx.redirect|ngx.redirect]], or [[#ngx.req.set_uri|ngx.req.set_uri(uri, true)]], or
 # the "entry thread" terminates with a Lua error.
 
 When the user "light thread" terminates with a Lua error, however, it will not abort other running "light threads" like the "entry thread" does.
@@ -6972,6 +7017,8 @@ Here is a simple example:
                 ngx.log(ngx.ERR, "failed to create timer: ", err)
                 return
             end
+
+            -- other job in log_by_lua_block
         }
     }
 </geshi>
@@ -6991,6 +7038,8 @@ One can also create infinite re-occurring timers, for instance, a timer getting 
             ngx.log(ngx.ERR, "failed to create the timer: ", err)
             return
         end
+
+        -- do something in timer
     end
 
     local ok, err = ngx.timer.at(delay, handler)
@@ -6998,6 +7047,8 @@ One can also create infinite re-occurring timers, for instance, a timer getting 
         ngx.log(ngx.ERR, "failed to create the timer: ", err)
         return
     end
+
+    -- do other jobs
 </geshi>
 
 It is recommended, however, to use the [[#ngx.timer.every|ngx.timer.every]] API function
@@ -7086,7 +7137,7 @@ This directive was first introduced in the <code>v0.9.20</code> release.
 
 '''context:''' ''set_by_lua*, rewrite_by_lua*, access_by_lua*, content_by_lua*, header_filter_by_lua*, body_filter_by_lua*, log_by_lua*, ngx.timer.*, init_by_lua*, init_worker_by_lua*''
 
-This string field indicates the current Nginx subsystem the current Lua environment is based on. For this module, this field always takes the string value <code>"http"</code>. For
+This string field indicates the Nginx subsystem the current Lua environment is based on. For this module, this field always takes the string value <code>"http"</code>. For
 [https://github.com/openresty/stream-lua-nginx-module#readme ngx_stream_lua_module], however, this field takes the value <code>"stream"</code>.
 
 This field was first introduced in the <code>0.10.1</code>.

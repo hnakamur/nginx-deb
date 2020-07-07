@@ -67,8 +67,8 @@ Version
 =======
 
 This document describes ngx_lua
-[v0.10.16](https://github.com/openresty/lua-nginx-module/tags), which is not
-released yet.
+[v0.10.17](https://github.com/openresty/lua-nginx-module/tags), which was released
+on 3 July, 2020.
 
 Synopsis
 ========
@@ -1386,7 +1386,7 @@ Usually you can pre-load Lua modules at server start-up by means of this hook an
      location = /api {
          content_by_lua_block {
              -- the following require() will just  return
-             -- the alrady loaded module from package.loaded:
+             -- the already loaded module from package.loaded:
              ngx.say(require "cjson".encode{dog = 5, cat = 6})
          }
      }
@@ -1512,6 +1512,8 @@ This hook is often used to create per-worker reoccurring timers (via the [ngx.ti
                  return
              end
          end
+
+         -- do something in timer
      end
 
      local hdl, err = new_timer(delay, check)
@@ -1519,6 +1521,8 @@ This hook is often used to create per-worker reoccurring timers (via the [ngx.ti
          log(ERR, "failed to create timer: ", err)
          return
      end
+
+     -- other job in init_worker_by_lua
  ';
 ```
 
@@ -1875,7 +1879,7 @@ can be implemented in ngx_lua as:
 
 Just as any other rewrite phase handlers, [rewrite_by_lua](#rewrite_by_lua) also runs in subrequests.
 
-Note that when calling `ngx.exit(ngx.OK)` within a [rewrite_by_lua](#rewrite_by_lua) handler, the Nginx request processing control flow will still continue to the content handler. To terminate the current request from within a [rewrite_by_lua](#rewrite_by_lua) handler, calling [ngx.exit](#ngxexit) with status >= 200 (`ngx.HTTP_OK`) and status < 300 (`ngx.HTTP_SPECIAL_RESPONSE`) for successful quits and `ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)` (or its friends) for failures.
+Note that when calling `ngx.exit(ngx.OK)` within a [rewrite_by_lua](#rewrite_by_lua) handler, the Nginx request processing control flow will still continue to the content handler. To terminate the current request from within a [rewrite_by_lua](#rewrite_by_lua) handler, call [ngx.exit](#ngxexit) with status >= 200 (`ngx.HTTP_OK`) and status < 300 (`ngx.HTTP_SPECIAL_RESPONSE`) for successful quits and `ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)` (or its friends) for failures.
 
 If the [ngx_http_rewrite_module](http://nginx.org/en/docs/http/ngx_http_rewrite_module.html)'s [rewrite](http://nginx.org/en/docs/http/ngx_http_rewrite_module.html#rewrite) directive is used to change the URI and initiate location re-lookups (internal redirections), then any [rewrite_by_lua](#rewrite_by_lua) or [rewrite_by_lua_file](#rewrite_by_lua_file) code sequences within the current location will not be executed. For example,
 
@@ -2017,7 +2021,7 @@ can be implemented in ngx_lua as:
 
 As with other access phase handlers, [access_by_lua](#access_by_lua) will *not* run in subrequests.
 
-Note that when calling `ngx.exit(ngx.OK)` within a [access_by_lua](#access_by_lua) handler, the Nginx request processing control flow will still continue to the content handler. To terminate the current request from within a [access_by_lua](#access_by_lua) handler, calling [ngx.exit](#ngxexit) with status >= 200 (`ngx.HTTP_OK`) and status < 300 (`ngx.HTTP_SPECIAL_RESPONSE`) for successful quits and `ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)` (or its friends) for failures.
+Note that when calling `ngx.exit(ngx.OK)` within a [access_by_lua](#access_by_lua) handler, the Nginx request processing control flow will still continue to the content handler. To terminate the current request from within a [access_by_lua](#access_by_lua) handler, call [ngx.exit](#ngxexit) with status >= 200 (`ngx.HTTP_OK`) and status < 300 (`ngx.HTTP_SPECIAL_RESPONSE`) for successful quits and `ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)` (or its friends) for failures.
 
 Starting from the `v0.9.20` release, you can use the [access_by_lua_no_postpone](#access_by_lua_no_postpone)
 directive to control when to run this handler inside the "access" request-processing phase
@@ -4040,7 +4044,7 @@ in gzipped responses that cannot be handled properly in Lua code. Original reque
 
 When the `body` option is not specified and the `always_forward_body` option is false (the default value), the `POST` and `PUT` subrequests will inherit the request bodies of the parent request (if any).
 
-There is a hard-coded upper limit on the number of concurrent subrequests possible for every main request. In older versions of Nginx, the limit was `50` concurrent subrequests and in more recent versions, Nginx `1.1.x` onwards, this was increased to `200` concurrent subrequests. When this limit is exceeded, the following error message is added to the `error.log` file:
+There is a hard-coded upper limit on the number of subrequests possible for every main request. In older versions of Nginx, the limit was `50` concurrent subrequests and in more recent versions, Nginx `1.9.5` onwards, the same limit is changed to limit the depth of recursive subrequests. When this limit is exceeded, the following error message is added to the `error.log` file:
 
 
     [error] 13983#0: *1 subrequests cycle while processing "/uri"
@@ -4427,7 +4431,7 @@ See also [ngx.req.get_method](#ngxreqget_method).
 ngx.req.set_uri
 ---------------
 
-**syntax:** *ngx.req.set_uri(uri, jump?)*
+**syntax:** *ngx.req.set_uri(uri, jump?, binary?)*
 
 **context:** *set_by_lua&#42;, rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, header_filter_by_lua&#42;, body_filter_by_lua&#42;*
 
@@ -4523,6 +4527,18 @@ or
  ngx.req.set_uri("/foo", true)
 ```
 
+Starting from `0.10.16` of this module, this function accepts an
+optional boolean `binary` argument to allow arbitrary binary URI
+data. By default, this `binary` argument is false and this function
+will throw out a Lua error such as the one below when the `uri`
+argument contains any control characters (ASCII Code 0 ~ 0x08, 0x0A ~ 0x1F and 0x7F).
+
+
+    [error] 23430#23430: *1 lua entry thread aborted: runtime error:
+    content_by_lua(nginx.conf:44):3: ngx.req.set_uri unsafe byte "0x00"
+    in "\x00foo" (maybe you want to set the 'binary' argument?)
+
+
 This interface was first introduced in the `v0.3.1rc14` release.
 
 [Back to TOC](#nginx-api-for-lua)
@@ -4548,7 +4564,12 @@ or a Lua table holding the query arguments' key-value pairs, as in
  ngx.req.set_uri_args({ a = 3, b = "hello world" })
 ```
 
-where in the latter case, this method will escape argument keys and values according to the URI escaping rule.
+In the former case, i.e., when the whole query-string is provided directly,
+the input Lua string should already be well-formed with the URI encoding.
+For security considerations, this method will automatically escape any control and
+whitespace characters (ASCII code 0x00 ~ 0x20 and 0x7F) in the Lua string.
+
+In the latter case, this method will escape argument keys and values according to the URI escaping rule.
 
 Multi-value arguments are also supported:
 
@@ -4874,6 +4895,11 @@ ngx.req.set_header
 
 Set the current request's request header named `header_name` to value `header_value`, overriding any existing ones.
 
+The input Lua string `header_name` and `header_value` should already be well-formed with the URI encoding.
+For security considerations, this method will automatically escape " ", """, "(", ")", ",", "/", ":", ";", "?",
+"<", "=", ">", "?", "@", "[", "]", "\", "{", "}", 0x00-0x1F, 0x7F-0xFF in `header_name` and automatically escape
+"0x00-0x08, 0x0A-0x0F, 0x7F in `header_value`.
+
 By default, all the subrequests subsequently initiated by [ngx.location.capture](#ngxlocationcapture) and [ngx.location.capture_multi](#ngxlocationcapture_multi) will inherit the new header.
 
 Here is an example of setting the `Content-Type` header:
@@ -5155,7 +5181,7 @@ ngx.req.socket
 
 **context:** *rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;*
 
-Returns a read-only cosocket object that wraps the downstream connection. Only [receive](#tcpsockreceive) and [receiveuntil](#tcpsockreceiveuntil) methods are supported on this object.
+Returns a read-only cosocket object that wraps the downstream connection. Only [receive](#tcpsockreceive), [receiveany](#tcpsockreceiveany) and [receiveuntil](#tcpsockreceiveuntil) methods are supported on this object.
 
 In case of error, `nil` will be returned as well as a string describing the error.
 
@@ -5164,7 +5190,7 @@ The socket object returned by this method is usually used to read the current re
 If any request body data has been pre-read into the Nginx core request header buffer, the resulting cosocket object will take care of this to avoid potential data loss resulting from such pre-reading.
 Chunked request bodies are not yet supported in this API.
 
-Since the `v0.9.0` release, this function accepts an optional boolean `raw` argument. When this argument is `true`, this function returns a full-duplex cosocket object wrapping around the raw downstream connection socket, upon which you can call the [receive](#tcpsockreceive), [receiveuntil](#tcpsockreceiveuntil), and [send](#tcpsocksend) methods.
+Since the `v0.9.0` release, this function accepts an optional boolean `raw` argument. When this argument is `true`, this function returns a full-duplex cosocket object wrapping around the raw downstream connection socket, upon which you can call the [receive](#tcpsockreceive), [receiveany](#tcpsockreceiveany), [receiveuntil](#tcpsockreceiveuntil), and [send](#tcpsocksend) methods.
 
 When the `raw` argument is `true`, it is required that no pending data from any previous [ngx.say](#ngxsay), [ngx.print](#ngxprint), or [ngx.send_headers](#ngxsend_headers) calls exists. So if you have these downstream output calls previously, you should call [ngx.flush(true)](#ngxflush) before calling `ngx.req.socket(true)` to ensure that there is no pending output data. If the request body has not been read yet, then this "raw socket" can also be used to read the request body.
 
@@ -5567,11 +5593,19 @@ This method was introduced in the `0.5.0rc30` release.
 ngx.escape_uri
 --------------
 
-**syntax:** *newstr = ngx.escape_uri(str)*
+**syntax:** *newstr = ngx.escape_uri(str, type?)*
 
 **context:** *init_by_lua&#42;, init_worker_by_lua&#42;, set_by_lua&#42;, rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, header_filter_by_lua&#42;, body_filter_by_lua&#42;, log_by_lua&#42;, ngx.timer.&#42;, balancer_by_lua&#42;, ssl_certificate_by_lua&#42;, ssl_session_fetch_by_lua&#42;, ssl_session_store_by_lua&#42;*
 
-Escape `str` as a URI component.
+Since `v0.10.16`, this function accepts an optional `type` argument.
+It accepts the following values (defaults to `2`):
+
+* `0`: escapes `str` as a full URI. And the characters
+` ` (space), `#`, `%`,
+`?`, 0x00 ~ 0x1F, 0x7F ~ 0xFF will be escaped.
+* `2`: escape `str` as a URI component. All characters except
+alphabetic characters, digits, `-`, `.`, `_`,
+`~` will be encoded as `%XX`.
 
 [Back to TOC](#nginx-api-for-lua)
 
@@ -6292,13 +6326,13 @@ When the `replace` is a string, then it is treated as a special template for str
 ```lua
 
  local newstr, n, err = ngx.re.sub("hello, 1234", "([0-9])[0-9]", "[$0][$1]")
- if newstr then
-     -- newstr == "hello, [12][1]34"
-     -- n == 1
- else
+ if not newstr then
      ngx.log(ngx.ERR, "error: ", err)
      return
  end
+
+ -- newstr == "hello, [12][1]34"
+ -- n == 1
 ```
 
 where `$0` referring to the whole substring matched by the pattern and `$1` referring to the first parenthesized capturing substring.
@@ -6308,8 +6342,8 @@ Curly braces can also be used to disambiguate variable names from the background
 ```lua
 
  local newstr, n, err = ngx.re.sub("hello, 1234", "[0-9]", "${0}00")
-     -- newstr == "hello, 100234"
-     -- n == 1
+ -- newstr == "hello, 100234"
+ -- n == 1
 ```
 
 Literal dollar sign characters (`$`) in the `replace` string argument can be escaped by another dollar sign, for instance,
@@ -6317,8 +6351,8 @@ Literal dollar sign characters (`$`) in the `replace` string argument can be esc
 ```lua
 
  local newstr, n, err = ngx.re.sub("hello, 1234", "[0-9]", "$$")
-     -- newstr == "hello, $234"
-     -- n == 1
+ -- newstr == "hello, $234"
+ -- n == 1
 ```
 
 Do not use backlashes to escape dollar signs; it will not work as expected.
@@ -6330,9 +6364,10 @@ When the `replace` argument is of type "function", then it will be invoked with 
  local func = function (m)
      return "[" .. m[0] .. "][" .. m[1] .. "]"
  end
+
  local newstr, n, err = ngx.re.sub("hello, 1234", "( [0-9] ) [0-9]", func, "x")
-     -- newstr == "hello, [12][1]34"
-     -- n == 1
+ -- newstr == "hello, [12][1]34"
+ -- n == 1
 ```
 
 The dollar sign characters in the return value of the `replace` function argument are not special at all.
@@ -6357,13 +6392,13 @@ Here is some examples:
 ```lua
 
  local newstr, n, err = ngx.re.gsub("hello, world", "([a-z])[a-z]+", "[$0,$1]", "i")
- if newstr then
-     -- newstr == "[hello,h], [world,w]"
-     -- n == 2
- else
+ if not newstr then
      ngx.log(ngx.ERR, "error: ", err)
      return
  end
+
+ -- newstr == "[hello,h], [world,w]"
+ -- n == 2
 ```
 
 ```lua
@@ -6372,8 +6407,8 @@ Here is some examples:
      return "[" .. m[0] .. "," .. m[1] .. "]"
  end
  local newstr, n, err = ngx.re.gsub("hello, world", "([a-z])[a-z]+", func, "i")
-     -- newstr == "[hello,h], [world,w]"
-     -- n == 2
+ -- newstr == "[hello,h], [world,w]"
+ -- n == 2
 ```
 
 This method requires the PCRE library enabled in Nginx ([Known Issue With Special Escaping Sequences](#special-escaping-sequences)).
@@ -6547,6 +6582,10 @@ The optional `exptime` argument specifies expiration time (in seconds) for the i
 The optional `flags` argument specifies a user flags value associated with the entry to be stored. It can also be retrieved later with the value. The user flags is stored as an unsigned 32-bit integer internally. Defaults to `0`. The user flags argument was first introduced in the `v0.5.0rc2` release.
 
 When it fails to allocate memory for the current key-value item, then `set` will try removing existing items in the storage according to the Least-Recently Used (LRU) algorithm. Note that, LRU takes priority over expiration time here. If up to tens of existing items have been removed and the storage left is still insufficient (either due to the total capacity limit specified by [lua_shared_dict](#lua_shared_dict) or memory segmentation), then the `err` return value will be `no memory` and `success` will be `false`.
+
+If the sizes of items in the dictionary are not multiples or even powers of a certain value (like 2), it is easier to encounter `no memory` error because of memory fragmentation. It is recommended to use different dictionaries for different sizes of items.
+
+When you encounter `no memory` error, you can also evict more least-recently-used items by retrying this method call more times to to make room for the current item.
 
 If this method succeeds in storing the current item by forcibly removing other not-yet-expired items in the dictionary via LRU, the `forcible` return value will be `true`. If it stores the item without forcibly removing other valid items, then the return value `forcible` will be `false`.
 
@@ -6882,7 +6921,7 @@ ngx.shared.DICT.flush_all
 
 **context:** *init_by_lua&#42;, set_by_lua&#42;, rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, header_filter_by_lua&#42;, body_filter_by_lua&#42;, log_by_lua&#42;, ngx.timer.&#42;, balancer_by_lua&#42;, ssl_certificate_by_lua&#42;, ssl_session_fetch_by_lua&#42;, ssl_session_store_by_lua&#42;*
 
-Flushes out all the items in the dictionary. This method does not actuall free up all the memory blocks in the dictionary but just marks all the existing items as expired.
+Flushes out all the items in the dictionary. This method does not actually free up all the memory blocks in the dictionary but just marks all the existing items as expired.
 
 This feature was first introduced in the `v0.5.0rc17` release.
 
@@ -7074,6 +7113,9 @@ Since the `v0.7.18` release, connecting to a datagram unix domain socket file is
      ngx.say("failed to connect to the datagram unix domain socket: ", err)
      return
  end
+
+ -- do something after connect
+ -- such as sock:send or sock:receive
 ```
 
 assuming the datagram service is listening on the unix domain socket file `/tmp/some-datagram-service.sock` and the client socket will use the "autobind" feature on Linux.
@@ -7278,6 +7320,9 @@ Connecting to a Unix Domain Socket file is also possible:
      ngx.say("failed to connect to the memcached unix domain socket: ", err)
      return
  end
+
+ -- do something after connect
+ -- such as sock:send or sock:receive
 ```
 
 assuming memcached (or something else) is listening on the unix domain socket file `/tmp/memcached.sock`.
@@ -7818,7 +7863,7 @@ All the Lua code chunks running by [rewrite_by_lua](#rewrite_by_lua), [access_by
 By default, the corresponding Nginx handler (e.g., [rewrite_by_lua](#rewrite_by_lua) handler) will not terminate until
 
 1. both the "entry thread" and all the user "light threads" terminates,
-1. a "light thread" (either the "entry thread" or a user "light thread" aborts by calling [ngx.exit](#ngxexit), [ngx.exec](#ngxexec), [ngx.redirect](#ngxredirect), or [ngx.req.set_uri(uri, true)](#ngxreqset_uri), or
+1. a "light thread" (either the "entry thread" or a user "light thread") aborts by calling [ngx.exit](#ngxexit), [ngx.exec](#ngxexec), [ngx.redirect](#ngxredirect), or [ngx.req.set_uri(uri, true)](#ngxreqset_uri), or
 1. the "entry thread" terminates with a Lua error.
 
 When the user "light thread" terminates with a Lua error, however, it will not abort other running "light threads" like the "entry thread" does.
@@ -8156,6 +8201,8 @@ Here is a simple example:
              ngx.log(ngx.ERR, "failed to create timer: ", err)
              return
          end
+
+         -- other job in log_by_lua_block
      }
  }
 ```
@@ -8176,6 +8223,8 @@ One can also create infinite re-occurring timers, for instance, a timer getting 
          ngx.log(ngx.ERR, "failed to create the timer: ", err)
          return
      end
+
+     -- do something in timer
  end
 
  local ok, err = ngx.timer.at(delay, handler)
@@ -8183,6 +8232,8 @@ One can also create infinite re-occurring timers, for instance, a timer getting 
      ngx.log(ngx.ERR, "failed to create the timer: ", err)
      return
  end
+
+ -- do other jobs
 ```
 
 It is recommended, however, to use the [ngx.timer.every](#ngxtimerevery) API function
@@ -8283,7 +8334,7 @@ ngx.config.subsystem
 
 **context:** *set_by_lua&#42;, rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, header_filter_by_lua&#42;, body_filter_by_lua&#42;, log_by_lua&#42;, ngx.timer.&#42;, init_by_lua&#42;, init_worker_by_lua&#42;*
 
-This string field indicates the current Nginx subsystem the current Lua environment is based on. For this module, this field always takes the string value `"http"`. For
+This string field indicates the Nginx subsystem the current Lua environment is based on. For this module, this field always takes the string value `"http"`. For
 [ngx_stream_lua_module](https://github.com/openresty/stream-lua-nginx-module#readme), however, this field takes the value `"stream"`.
 
 This field was first introduced in the `0.10.1`.

@@ -9,7 +9,7 @@ local max = math.max
 
 
 local _M = {
-    _VERSION = '0.06'
+    _VERSION = '0.07'
 }
 
 
@@ -42,6 +42,7 @@ function _M.combine(limiters, keys, states)
                 -- we intentionally ignore any errors returned below.
                 limiters[j]:uncommit(keys[j])
             end
+            limiters[n]:uncommit(keys[n])
             return nil, err
         end
         if states then

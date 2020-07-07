@@ -373,7 +373,7 @@ local function init()
 end
 
 local session = {
-    _VERSION = "3.5"
+    _VERSION = "3.6"
 }
 
 session.__index = session
@@ -743,7 +743,7 @@ function session:hide()
     if j == 0 then
         clear_header("Cookie")
     else
-        set_header("Cookie", results)
+        set_header("Cookie", concat(results, "; ", 1, j))
     end
 end
 

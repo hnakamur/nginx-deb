@@ -27,6 +27,17 @@
 #   define NGX_HTTP_SWITCHING_PROTOCOLS 101
 #endif
 
+#define NGX_HTTP_LUA_ESCAPE_HEADER_NAME  7
+
+#define NGX_HTTP_LUA_ESCAPE_HEADER_VALUE  8
+
+#define NGX_HTTP_LUA_CONTEXT_YIELDABLE  NGX_HTTP_LUA_CONTEXT_REWRITE         \
+                                        | NGX_HTTP_LUA_CONTEXT_ACCESS        \
+                                        | NGX_HTTP_LUA_CONTEXT_CONTENT       \
+                                        | NGX_HTTP_LUA_CONTEXT_TIMER         \
+                                        | NGX_HTTP_LUA_CONTEXT_SSL_CERT      \
+                                        | NGX_HTTP_LUA_CONTEXT_SSL_SESS_FETCH
+
 
 /* key in Lua vm registry for all the "ngx.ctx" tables */
 #define ngx_http_lua_ctx_tables_key  "ngx_lua_ctx_tables"
@@ -168,6 +179,9 @@ void ngx_http_lua_unescape_uri(u_char **dst, u_char **src, size_t size,
 
 uintptr_t ngx_http_lua_escape_uri(u_char *dst, u_char *src,
     size_t size, ngx_uint_t type);
+
+ngx_int_t ngx_http_lua_copy_escaped_header(ngx_http_request_t *r,
+    ngx_str_t *dst, int is_name);
 
 void ngx_http_lua_inject_req_api(ngx_log_t *log, lua_State *L);
 
@@ -490,17 +504,16 @@ ngx_inet_get_port(struct sockaddr *sa)
 
 
 static ngx_inline ngx_int_t
-ngx_http_lua_check_unsafe_string(ngx_http_request_t *r, u_char *str, size_t len,
-    const char *name)
+ngx_http_lua_check_unsafe_uri_bytes(ngx_http_request_t *r, u_char *str,
+    size_t len, u_char *byte)
 {
-    size_t           i, buf_len;
+    size_t           i;
     u_char           c;
-    u_char          *buf, *src = str;
 
-                     /* %00-%1F, %7F */
+                     /* %00-%08, %0A-%1F, %7F */
 
     static uint32_t  unsafe[] = {
-        0xffffffff, /* 1111 1111 1111 1111  1111 1111 1111 1111 */
+        0xfffffdff, /* 1111 1111 1111 1111  1111 1101 1111 1111 */
 
                     /* ?>=< ;:98 7654 3210  /.-, +*)( '&%$ #"!  */
         0x00000000, /* 0000 0000 0000 0000  0000 0000 0000 0000 */
@@ -520,20 +533,7 @@ ngx_http_lua_check_unsafe_string(ngx_http_request_t *r, u_char *str, size_t len,
     for (i = 0; i < len; i++, str++) {
         c = *str;
         if (unsafe[c >> 5] & (1 << (c & 0x1f))) {
-            buf_len = ngx_http_lua_escape_log(NULL, src, len);
-            buf = ngx_palloc(r->pool, buf_len);
-            if (buf == NULL) {
-                return NGX_ERROR;
-            }
-
-            ngx_http_lua_escape_log(buf, src, len);
-
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                          "unsafe byte \"0x%uxd\" in %s \"%*s\"",
-                          (unsigned) c, name, buf_len, buf);
-
-            ngx_pfree(r->pool, buf);
-
+            *byte = c;
             return NGX_ERROR;
         }
     }

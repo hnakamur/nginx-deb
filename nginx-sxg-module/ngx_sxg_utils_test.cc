@@ -75,6 +75,11 @@ bool ParamIsPreload(const std::string& input) {
 
 TEST(NgxSxgUtilsTest, ParamIsPreload) {
   EXPECT_TRUE(ParamIsPreload("rel=preload"));
+  EXPECT_TRUE(ParamIsPreload(" rel=preload"));
+  EXPECT_TRUE(ParamIsPreload("rel=preload "));
+  EXPECT_TRUE(ParamIsPreload("rel= preload"));
+  EXPECT_TRUE(ParamIsPreload("rel=\" preload\""));
+  EXPECT_TRUE(ParamIsPreload("rel=\"preload \""));
   EXPECT_TRUE(ParamIsPreload(R"(rel="preload")"));
   EXPECT_TRUE(ParamIsPreload(R"(rel="alter preload hello world")"));
   EXPECT_FALSE(ParamIsPreload("preload=rel"));
@@ -86,6 +91,33 @@ TEST(NgxSxgUtilsTest, ParamIsPreload) {
   EXPECT_FALSE(ParamIsPreload("rel=\"\n \""));
   EXPECT_FALSE(ParamIsPreload("r"));
   EXPECT_FALSE(ParamIsPreload("rel=prepreload"));
+
+  // TODO: we should support this pattern.
+  // EXPECT_TRUE(ParamIsPreload("rel =preload"));
+}
+
+bool ParamIsAs(const std::string& input, const std::string& value) {
+  const char* ptr;
+  size_t len;
+  bool result = param_is_as(input.data(), input.size(), &ptr, &len);
+  return value == std::string(ptr, len) && result;
+}
+
+TEST(NgxSxgUtilsTest, ParamIsAs) {
+  EXPECT_TRUE(ParamIsAs("as=script", "script"));
+  EXPECT_TRUE(ParamIsAs("as=image", "image"));
+  EXPECT_TRUE(ParamIsAs("as= script", "script"));
+  EXPECT_TRUE(ParamIsAs("as=script ", "script"));
+  EXPECT_TRUE(ParamIsAs(" as=script", "script"));
+  EXPECT_TRUE(ParamIsAs("as=\"script\"", "script"));
+  EXPECT_TRUE(ParamIsAs("as=\" script\"", "script"));
+  EXPECT_TRUE(ParamIsAs("as=\"script \"", "script"));
+  EXPECT_FALSE(ParamIsAs("as=script", "image"));
+  EXPECT_FALSE(ParamIsAs("is=script", "script"));
+  EXPECT_FALSE(ParamIsAs("as=scrpt", "script"));
+
+  // TODO(kumagi): we should support this pattern.
+  // EXPECT_TRUE(ParamIsPreload("as =script"));
 }
 
 TEST(NgxSxgCertChain, free) {
