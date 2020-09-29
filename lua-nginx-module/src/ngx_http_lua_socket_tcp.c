@@ -901,7 +901,7 @@ ngx_http_lua_socket_tcp_connect(lua_State *L)
             pool_size = (ngx_int_t) lua_tointeger(L, -1);
 
             if (pool_size <= 0) {
-                msg = lua_pushfstring(L, "bad \"pool_size\" option value: %i",
+                msg = lua_pushfstring(L, "bad \"pool_size\" option value: %d",
                                       pool_size);
                 return luaL_argerror(L, n, msg);
             }
@@ -920,7 +920,7 @@ ngx_http_lua_socket_tcp_connect(lua_State *L)
             backlog = (ngx_int_t) lua_tointeger(L, -1);
 
             if (backlog < 0) {
-                msg = lua_pushfstring(L, "bad \"backlog\" option value: %i",
+                msg = lua_pushfstring(L, "bad \"backlog\" option value: %d",
                                       backlog);
                 return luaL_argerror(L, n, msg);
             }
@@ -970,8 +970,16 @@ ngx_http_lua_socket_tcp_connect(lua_State *L)
         n--;
     }
 
-    if (n == 3) {
-        port = luaL_checkinteger(L, 3);
+    /* most popular suit: host:port */
+    if (n == 3 && lua_isnumber(L, 3)) {
+
+        /* Hit the following parameter combination:
+         * sock:connect("127.0.0.1", port)
+         * sock:connect("127.0.0.1", port, opts)
+         * sock:connect("unix:/path", port)
+         * sock:connect("unix:/path", port, opts) */
+
+        port = (int) lua_tointeger(L, 3);
 
         if (port < 0 || port > 65535) {
             lua_pushnil(L);
@@ -987,8 +995,27 @@ ngx_http_lua_socket_tcp_connect(lua_State *L)
 
         dd("socket key: %s", lua_tostring(L, -1));
 
-    } else { /* n == 2 */
+    } else if (len >= 5 && ngx_strncasecmp(p, (u_char *) "unix:", 5) == 0) {
+
+        /* Hit the following parameter combination:
+         * sock:connect("unix:/path")
+         * sock:connect("unix:/path", nil)
+         * sock:connect("unix:/path", opts)
+         * sock:connect("unix:/path", nil, opts) */
+
         port = 0;
+
+    } else {
+
+        /* Ban the following parameter combination:
+         * sock:connect("127.0.0.1")
+         * sock:connect("127.0.0.1", nil)
+         * sock:connect("127.0.0.1", opts)
+         * sock:connect("127.0.0.1", nil, opts) */
+
+        lua_pushnil(L);
+        lua_pushfstring(L, "missing the port number");
+        return 2;
     }
 
     if (!custom_pool) {
@@ -5259,7 +5286,7 @@ ngx_http_lua_socket_tcp_setkeepalive(lua_State *L)
         }
 
         if (pool_size <= 0) {
-            msg = lua_pushfstring(L, "bad \"pool_size\" option value: %i",
+            msg = lua_pushfstring(L, "bad \"pool_size\" option value: %d",
                                   pool_size);
             return luaL_argerror(L, n, msg);
         }
