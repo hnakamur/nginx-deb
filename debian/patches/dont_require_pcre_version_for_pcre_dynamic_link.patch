@@ -20,7 +20,7 @@ Last-Update: 2019-10-04
 
 --- a/lua-nginx-module/config
 +++ b/lua-nginx-module/config
-@@ -495,7 +495,7 @@
+@@ -497,7 +497,7 @@
  
  # ----------------------------------------
  
@@ -31,7 +31,7 @@ Last-Update: 2019-10-04
          Darwin:*)
 --- a/stream-lua-nginx-module/config
 +++ b/stream-lua-nginx-module/config
-@@ -404,7 +404,7 @@
+@@ -403,7 +403,7 @@
  
  # ----------------------------------------
  
