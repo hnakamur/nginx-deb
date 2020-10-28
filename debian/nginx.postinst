@@ -25,8 +25,12 @@ fi
 
 if [ -x "/etc/init.d/nginx" ]; then
     if [ -f "/var/run/nginx.pid" ] && kill -0 `cat /var/run/nginx.pid` >/dev/null; then
-        /etc/init.d/nginx upgrade || echo \
-            "Binary upgrade failed, please check nginx's error.log"
+        echo "======================================================"
+        echo "Binary upgrade is disabled in this nginx deb package."
+        echo "You can run \"/etc/init.d/nginx upgrade\" by yourself."
+        echo "======================================================"
+        #/etc/init.d/nginx upgrade || echo \
+        #    "Binary upgrade failed, please check nginx's error.log"
     else
         if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
             invoke-rc.d nginx start || true
