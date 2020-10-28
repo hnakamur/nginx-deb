@@ -1,6 +1,6 @@
 --- a/src/http/modules/ngx_http_proxy_module.c
 +++ b/src/http/modules/ngx_http_proxy_module.c
-@@ -239,6 +239,8 @@
+@@ -244,6 +244,8 @@
  #endif
  static void ngx_http_proxy_set_vars(ngx_url_t *u, ngx_http_proxy_vars_t *v);
  
@@ -9,8 +9,8 @@
  
  static ngx_conf_post_t  ngx_http_proxy_lowat_post =
      { ngx_http_proxy_lowat_check };
-@@ -764,6 +766,12 @@
-       0,
+@@ -614,6 +616,12 @@
+       offsetof(ngx_http_proxy_loc_conf_t, upstream.cache_background_update),
        NULL },
  
 +    { ngx_string("file_cache_stats"),
@@ -21,8 +21,8 @@
 +      NULL },
  #endif
  
-       ngx_null_command
-@@ -4958,3 +4966,103 @@
+     { ngx_string("proxy_temp_path"),
+@@ -4996,3 +5004,103 @@
  
      v->uri = u->uri;
  }
