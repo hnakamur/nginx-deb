@@ -237,7 +237,9 @@ ngx_http_lua_ssl_sess_fetch_handler(ngx_ssl_conn_t *ssl_conn,
 
     dd("first time");
 
+#if (nginx_version < 1017009)
     ngx_reusable_connection(c, 0);
+#endif
 
     hc = c->data;
 
@@ -512,6 +514,8 @@ ngx_http_lua_ssl_sess_fetch_by_chunk(lua_State *L, ngx_http_request_t *r)
 #ifdef NGX_LUA_USE_ASSERT
     ctx->cur_co_ctx->co_top = 1;
 #endif
+
+    ngx_http_lua_attach_co_ctx_to_L(co, ctx->cur_co_ctx);
 
     /* register request cleanup hooks */
     if (ctx->cleanup == NULL) {

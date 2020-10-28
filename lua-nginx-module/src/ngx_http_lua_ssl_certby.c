@@ -215,7 +215,9 @@ ngx_http_lua_ssl_cert_handler(ngx_ssl_conn_t *ssl_conn, void *data)
 
     dd("first time");
 
+#if (nginx_version < 1017009)
     ngx_reusable_connection(c, 0);
+#endif
 
     hc = c->data;
 
@@ -490,6 +492,8 @@ ngx_http_lua_ssl_cert_by_chunk(lua_State *L, ngx_http_request_t *r)
 #ifdef NGX_LUA_USE_ASSERT
     ctx->cur_co_ctx->co_top = 1;
 #endif
+
+    ngx_http_lua_attach_co_ctx_to_L(co, ctx->cur_co_ctx);
 
     /* register request cleanup hooks */
     if (ctx->cleanup == NULL) {
@@ -853,6 +857,39 @@ ngx_http_lua_ffi_ssl_server_name(ngx_http_request_t *r, char **name,
     return NGX_ERROR;
 
 #endif
+}
+
+
+int
+ngx_http_lua_ffi_ssl_server_port(ngx_http_request_t *r,
+    unsigned short *server_port, char **err)
+{
+    ngx_ssl_conn_t          *ssl_conn;
+    ngx_connection_t        *c;
+
+    if (r->connection == NULL || r->connection->ssl == NULL) {
+        *err = "bad request";
+        return NGX_ERROR;
+    }
+
+    ssl_conn = r->connection->ssl->connection;
+    if (ssl_conn == NULL) {
+        *err = "bad ssl conn";
+        return NGX_ERROR;
+    }
+
+    c = ngx_ssl_get_connection(ssl_conn);
+
+    switch (c->local_sockaddr->sa_family) {
+
+    case AF_UNIX:
+        *err = "unix domain has no port";
+        return NGX_ERROR;
+
+    default:
+        *server_port = (unsigned short) ngx_inet_get_port(c->local_sockaddr);
+        return NGX_OK;
+    }
 }
 
 

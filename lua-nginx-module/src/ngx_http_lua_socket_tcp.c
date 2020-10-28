@@ -28,7 +28,6 @@ static int ngx_http_lua_socket_tcp_receive(lua_State *L);
 static int ngx_http_lua_socket_tcp_receiveany(lua_State *L);
 static int ngx_http_lua_socket_tcp_send(lua_State *L);
 static int ngx_http_lua_socket_tcp_close(lua_State *L);
-static int ngx_http_lua_socket_tcp_setoption(lua_State *L);
 static int ngx_http_lua_socket_tcp_settimeout(lua_State *L);
 static int ngx_http_lua_socket_tcp_settimeouts(lua_State *L);
 static void ngx_http_lua_socket_tcp_handler(ngx_event_t *ev);
@@ -178,6 +177,15 @@ enum {
 };
 
 
+enum {
+    NGX_HTTP_LUA_SOCKOPT_KEEPALIVE = 1,
+    NGX_HTTP_LUA_SOCKOPT_REUSEADDR,
+    NGX_HTTP_LUA_SOCKOPT_TCP_NODELAY,
+    NGX_HTTP_LUA_SOCKOPT_SNDBUF,
+    NGX_HTTP_LUA_SOCKOPT_RCVBUF,
+};
+
+
 #define ngx_http_lua_socket_check_busy_connecting(r, u, L)                   \
     if ((u)->conn_waiting) {                                                 \
         lua_pushnil(L);                                                      \
@@ -219,6 +227,9 @@ static char ngx_http_lua_pattern_udata_metatable_key;
 #if (NGX_HTTP_SSL)
 static char ngx_http_lua_ssl_session_metatable_key;
 #endif
+
+
+#define ngx_http_lua_tcp_socket_metatable_literal_key  "__tcp_cosocket_mt"
 
 
 void
@@ -310,7 +321,7 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
     /* {{{tcp object metatable */
     lua_pushlightuserdata(L, ngx_http_lua_lightudata_mask(
                           tcp_socket_metatable_key));
-    lua_createtable(L, 0 /* narr */, 13 /* nrec */);
+    lua_createtable(L, 0 /* narr */, 14 /* nrec */);
 
     lua_pushcfunction(L, ngx_http_lua_socket_tcp_connect);
     lua_setfield(L, -2, "connect");
@@ -337,9 +348,6 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
     lua_pushcfunction(L, ngx_http_lua_socket_tcp_close);
     lua_setfield(L, -2, "close");
 
-    lua_pushcfunction(L, ngx_http_lua_socket_tcp_setoption);
-    lua_setfield(L, -2, "setoption");
-
     lua_pushcfunction(L, ngx_http_lua_socket_tcp_settimeout);
     lua_setfield(L, -2, "settimeout"); /* ngx socket mt */
 
@@ -354,6 +362,12 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
 
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");
+    lua_rawset(L, LUA_REGISTRYINDEX);
+
+    lua_pushliteral(L, ngx_http_lua_tcp_socket_metatable_literal_key);
+    lua_pushlightuserdata(L, ngx_http_lua_lightudata_mask(
+                          tcp_socket_metatable_key));
+    lua_rawget(L, LUA_REGISTRYINDEX);
     lua_rawset(L, LUA_REGISTRYINDEX);
     /* }}} */
 
@@ -3097,14 +3111,6 @@ ngx_http_lua_socket_tcp_close(lua_State *L)
 
 
 static int
-ngx_http_lua_socket_tcp_setoption(lua_State *L)
-{
-    /* TODO */
-    return 0;
-}
-
-
-static int
 ngx_http_lua_socket_tcp_settimeout(lua_State *L)
 {
     int                     n;
@@ -5382,6 +5388,8 @@ ngx_http_lua_socket_tcp_setkeepalive(lua_State *L)
     item->socklen = pc->socklen;
     ngx_memcpy(&item->sockaddr, pc->sockaddr, pc->socklen);
     item->reused = u->reused;
+    item->udata_queue = u->udata_queue;
+    u->udata_queue = NULL;
 
     if (c->read->ready) {
         rc = ngx_http_lua_socket_keepalive_close_handler(c->read);
@@ -5457,6 +5465,8 @@ ngx_http_lua_get_keepalive_peer(ngx_http_request_t *r,
         pc->cached = 1;
 
         u->reused = item->reused + 1;
+        u->udata_queue = item->udata_queue;
+        item->udata_queue = NULL;
 
 #if 1
         u->write_event_handler = ngx_http_lua_socket_dummy_handler;
@@ -6024,8 +6034,17 @@ ngx_http_lua_tcp_queue_conn_op_cleanup(void *data)
                    "lua tcp socket abort queueing, conn_op_ctx: %p, u: %p",
                    conn_op_ctx, u);
 
+#if (nginx_version >= 1007005)
     if (conn_op_ctx->event.posted) {
-        ngx_delete_posted_event(&conn_op_ctx->event);
+#else
+    if (conn_op_ctx->event.prev) {
+#endif
+        /*
+        * We need the extra parentheses around the argument
+        * of ngx_delete_posted_event() just to work around macro issues in
+        * nginx cores older than 1.7.5 (exclusive).
+        */
+        ngx_delete_posted_event((&conn_op_ctx->event));
 
     } else if (conn_op_ctx->event.timer_set) {
         ngx_del_timer(&conn_op_ctx->event);
@@ -6141,5 +6160,384 @@ ngx_http_lua_cleanup_conn_pools(lua_State *L)
 
     lua_pop(L, 1);
 }
+
+
+int
+ngx_http_lua_ffi_socket_tcp_init_udata_queue(
+    ngx_http_lua_socket_tcp_upstream_t *u, int capacity, char **err_msg)
+{
+    int                                  i, max_size;
+    ngx_pool_t                          *pool;
+    ngx_http_lua_socket_udata_queue_t   *udata_queue;
+    ngx_http_lua_socket_node_t          *node;
+
+    pool = u->peer.connection->pool;
+
+    if (u->udata_queue == NULL) {
+        max_size = capacity;
+        if (max_size == 0) {
+            max_size = 4;
+        }
+
+        udata_queue = ngx_palloc(pool,
+                                 sizeof(ngx_http_lua_socket_udata_queue_t) +
+                                 sizeof(ngx_http_lua_socket_node_t) * max_size);
+
+        if (udata_queue == NULL) {
+            *err_msg = "no memory";
+            return NGX_ERROR;
+        }
+
+        udata_queue->pool = pool;
+        udata_queue->capacity = capacity;
+        udata_queue->len = 0;
+        ngx_queue_init(&udata_queue->queue);
+        ngx_queue_init(&udata_queue->free);
+
+        node = (ngx_http_lua_socket_node_t *) (udata_queue + 1);
+
+        for (i = 0; i < max_size; i++) {
+            ngx_queue_insert_head(&udata_queue->free, &node->queue);
+            node++;
+        }
+
+        u->udata_queue = udata_queue;
+
+        ngx_log_debug3(NGX_LOG_DEBUG_HTTP, u->request->connection->log, 0,
+                       "init udata_queue %uD, cosocket %p udata %p",
+                       capacity, u, udata_queue);
+    }
+
+    return NGX_OK;
+}
+
+
+int
+ngx_http_lua_ffi_socket_tcp_count_udata(ngx_http_lua_socket_tcp_upstream_t *u)
+{
+    /* return NGX_ERROR (-1) for missing udata_queue to
+     * distinguish it from empty udata_queue */
+    if (u->udata_queue == NULL) {
+        return NGX_ERROR;
+    }
+
+    return u->udata_queue->len;
+}
+
+
+int
+ngx_http_lua_ffi_socket_tcp_add_udata(ngx_http_lua_socket_tcp_upstream_t *u,
+    uint64_t key, uint64_t value, uint64_t *evicted_key,
+    uint64_t *evicted_value, char **err_msg)
+{
+    int                             evicted = 0;
+    ngx_pool_t                     *pool;
+    ngx_http_lua_socket_node_t     *node = NULL;
+    ngx_queue_t                    *q, *uqueue;
+
+    pool = u->peer.connection->pool;
+
+    if (u->udata_queue == NULL) {
+        *err_msg = "no udata queue";
+        return NGX_ERROR;
+    }
+
+    uqueue = &u->udata_queue->queue;
+
+    for (q = ngx_queue_head(uqueue);
+         q != ngx_queue_sentinel(uqueue);
+         q = ngx_queue_next(q))
+    {
+        node = ngx_queue_data(q, ngx_http_lua_socket_node_t, queue);
+
+        if (node->key == key) {
+            /* key exists */
+            ngx_log_debug3(NGX_LOG_DEBUG_HTTP, u->request->connection->log, 0,
+                           "found %uD, cosocket %p udata %p",
+                           key, u, u->udata_queue);
+            ngx_queue_remove(q);
+            node->value = value;
+
+            break;
+        }
+    }
+
+    if (q == ngx_queue_sentinel(uqueue)) {
+
+        if (u->udata_queue->capacity
+            && u->udata_queue->capacity == u->udata_queue->len)
+        {
+            /* evict key */
+            q = ngx_queue_last(uqueue);
+            node = ngx_queue_data(q, ngx_http_lua_socket_node_t, queue);
+            ngx_queue_remove(q);
+            ngx_log_debug4(NGX_LOG_DEBUG_HTTP, u->request->connection->log, 0,
+                           "evict %uD for %uD, cosocket %p udata %p",
+                           node->key, key, u, u->udata_queue);
+            *evicted_key = node->key;
+            *evicted_value = node->value;
+            evicted = 1;
+
+        } else {
+            /* insert key */
+            ngx_log_debug3(NGX_LOG_DEBUG_HTTP, u->request->connection->log, 0,
+                           "insert %uD, cosocket %p udata %p",
+                           key, u, u->udata_queue);
+
+            if (!ngx_queue_empty(&u->udata_queue->free)) {
+                q = ngx_queue_head(&u->udata_queue->free);
+                node = ngx_queue_data(q, ngx_http_lua_socket_node_t, queue);
+                ngx_queue_remove(q);
+                ngx_log_debug3(NGX_LOG_DEBUG_HTTP, u->request->connection->log,
+                               0, "reuse free node %p, cosocket %p udata %p",
+                               node, u, u->udata_queue);
+
+            } else {
+                node = ngx_palloc(pool, sizeof(ngx_http_lua_socket_node_t));
+                if (node == NULL) {
+                    goto nomem;
+                }
+
+                ngx_log_debug3(NGX_LOG_DEBUG_HTTP, u->request->connection->log,
+                               0, "allocate new node %p, cosocket %p udata %p",
+                               node, u, u->udata_queue);
+            }
+
+            u->udata_queue->len++;
+        }
+
+        node->key = key;
+        node->value = value;
+    }
+
+    ngx_queue_insert_head(uqueue, &node->queue);
+    return evicted ? NGX_DONE : NGX_OK;
+
+nomem:
+
+    *err_msg = "no memory";
+    return NGX_ERROR;
+}
+
+
+int
+ngx_http_lua_ffi_socket_tcp_get_udata(ngx_http_lua_socket_tcp_upstream_t *u,
+    uint64_t key, uint64_t *value, char **err_msg)
+{
+    ngx_http_lua_socket_node_t     *node;
+    ngx_queue_t                    *q, *uqueue;
+
+    if (u->udata_queue == NULL) {
+        *err_msg = "no udata queue";
+        return NGX_ERROR;
+    }
+
+    uqueue = &u->udata_queue->queue;
+
+    for (q = ngx_queue_head(uqueue);
+         q != ngx_queue_sentinel(uqueue);
+         q = ngx_queue_next(q))
+    {
+        node = ngx_queue_data(q, ngx_http_lua_socket_node_t, queue);
+
+        if (node->key == key) {
+            ngx_log_debug3(NGX_LOG_DEBUG_HTTP, u->request->connection->log, 0,
+                           "found %uD, cosocket %p udata %p",
+                           key, u, u->udata_queue);
+            ngx_queue_remove(q);
+            ngx_queue_insert_head(uqueue, &node->queue);
+            *value = node->value;
+            return NGX_OK;
+        }
+    }
+
+    *err_msg = "not found";
+    return NGX_ERROR;
+}
+
+
+int
+ngx_http_lua_ffi_socket_tcp_del_udata(ngx_http_lua_socket_tcp_upstream_t *u,
+    uint64_t key, char **err_msg)
+{
+    ngx_http_lua_socket_node_t     *node;
+    ngx_queue_t                    *q, *uqueue;
+
+    if (u->udata_queue == NULL) {
+        *err_msg = "no udata queue";
+        return NGX_ERROR;
+    }
+
+    uqueue = &u->udata_queue->queue;
+
+    for (q = ngx_queue_head(uqueue);
+         q != ngx_queue_sentinel(uqueue);
+         q = ngx_queue_next(q))
+    {
+        node = ngx_queue_data(q, ngx_http_lua_socket_node_t, queue);
+
+        if (node->key == key) {
+            ngx_log_debug3(NGX_LOG_DEBUG_HTTP, u->request->connection->log, 0,
+                           "delete %uD, cosocket %p udata %p",
+                           key, u, u->udata_queue);
+            ngx_queue_remove(q);
+            ngx_queue_insert_head(&u->udata_queue->free, &node->queue);
+            u->udata_queue->len--;
+            return NGX_OK;
+        }
+    }
+
+    *err_msg = "not found";
+    return NGX_ERROR;
+}
+
+
+int
+ngx_http_lua_ffi_socket_tcp_getoption(ngx_http_lua_socket_tcp_upstream_t *u,
+    int option, int *val, u_char *err, size_t *errlen)
+{
+    socklen_t len;
+    int       fd, rc;
+
+    if (u == NULL || u->peer.connection == NULL) {
+        *errlen = ngx_snprintf(err, *errlen, "closed") - err;
+        return NGX_ERROR;
+    }
+
+    fd = u->peer.connection->fd;
+
+    if (fd == (ngx_socket_t) -1) {
+        *errlen = ngx_snprintf(err, *errlen, "invalid socket fd") - err;
+        return NGX_ERROR;
+    }
+
+    len = sizeof(int);
+
+    switch (option) {
+    case NGX_HTTP_LUA_SOCKOPT_KEEPALIVE:
+        rc = getsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *) val, &len);
+        break;
+
+    case NGX_HTTP_LUA_SOCKOPT_REUSEADDR:
+        rc = getsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) val, &len);
+        break;
+
+    case NGX_HTTP_LUA_SOCKOPT_TCP_NODELAY:
+        rc = getsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void *) val, &len);
+        break;
+
+    case NGX_HTTP_LUA_SOCKOPT_SNDBUF:
+        rc = getsockopt(fd, SOL_SOCKET, SO_RCVBUF, (void *) val, &len);
+        break;
+
+    case NGX_HTTP_LUA_SOCKOPT_RCVBUF:
+        rc = getsockopt(fd, SOL_SOCKET, SO_SNDBUF, (void *) val, &len);
+        break;
+
+    default:
+        *errlen = ngx_snprintf(err, *errlen, "unsupported option %d", option)
+                  - err;
+        return NGX_ERROR;
+    }
+
+    if (rc == -1) {
+        *errlen = ngx_strerror(ngx_errno, err, NGX_MAX_ERROR_STR) - err;
+        return NGX_ERROR;
+    }
+
+    return NGX_OK;
+}
+
+
+int
+ngx_http_lua_ffi_socket_tcp_setoption(ngx_http_lua_socket_tcp_upstream_t *u,
+    int option, int val, u_char *err, size_t *errlen)
+{
+    socklen_t len;
+    int       fd, rc;
+
+    if (u == NULL || u->peer.connection == NULL) {
+        *errlen = ngx_snprintf(err, *errlen, "closed") - err;
+        return NGX_ERROR;
+    }
+
+    fd = u->peer.connection->fd;
+
+    if (fd == (ngx_socket_t) -1) {
+        *errlen = ngx_snprintf(err, *errlen, "invalid socket fd") - err;
+        return NGX_ERROR;
+    }
+
+    len = sizeof(int);
+
+    switch (option) {
+    case NGX_HTTP_LUA_SOCKOPT_KEEPALIVE:
+        rc = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE,
+                        (const void *) &val, len);
+        break;
+
+    case NGX_HTTP_LUA_SOCKOPT_REUSEADDR:
+        rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                        (const void *) &val, len);
+        break;
+
+    case NGX_HTTP_LUA_SOCKOPT_TCP_NODELAY:
+        rc = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
+                        (const void *) &val, len);
+        break;
+
+    case NGX_HTTP_LUA_SOCKOPT_SNDBUF:
+        rc = setsockopt(fd, SOL_SOCKET, SO_RCVBUF,
+                        (const void *) &val, len);
+        break;
+
+    case NGX_HTTP_LUA_SOCKOPT_RCVBUF:
+        rc = setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
+                        (const void *) &val, len);
+        break;
+
+    default:
+        *errlen = ngx_snprintf(err, *errlen, "unsupported option: %d", option)
+                  - err;
+        return NGX_ERROR;
+    }
+
+    if (rc == -1) {
+        *errlen = ngx_strerror(ngx_errno, err, NGX_MAX_ERROR_STR) - err;
+        return NGX_ERROR;
+    }
+
+    return NGX_OK;
+}
+
+
+/* just hack the fd for testing bad case, it will also return the original fd */
+int
+ngx_http_lua_ffi_socket_tcp_hack_fd(ngx_http_lua_socket_tcp_upstream_t *u,
+    int fd, u_char *err, size_t *errlen)
+{
+    int rc;
+
+    if (u == NULL || u->peer.connection == NULL) {
+        *errlen = ngx_snprintf(err, *errlen, "closed") - err;
+        return -1;
+    }
+
+    rc = u->peer.connection->fd;
+    if (rc == (ngx_socket_t) -1) {
+        *errlen = ngx_snprintf(err, *errlen, "invalid socket fd") - err;
+        return -1;
+    }
+
+    /* return the original fd value directly when the new fd is invalid */
+    if (fd < 0) {
+        return rc;
+    }
+
+    u->peer.connection->fd = fd;
+
+    return rc;
+}
+
 
 /* vi:set ft=c ts=4 sw=4 et fdm=marker: */

@@ -4,7 +4,7 @@ use t::TestCore;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 3 + 20);
+plan tests => repeat_each() * (blocks() * 3 + 19) + 2;
 
 add_block_preprocessor(sub {
     my $block = shift;
@@ -1127,6 +1127,7 @@ hello
 --- config
     location = /t {
         content_by_lua_block {
+            collectgarbage()
             local ngx_pipe = require "ngx.pipe"
             local proc = ngx_pipe.spawn("echo 'hello' && >&2 echo 'world'")
 
@@ -1589,7 +1590,7 @@ end
             local f = io.open("$TEST_NGINX_HTML_DIR/a.lua")
             local code = f:read("*a")
             local proc = helper.run_lua_with_graceful_shutdown("$TEST_NGINX_HTML_DIR", code)
-            proc:set_timeouts(100, 100, 100, 100)
+            proc:set_timeouts(300, 300, 300, 300)
 
             local data, err = proc:stdout_read_all()
             if not data then

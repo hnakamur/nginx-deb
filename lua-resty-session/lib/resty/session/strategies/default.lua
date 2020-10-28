@@ -3,13 +3,13 @@ local concat = table.concat
 
 local strategy = {}
 
-function strategy.load(session, cookie, key)
+function strategy.load(session, cookie, key, keep_lock)
   local storage = session.storage
   local id      = cookie.id
 
   local data, err
   if storage.open then
-    data, err = session.storage:open(session.encoder.encode(id), cookie)
+    data, err = session.storage:open(session.encoder.encode(id), keep_lock)
     if not data then
       return nil, err or "cookie data was not found"
     end
@@ -38,6 +38,11 @@ function strategy.load(session, cookie, key)
     return nil, "cookie has invalid signature"
   end
 
+  data, err = session.compressor:decompress(data)
+  if not data then
+    return nil, err or "unable to decompress data"
+  end
+
   data, err = session.serializer.deserialize(data)
   if not data then
     return nil, err or "unable to deserialize data"
@@ -52,8 +57,8 @@ function strategy.load(session, cookie, key)
   return true
 end
 
-function strategy.open(session, cookie)
-  return strategy.load(session, cookie)
+function strategy.open(session, cookie, keep_lock)
+  return strategy.load(session, cookie, nil, keep_lock)
 end
 
 function strategy.start(session)
@@ -101,6 +106,16 @@ function strategy.modify(session, action, close, key)
 
     return nil, err or "unable to serialize data"
   end
+
+  data, err = session.compressor:compress(data)
+  if not data then
+    if close and storage.close then
+      storage:close(id_encoded)
+    end
+
+    return nil, err or "unable to compress data"
+  end
+
   local hash = session.hmac(hkey, concat{ key, data, session.key })
 
   data, err = session.cipher:encrypt(data, hkey, id, session.key)
