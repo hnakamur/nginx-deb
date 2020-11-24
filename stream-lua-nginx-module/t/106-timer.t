@@ -12,7 +12,7 @@ our $StapScript = $t::StapThread::StapScript;
 
 repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 8 + 46);
+plan tests => repeat_each() * (blocks() * 8 + 45);
 
 #no_diff();
 no_long_string();
@@ -1893,6 +1893,50 @@ return _M
         end
 
         local ok, err = ngx.timer.at(0, test.run)
+        if not ok then
+            ngx.say("failed to set timer: ", err)
+            return
+        end
+
+        ngx.say("ok")
+    }
+--- stream_response
+ok
+--- wait: 0.1
+--- error_log eval
+qr/\[alert\] .*? lua failed to run timer with function defined at @.+\/test.lua:3: stream lua: 1 lua_max_running_timers are not enough/
+--- no_error_log
+[emerg]
+[crit]
+[error]
+[warn]
+
+
+
+=== TEST 33: log function location when failed to run a timer with arg (lua file)
+--- user_files
+>>> test.lua
+local _M = {}
+
+function _M.run()
+    ngx.sleep(0.01)
+end
+
+return _M
+--- stream_config
+    lua_package_path '$TEST_NGINX_HTML_DIR/?.lua;./?.lua;;';
+    lua_max_running_timers 1;
+--- stream_server_config
+    content_by_lua_block {
+        local test = require "test"
+
+        local ok, err = ngx.timer.at(0, test.run, "arg")
+        if not ok then
+            ngx.say("failed to set timer: ", err)
+            return
+        end
+
+        local ok, err = ngx.timer.at(0, test.run, "arg")
         if not ok then
             ngx.say("failed to set timer: ", err)
             return
