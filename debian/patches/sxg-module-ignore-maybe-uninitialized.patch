@@ -1,0 +1,19 @@
+diff --git a/nginx-sxg-module/ngx_sxg_utils.c b/nginx-sxg-module/ngx_sxg_utils.c
+index 2cd06ab..b18f1cc 100644
+--- a/nginx-sxg-module/ngx_sxg_utils.c
++++ b/nginx-sxg-module/ngx_sxg_utils.c
+@@ -386,12 +386,14 @@ static bool check_refresh_needed(ngx_sxg_cert_chain_t* target) {
+     bool next_update_exists =
+         asn1_generalizedtime_to_unixtime(revocation_time, &update);
+ 
++#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+     if (since < until) {
+       return false;
+     }
+     time_t middle_lifespan = since + ((until - since) / 2);
+     const time_t now = time(NULL);
+ 
++#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+     if (middle_lifespan < now || (next_update_exists && update < now)) {
+       return true;
+     }
