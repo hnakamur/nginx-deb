@@ -20,6 +20,7 @@ Table of Contents
 * [Name](#name)
 * [Status](#status)
 * [Version](#version)
+* [Videos](#videos)
 * [Synopsis](#synopsis)
 * [Description](#description)
 * [Typical Uses](#typical-uses)
@@ -69,6 +70,33 @@ Version
 This document describes ngx_lua
 [v0.10.19](https://github.com/openresty/lua-nginx-module/tags), which was released
 on 3 Nov, 2020.
+
+Videos
+======
+
+* YouTube video "[Hello World HTTP Example with OpenResty/Lua](https://youtu.be/eSfYLvVQMxw)"
+
+    [![Hello World HTTP Example with OpenResty/Lua](https://img.youtube.com/vi/eSfYLvVQMxw/0.jpg)](https://youtu.be/eSfYLvVQMxw)
+
+* YouTube video "[Write Your Own Lua Modules in OpenResty/Nginx Applications](https://youtu.be/vfYxOMl5LVY)"
+
+    [![Write Your Own Lua Modules in OpenResty/Nginx Applications](https://img.youtube.com/vi/vfYxOMl5LVY/0.jpg)](https://youtu.be/vfYxOMl5LVY)
+
+* YouTube video "[OpenResty's resty Command-Line Utility Demo](https://youtu.be/L1c7aw4mSOo)"
+
+    [![OpenResty's resty Command-Line Utility Demo](https://img.youtube.com/vi/L1c7aw4mSOo/0.jpg)](https://youtu.be/L1c7aw4mSOo)
+
+* YouTube video "[Measure Execution Time of Lua Code Correctly in OpenResty](https://youtu.be/VkRYW_qLoME)"
+
+    [![Measure Execution Time of Lua Code Correctly in OpenResty](https://img.youtube.com/vi/VkRYW_qLoME/0.jpg)](https://youtu.be/VkRYW_qLoME)
+
+* YouTube video "[Precompile Lua Modules into LuaJIT Bytecode to Speedup OpenResty Startup](https://youtu.be/EP7c0BM2yNo)"
+
+    [![Precompile Lua Modules into LuaJIT Bytecode to Speedup OpenResty Startup](https://img.youtube.com/vi/EP7c0BM2yNo/0.jpg)](https://youtu.be/EP7c0BM2yNo)
+
+You are welcome to subscribe to our [official YouTube channel, OpenResty](https://www.youtube.com/channel/UCXVmwF-UCScv2ftsGoMqxhw).
+
+[Back to TOC](#table-of-contents)
 
 Synopsis
 ========
@@ -431,6 +459,10 @@ Please submit bug reports, wishlists, or patches by
 
 LuaJIT bytecode support
 =======================
+
+Watch YouTube video "[Measure Execution Time of Lua Code Correctly in OpenResty](https://youtu.be/VkRYW_qLoME)"
+
+[![Precompile Lua Modules into LuaJIT Bytecode to Speedup OpenResty Startup](https://img.youtube.com/vi/EP7c0BM2yNo/0.jpg)](https://youtu.be/EP7c0BM2yNo)
 
 As from the `v0.5.0rc32` release, all `*_by_lua_file` configure directives (such as [content_by_lua_file](#content_by_lua_file)) support loading LuaJIT 2.0/2.1 raw bytecode files directly:
 
