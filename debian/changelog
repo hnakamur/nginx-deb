@@ -1,3 +1,10 @@
+nginx (1.19.6+mod.1-1ppa1~groovy) groovy; urgency=medium
+
+  * Change target distribution to groovy
+  * Add patch to ignore maybe uninitialized GCC warning
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 16 Dec 2020 05:25:44 +0900
+
 nginx (1.19.6+mod.1-1ppa1~focal) focal; urgency=medium
 
   * New upstream version 1.19.6
