@@ -1,3 +1,9 @@
+nginx (1.19.8+mod.2-1ppa1~bionic) bionic; urgency=medium
+
+  * Increment orig module version just to build on PPA
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 24 Mar 2021 22:46:06 +0900
+
 nginx (1.19.8+mod.1-1ppa2~bionic) bionic; urgency=medium
 
   * Increment release just to build again on PPA
