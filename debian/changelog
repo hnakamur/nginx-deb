@@ -1,3 +1,9 @@
+nginx (1.19.8+mod.1-1ppa2~focal) focal; urgency=medium
+
+  * Fix distribution to focal
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 24 Mar 2021 22:09:30 +0900
+
 nginx (1.19.8+mod.1-1ppa1~focal) bionic; urgency=medium
 
   * New upstream version 1.19.8
