@@ -1,3 +1,9 @@
+nginx (1.19.8+mod.1-1ppa2~bionic) bionic; urgency=medium
+
+  * Increment release just to build again on PPA
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 24 Mar 2021 22:13:55 +0900
+
 nginx (1.19.8+mod.1-1ppa1~bionic) bionic; urgency=medium
 
   * New upstream version 1.19.8
