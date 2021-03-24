@@ -1,7 +1,5 @@
-use Test::Nginx::Socket;
+use Test::Nginx::Socket 'no_plan';
 use Cwd qw(cwd);
-
-plan tests => repeat_each() * (blocks() * 4) + 1;
 
 my $pwd = cwd();
 
@@ -33,7 +31,11 @@ __DATA__
         content_by_lua '
             local http = require "resty.http"
             local httpc = http.new()
-            httpc:connect("127.0.0.1", ngx.var.server_port)
+            httpc:connect{
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port
+            }
 
             local res, err = httpc:request{
                 path = "/b"
@@ -64,7 +66,11 @@ OK
         content_by_lua '
             local http = require "resty.http"
             local httpc = http.new()
-            httpc:connect("127.0.0.1", ngx.var.server_port)
+            httpc:connect{
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port
+            }
 
             local res, err = httpc:request{
                 version = 1.0,
@@ -96,7 +102,11 @@ OK
         content_by_lua '
             local http = require "resty.http"
             local httpc = http.new()
-            httpc:connect("127.0.0.1", ngx.var.server_port)
+            local ok, err = httpc:connect{
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port
+            }
 
             local res, err = httpc:request{
                 path = "/b"
@@ -133,7 +143,11 @@ OK
         content_by_lua '
             local http = require "resty.http"
             local httpc = http.new()
-            httpc:connect("127.0.0.1", ngx.var.server_port)
+            httpc:connect{
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port
+            }
 
             local res, err = httpc:request{
                 path = "/b"
@@ -167,7 +181,11 @@ x-value
         content_by_lua '
             local http = require "resty.http"
             local httpc = http.new()
-            httpc:connect("127.0.0.1", ngx.var.server_port)
+            httpc:connect{
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port
+            }
 
             local res, err = httpc:request{
                 query = {
@@ -212,7 +230,11 @@ X-Header-B: 2
         content_by_lua '
             local http = require "resty.http"
             local httpc = http.new()
-            httpc:connect("127.0.0.1", ngx.var.server_port)
+            httpc:connect{
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port
+            }
 
             local res, err = httpc:request{
                 method = "HEAD",
@@ -245,13 +267,14 @@ GET /a
         content_by_lua '
             local http = require "resty.http"
 
-            local res, err = http:connect("127.0.0.1", 1984)
+            local res, err = http:connect{
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port
+            }
             if not res then ngx.say(err) end
 
             local res, err = http:set_timeout(500)
-            if not res then ngx.say(err) end
-
-            local res, err = http:ssl_handshake()
             if not res then ngx.say(err) end
 
             local res, err = http:set_keepalive()
@@ -272,102 +295,6 @@ not initialized
 not initialized
 not initialized
 not initialized
-not initialized
---- no_error_log
-[error]
-[warn]
-
-
-=== TEST 9: Parse URI errors if malformed
---- http_config eval: $::HttpConfig
---- config
-    location = /a {
-        content_by_lua '
-            local http = require("resty.http").new()
-            local parts, err = http:parse_uri("http:///example.com")
-            if not parts then ngx.say(err) end
-        ';
-    }
---- request
-GET /a
---- response_body
-bad uri: http:///example.com
---- no_error_log
-[error]
-[warn]
-
-
-=== TEST 10: Parse URI fills in defaults correctly
---- http_config eval: $::HttpConfig
---- config
-    location = /a {
-        content_by_lua '
-            local http = require("resty.http").new()
-
-            local function test_uri(uri)
-                local scheme, host, port, path, query = unpack(http:parse_uri(uri, false))
-                ngx.say("scheme: ", scheme, ", host: ", host, ", port: ", port, ", path: ", path, ", query: ", query)
-            end
-
-            test_uri("http://example.com")
-            test_uri("http://example.com/")
-            test_uri("https://example.com/foo/bar")
-            test_uri("https://example.com/foo/bar?a=1&b=2")
-            test_uri("http://example.com?a=1&b=2")
-            test_uri("//example.com")
-            test_uri("//example.com?a=1&b=2")
-            test_uri("//example.com/foo/bar?a=1&b=2")
-        ';
-    }
---- request
-GET /a
---- response_body
-scheme: http, host: example.com, port: 80, path: /, query: 
-scheme: http, host: example.com, port: 80, path: /, query: 
-scheme: https, host: example.com, port: 443, path: /foo/bar, query: 
-scheme: https, host: example.com, port: 443, path: /foo/bar, query: a=1&b=2
-scheme: http, host: example.com, port: 80, path: /, query: a=1&b=2
-scheme: http, host: example.com, port: 80, path: /, query: 
-scheme: http, host: example.com, port: 80, path: /, query: a=1&b=2
-scheme: http, host: example.com, port: 80, path: /foo/bar, query: a=1&b=2
---- no_error_log
-[error]
-[warn]
-
-
-=== TEST 11: Parse URI fills in defaults correctly, using backwards compatible mode
---- http_config eval: $::HttpConfig
---- config
-    location = /a {
-        content_by_lua '
-            local http = require("resty.http").new()
-
-            local function test_uri(uri)
-                local scheme, host, port, path, query = unpack(http:parse_uri(uri))
-                ngx.say("scheme: ", scheme, ", host: ", host, ", port: ", port, ", path: ", path)
-            end
-
-            test_uri("http://example.com")
-            test_uri("http://example.com/")
-            test_uri("https://example.com/foo/bar")
-            test_uri("https://example.com/foo/bar?a=1&b=2")
-            test_uri("http://example.com?a=1&b=2")
-            test_uri("//example.com")
-            test_uri("//example.com?a=1&b=2")
-            test_uri("//example.com/foo/bar?a=1&b=2")
-        ';
-    }
---- request
-GET /a
---- response_body
-scheme: http, host: example.com, port: 80, path: /
-scheme: http, host: example.com, port: 80, path: /
-scheme: https, host: example.com, port: 443, path: /foo/bar
-scheme: https, host: example.com, port: 443, path: /foo/bar?a=1&b=2
-scheme: http, host: example.com, port: 80, path: /?a=1&b=2
-scheme: http, host: example.com, port: 80, path: /
-scheme: http, host: example.com, port: 80, path: /?a=1&b=2
-scheme: http, host: example.com, port: 80, path: /foo/bar?a=1&b=2
 --- no_error_log
 [error]
 [warn]
@@ -382,8 +309,11 @@ scheme: http, host: example.com, port: 80, path: /foo/bar?a=1&b=2
 
             -- Create a TCP connection and return an raw HTTP-response because
             -- there is no way to set an empty header value in nginx.
-            assert(httpc:connect("127.0.0.1", 12345),
-                "connect should return positively")
+            assert(httpc:connect{
+                scheme = "http",
+                host = "127.0.0.1",
+                port = 12345,
+            }, "connect should return positively")
 
             local res = httpc:request({ path = "/b" })
             if res.headers["X-Header-Empty"] == "" then

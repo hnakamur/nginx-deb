@@ -1,7 +1,5 @@
-use Test::Nginx::Socket;
+use Test::Nginx::Socket 'no_plan';
 use Cwd qw(cwd);
-
-plan tests => repeat_each() * (blocks() * 5);
 
 my $pwd = cwd();
 
@@ -35,7 +33,11 @@ __DATA__
         content_by_lua '
             local http = require "resty.http"
             local httpc = http.new()
-            httpc:connect("127.0.0.1", ngx.var.server_port)
+            httpc:connect({
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port,
+            })
             httpc:proxy_response(httpc:proxy_request())
             httpc:set_keepalive()
         ';
@@ -57,6 +59,8 @@ X-Test: foo
 --- no_error_log
 [error]
 [warn]
+--- error_log
+[debug]
 
 
 === TEST 2: Proxy POST request and response
@@ -67,7 +71,11 @@ X-Test: foo
         content_by_lua '
             local http = require "resty.http"
             local httpc = http.new()
-            httpc:connect("127.0.0.1", ngx.var.server_port)
+            httpc:connect({
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port,
+            })
             httpc:proxy_response(httpc:proxy_request())
             httpc:set_keepalive()
         ';
@@ -93,7 +101,10 @@ X-Test: foo
 --- error_code: 404
 --- no_error_log
 [error]
+--- error_log
 [warn]
+--- error_log
+[debug]
 
 
 === TEST 3: Proxy multiple headers
@@ -104,7 +115,11 @@ X-Test: foo
         content_by_lua '
             local http = require "resty.http"
             local httpc = http.new()
-            httpc:connect("127.0.0.1", ngx.var.server_port)
+            httpc:connect({
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port,
+            })
             httpc:proxy_response(httpc:proxy_request())
             httpc:set_keepalive()
         ';
@@ -125,6 +140,8 @@ OK
 --- no_error_log
 [error]
 [warn]
+--- error_log
+[debug]
 
 
 === TEST 4: Proxy still works with spaces in URI
@@ -135,7 +152,11 @@ OK
         content_by_lua '
             local http = require "resty.http"
             local httpc = http.new()
-            httpc:connect("127.0.0.1", ngx.var.server_port)
+            httpc:connect({
+                scheme = "http",
+                host = "127.0.0.1",
+                port = ngx.var.server_port,
+            })
             httpc:proxy_response(httpc:proxy_request())
             httpc:set_keepalive()
         ';
@@ -157,3 +178,5 @@ X-Test: foo
 --- no_error_log
 [error]
 [warn]
+--- error_log
+[debug]
