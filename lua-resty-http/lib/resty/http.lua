@@ -106,7 +106,7 @@ end
 
 
 local _M = {
-    _VERSION = '0.14',
+    _VERSION = '0.16.1',
 }
 _M._USER_AGENT = "lua-resty-http/" .. _M._VERSION .. " (Lua) ngx_lua/" .. ngx.config.ngx_lua_version
 
@@ -899,6 +899,7 @@ function _M.request_uri(self, uri, params)
         params.scheme, params.host, params.port, path, query = unpack(parsed_uri)
         params.path = params.path or path
         params.query = params.query or query
+        params.ssl_server_name = params.ssl_server_name or params.host
     end
 
     do
