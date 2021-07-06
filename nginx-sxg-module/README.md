@@ -1,4 +1,4 @@
-# NGINX SXG extension
+# NGINX SXG module
 
 [![Build Status](https://travis-ci.org/google/nginx-sxg-module.svg?branch=master)](https://travis-ci.org/google/nginx-sxg-module)
 
@@ -125,3 +125,32 @@ http {
 nginx-sxg-module automatically includes signatures of subresources in its responses, allowing end users to prefetch it from distributor.
 When finding `link: rel="preload"` entry in HTTP response header from upstream, this plugin will collect the specified resource to the upstream and append `rel="allowed-alt-sxg";header-integrity="sha256-...."` to the original HTTP response automatically.
 This functionality is essential to subresource preloading for faster cross-site navigation.
+
+  - Preload URLs must be [relative references](https://tools.ietf.org/html/rfc3986#section-4.2)
+    of the `path-absolute` form, such as: `Link: </app.js>;rel=preload;as=script`.
+  - The [`server_name`](https://nginx.org/en/docs/http/ngx_http_core_module.html#server_name)
+    must match the externally-addressable host:port of the subresources.
+  - Their responses must be no larger than the configured
+    [`subrequest_output_buffer_size`](https://nginx.org/en/docs/http/ngx_http_core_module.html#subrequest_output_buffer_size).
+  - Their responses must come from an upstream server, such as via
+    [`proxy_pass`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass).
+    The upstream may optionally be named via
+    [`upstream`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#upstream).
+  - If [using variables in
+    `proxy_pass`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#non_idempotent:~:text=When%20variables%20are%20used%20in%20proxy_pass),
+    use
+    [`$uri`](http://nginx.org/en/docs/http/ngx_http_core_module.html#var_uri:~:text=1.2.7%29-,%24uri,current%20URI%20in%20request)
+    instead of
+    [`$request_uri`](http://nginx.org/en/docs/http/ngx_http_core_module.html#var_request_uri:~:text=%24request_uri,full%20original%20request%20URI).
+
+To ensure subresource prefetching works, verify that the `header-integrity` in:
+
+```bash
+curl -H 'Accept: application/signed-exchange;v=b3' https://url/of/page.html | dump-signedexchange -payload=false | grep Link:
+```
+
+equals the value of:
+
+```bash
+curl -H 'Accept: application/signed-exchange;v=b3' https://url/of/subresource.jpg | dump-signedexchange -headerIntegrity
+```

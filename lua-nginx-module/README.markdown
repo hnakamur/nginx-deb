@@ -1153,6 +1153,7 @@ Directives
 * [lua_ssl_protocols](#lua_ssl_protocols)
 * [lua_ssl_trusted_certificate](#lua_ssl_trusted_certificate)
 * [lua_ssl_verify_depth](#lua_ssl_verify_depth)
+* [lua_ssl_conf_command](#lua_ssl_conf_command)
 * [lua_http10_buffering](#lua_http10_buffering)
 * [rewrite_by_lua_no_postpone](#rewrite_by_lua_no_postpone)
 * [access_by_lua_no_postpone](#access_by_lua_no_postpone)
@@ -3138,6 +3139,34 @@ See also [lua_ssl_trusted_certificate](#lua_ssl_trusted_certificate).
 
 [Back to TOC](#directives)
 
+lua_ssl_conf_command
+--------------------
+
+**syntax:** *lua_ssl_conf_command &lt;command&gt;*
+
+**default:** *no*
+
+**context:** *http, server, location*
+
+Sets arbitrary OpenSSL configuration [commands](https://www.openssl.org/docs/man1.1.1/man3/SSL_CONF_cmd.html).
+
+The directive is supported when using OpenSSL 1.0.2 or higher and nginx 1.19.4 or higher. According to the specify command, higher OpenSSL version may be needed.
+
+Several `lua_ssl_conf_command` directives can be specified on the same level:
+
+```
+lua_ssl_conf_command Options PrioritizeChaCha;
+lua_ssl_conf_command Ciphersuites TLS_CHACHA20_POLY1305_SHA256;
+```
+
+Configuration commands are applied after OpenResty own configuration for SSL, so they can be used to override anything set by OpenResty.
+
+Note though that configuring OpenSSL directly with `lua_ssl_conf_command` might result in a behaviour OpenResty does not expect, and should be done with care.
+
+This directive was first introduced in the `v0.10.21` release.
+
+[Back to TOC](#directives)
+
 lua_http10_buffering
 --------------------
 
@@ -3798,7 +3827,7 @@ Then `GET /main` will give the output
 
 Here, modification of the `ngx.ctx.blah` entry in the subrequest does not affect the one in the parent request. This is because they have two separate versions of `ngx.ctx.blah`.
 
-Internal redirection will destroy the original request `ngx.ctx` data (if any) and the new request will have an empty `ngx.ctx` table. For instance,
+Internal redirects (triggered by nginx configuration directives like `error_page`, `try_files`, `index` and etc) will destroy the original request `ngx.ctx` data (if any) and the new request will have an empty `ngx.ctx` table. For instance,
 
 ```nginx
 
@@ -5750,9 +5779,10 @@ gives the output
 
     b r56 7
 
+
 Invalid escaping sequences are handled in a conventional way: `%`s are left unchanged. Also, characters that should not appear in escaped string are simply left unchanged.
 
-For example, 
+For example,
 
 ```lua
 
@@ -5763,6 +5793,7 @@ gives the output
 
 
     try %search% %again%
+
 
 (Note that `%20` following `%` got unescaped, even it can be considered a part of invalid sequence.)
 
@@ -8499,7 +8530,14 @@ user "light threads" ([ngx.thread.*](#ngxthreadspawn)), [ngx.exit](#ngxexit), [n
 (like [ngx.say](#ngxsay), [ngx.print](#ngxprint), and [ngx.flush](#ngxflush)) are explicitly disabled in
 this context.
 
+You must notice that each timer will be based on a fake request (this fake request is also based on a fake connection). Because Nginx's memory release is based on the connection closure, if you run a lot of APIs that apply for memory resources in a timer, such as [tcpsock:connect](#tcpsockconnect), will cause the accumulation of memory resources. So it is recommended to create a new timer after running several times to release memory resources.
+
 You can pass most of the standard Lua values (nils, booleans, numbers, strings, tables, closures, file handles, and etc) into the timer callback, either explicitly as user arguments or implicitly as upvalues for the callback closure. There are several exceptions, however: you *cannot* pass any thread objects returned by [coroutine.create](#coroutinecreate) and [ngx.thread.spawn](#ngxthreadspawn) or any cosocket objects returned by [ngx.socket.tcp](#ngxsockettcp), [ngx.socket.udp](#ngxsocketudp), and [ngx.req.socket](#ngxreqsocket) because these objects' lifetime is bound to the request context creating them while the timer callback is detached from the creating request's context (by design) and runs in its own (fake) request context. If you try to share the thread or cosocket objects across the boundary of the creating request, then you will get the "no co ctx found" error (for threads) or "bad request" (for cosockets). It is fine, however, to create all these objects inside your timer callback.
+
+Please note that the timer Lua handler has its own copy of the `ngx.ctx` magic
+table. It won't share the same `ngx.ctx` with the Lua handler creating the timer.
+If you need to pass data from the timer creator to the timer handler, please
+use the extra parameters of `ngx.timer.at()`.
 
 This API was first introduced in the `v0.8.0` release.
 

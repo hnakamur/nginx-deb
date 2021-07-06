@@ -1352,6 +1352,7 @@ failed:
 }
 
 
+#ifndef LIBRESSL_VERSION_NUMBER
 static int
 ngx_stream_lua_ssl_verify_callback(int ok, X509_STORE_CTX *x509_store)
 {
@@ -1363,12 +1364,20 @@ ngx_stream_lua_ssl_verify_callback(int ok, X509_STORE_CTX *x509_store)
      */
     return 1;
 }
+#endif
 
 
 int
 ngx_stream_lua_ffi_ssl_verify_client(ngx_stream_lua_request_t *r,
     void *ca_certs, int depth, char **err)
 {
+#ifdef LIBRESSL_VERSION_NUMBER
+
+    *err = "LibreSSL not supported";
+    return NGX_ERROR;
+
+#else
+
     ngx_stream_lua_ctx_t        *ctx;
     ngx_ssl_conn_t              *ssl_conn;
     ngx_stream_ssl_conf_t       *sscf;
@@ -1487,6 +1496,7 @@ failed:
     X509_STORE_free(ca_store);
 
     return NGX_ERROR;
+#endif
 }
 
 
