@@ -69,7 +69,7 @@ download_github_repo -b master arut/nginx-dav-ext-module
 download_github_repo -b master bpaquet/ngx_http_enhanced_memcached_module
 download_github_repo -b master replay/ngx_http_secure_download
 download_github_repo -b master simplresty/ngx_devel_kit
-download_github_repo -b master wandenberg/nginx-sorted-querystring-module
+download_github_repo -b master hnakamur/nginx-sorted-querystring-module
 download_github_repo -b master pandax381/ngx_http_pipelog_module
 download_github_repo -b master nginx-shib/nginx-http-shibboleth
 download_github_repo -b master hnakamur/nginx-lua-saml-service-provider
