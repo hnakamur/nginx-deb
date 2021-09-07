@@ -32,11 +32,14 @@ Table of Contents
     * [set_decode_base32](#set_decode_base32)
     * [set_encode_base64](#set_encode_base64)
     * [set_decode_base64](#set_decode_base64)
+    * [set_encode_base64url](#set_encode_base64url)
+    * [set_decode_base64url](#set_decode_base64url)
     * [set_encode_hex](#set_encode_hex)
     * [set_decode_hex](#set_decode_hex)
     * [set_sha1](#set_sha1)
     * [set_md5](#set_md5)
     * [set_hmac_sha1](#set_hmac_sha1)
+    * [set_hmac_sha256](#set_hmac_sha256)
     * [set_random](#set_random)
     * [set_secure_random_alphanum](#set_secure_random_alphanum)
     * [set_secure_random_lcalpha](#set_secure_random_lcalpha)
@@ -648,6 +651,58 @@ This directive can be invoked by [lua-nginx-module](http://github.com/openresty/
 
 [Back to TOC](#table-of-contents)
 
+set_encode_base64url
+-----------------
+**syntax:** *set_encode_base64url $dst &lt;src&gt;*
+
+**syntax:** *set_encode_base64url $dst*
+
+**default:** *no*
+
+**context:** *location, location if*
+
+**phase:** *rewrite*
+
+**category:** *ndk_set_var_value*
+
+When taking two arguments, this directive will encode the value of the second argument `<src>` to its base64 url safe digest and assign the result into the first argument, variable `$dst`. For example,
+
+```nginx
+
+ location /test {
+     set $raw "abcde";
+     set_encode_base64url $digest $raw;
+
+     echo $digest;
+ }
+```
+
+Then request `GET /test` will yield the following output
+
+```
+YWJjZGU=
+```
+
+Please note that we're using [echo-nginx-module](http://github.com/openresty/echo-nginx-module)'s [echo directive](http://github.com/openresty/echo-nginx-module#echo) here to output values of nginx variables directly.
+
+When taking a single argument, this directive will do in-place modification of the argument variable. For example,
+
+```nginx
+
+ location /test {
+     set $value "abcde";
+     set_encode_base64url $value;
+
+     echo $value;
+ }
+```
+
+then request `GET /test` will give exactly the same output as the previous example.
+
+This directive can be invoked by [lua-nginx-module](http://github.com/openresty/lua-nginx-module)'s [ndk.set_var.DIRECTIVE](http://github.com/openresty/lua-nginx-module#ndkset_vardirective) interface and [array-var-nginx-module](http://github.com/openresty/array-var-nginx-module)'s [array_map_op](http://github.com/openresty/array-var-nginx-module#array_map_op) directive.
+
+[Back to TOC](#table-of-contents)
+
 set_decode_base64
 -----------------
 **syntax:** *set_decode_base64 $dst &lt;src&gt;*
@@ -663,6 +718,24 @@ set_decode_base64
 **category:** *ndk_set_var_value*
 
 Similar to the [set_encode_base64](#set_encode_base64) directive, but does exactly the opposite operation, .i.e, decoding a base64 digest into its original form.
+
+[Back to TOC](#table-of-contents)
+
+set_decode_base64url
+-----------------
+**syntax:** *set_decode_base64url $dst &lt;src&gt;*
+
+**syntax:** *set_decode_base64url $dst*
+
+**default:** *no*
+
+**context:** *location, location if*
+
+**phase:** *rewrite*
+
+**category:** *ndk_set_var_value*
+
+Similar to the [set_encode_base64url](#set_encode_base64url) directive, but does exactly the the opposite operation, .i.e, decoding a base64 url safe digest into its original form.
 
 [Back to TOC](#table-of-contents)
 
@@ -881,7 +954,48 @@ R/pvxzHC4NLtj7S+kXFg/NePTmk=
 
 Please note that we're using [echo-nginx-module](http://github.com/openresty/echo-nginx-module)'s [echo directive](http://github.com/openresty/echo-nginx-module#echo) here to output values of nginx variables directly.
 
-This directive requires the OpenSSL library enabled in your Nignx build (usually by passing the `--with-http_ssl_module` option to the `./configure` script).
+This directive requires the OpenSSL library enabled in your Nginx build (usually by passing the `--with-http_ssl_module` option to the `./configure` script).
+
+[Back to TOC](#table-of-contents)
+
+set_hmac_sha256
+---------------
+**syntax:** *set_hmac_sha256 $dst &lt;secret_key&gt; &lt;src&gt;*
+
+**syntax:** *set_hmac_sha256 $dst*
+
+**default:** *no*
+
+**context:** *location, location if*
+
+**phase:** *rewrite*
+
+Computes the [HMAC-SHA256](http://en.wikipedia.org/wiki/HMAC) digest of the argument `<src>` and assigns the result into the argument variable `$dst` with the secret key `<secret_key>`.
+
+The raw binary form of the `HMAC-SHA256` digest will be generated, use [set_encode_base64](#set_encode_base64), for example, to encode the result to a textual representation if desired.
+
+For example,
+
+```nginx
+
+ location /test {
+     set $secret 'thisisverysecretstuff';
+     set $string_to_sign 'some string we want to sign';
+     set_hmac_sha256 $signature $secret $string_to_sign;
+     set_encode_base64 $signature $signature;
+     echo $signature;
+ }
+```
+
+Then request `GET /test` will yield the following output
+
+```
+4pU3GRQrKKIoeLb9CqYsavHE2l6Hx+KMmRmesU+Cfrs=
+```
+
+Please note that we're using [echo-nginx-module](http://github.com/openresty/echo-nginx-module)'s [echo directive](http://github.com/openresty/echo-nginx-module#echo) here to output values of nginx variables directly.
+
+This directive requires the OpenSSL library enabled in your Nginx build (usually by passing the `--with-http_ssl_module` option to the `./configure` script).
 
 [Back to TOC](#table-of-contents)
 
