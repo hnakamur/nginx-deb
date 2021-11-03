@@ -1,4 +1,4 @@
-local _M = { _VERSION = "1.11.0-1" }
+local _M = { _VERSION = "1.12.0-1" }
 
 local dataset = require('resty.woothee.dataset')
 local browser = require('resty.woothee.browser')
@@ -31,6 +31,10 @@ local function try_browser(useragent, result)
   end
 
   if browser.challenge_yandexbrowser(useragent, result) then
+    return true
+  end
+
+  if browser.challenge_samsung(useragent, result) then
     return true
   end
 

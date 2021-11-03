@@ -129,6 +129,14 @@ function _M.get_all(self)
     return self.cookie_table
 end
 
+function _M.get_cookie_size(self)
+    if not self._cookie then
+        return 0
+    end
+
+    return string.len(self._cookie)
+end
+
 local function bake(cookie)
     if not cookie.key or not cookie.value then
         return nil, 'missing cookie field "key" or "value"'
@@ -141,7 +149,7 @@ local function bake(cookie)
     if (cookie.samesite) then
         local samesite = cookie.samesite
 
-        -- if we dont have a valid-looking attribute, ignore the attribute
+        -- if we don't have a valid-looking attribute, ignore the attribute
         if (samesite ~= "Strict" and samesite ~= "Lax" and samesite ~= "None") then
             log(WARN, "SameSite value must be 'Strict', 'Lax' or 'None'")
             cookie.samesite = nil
@@ -199,5 +207,7 @@ function _M.set(self, cookie)
     end
     return true
 end
+
+_M.get_cookie_string = bake
 
 return _M

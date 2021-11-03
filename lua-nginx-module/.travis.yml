@@ -1,4 +1,4 @@
-dist: xenial
+dist: bionic
 
 branches:
   only:
@@ -50,8 +50,8 @@ env:
     - DRIZZLE_VER=2011.07.21
     - TEST_NGINX_SLEEP=0.006
   jobs:
-    - NGINX_VERSION=1.19.9 OPENSSL_VER=1.1.0l OPENSSL_PATCH_VER=1.1.0d
-    - NGINX_VERSION=1.19.9 OPENSSL_VER=1.1.1l OPENSSL_PATCH_VER=1.1.1f
+    - NGINX_VERSION=1.21.3 OPENSSL_VER=1.1.0l OPENSSL_PATCH_VER=1.1.0d
+    - NGINX_VERSION=1.21.3 OPENSSL_VER=1.1.1l OPENSSL_PATCH_VER=1.1.1f
 
 services:
  - memcached
@@ -59,6 +59,8 @@ services:
  - mysql
 
 before_install:
+  - sudo apt update
+  - sudo apt install --only-upgrade ca-certificates
   - '! grep -n -P ''(?<=.{80}).+'' --color `find src -name ''*.c''` `find . -name ''*.h''` || (echo "ERROR: Found C source lines exceeding 80 columns." > /dev/stderr; exit 1)'
   - '! grep -n -P ''\t+'' --color `find src -name ''*.c''` `find . -name ''*.h''` || (echo "ERROR: Cannot use tabs." > /dev/stderr; exit 1)'
   - sudo cpanm --notest Test::Nginx IPC::Run > build.log 2>&1 || (cat build.log && exit 1)
@@ -96,6 +98,9 @@ before_script:
   - mysql -uroot -e 'create database ngx_test; grant all on ngx_test.* to "ngx_test"@"%" identified by "ngx_test"; flush privileges;'
 
 script:
+  - export PATH=$PWD/work/nginx/sbin:$PWD/openresty-devel-utils:$PATH
+  - ngx-releng > check.txt || true
+  - lines=`wc -l check.txt | awk '{print $1}'`; if [ $lines -gt 5 ]; then cat check.txt; exit 1; fi
   - sudo iptables -I OUTPUT 1 -p udp --dport 10086 -j REJECT
   - sudo iptables -I OUTPUT -p tcp --dst 127.0.0.2 --dport 12345 -j DROP
   - sudo iptables -I OUTPUT -p udp --dst 127.0.0.2 --dport 12345 -j DROP
@@ -123,7 +128,6 @@ script:
   - make -j$JOBS > build.log 2>&1 || (cat build.log && exit 1)
   - sudo make PATH=$PATH install_sw > build.log 2>&1 || (cat build.log && exit 1)
   - cd ..
-  - export PATH=$PWD/work/nginx/sbin:$PWD/openresty-devel-utils:$PATH
   - export NGX_BUILD_CC=$CC
   - sh util/build.sh $NGINX_VERSION > build.log 2>&1 || (cat build.log && exit 1)
   - nginx -V
@@ -134,4 +138,4 @@ script:
   - dig +short myip.opendns.com @resolver1.opendns.com || exit 0
   - dig +short @$TEST_NGINX_RESOLVER openresty.org || exit 0
   - dig +short @$TEST_NGINX_RESOLVER agentzh.org || exit 0
-  - prove -Itest-nginx/lib -r t
+  - prove -I. -Itest-nginx/lib -r t

@@ -13,6 +13,7 @@ Table of Contents
 * [Methods](#methods)
     * [new](#new)
     * [connect](#connect)
+    * [sslhandshake](#sslhandshake)
     * [set](#set)
     * [set_timeout](#set_timeout)
     * [set_timeouts](#set_timeouts)
@@ -35,6 +36,9 @@ Table of Contents
     * [version](#version)
     * [quit](#quit)
     * [verbosity](#verbosity)
+    * [init_pipeline](#init_pipeline)
+    * [commit_pipeline](#commit_pipeline)
+    * [cancel_pipeline](#cancel_pipeline)
 * [Automatic Error Logging](#automatic-error-logging)
 * [Limitations](#limitations)
 * [TODO](#todo)
@@ -171,6 +175,17 @@ connect
 Attempts to connect to the remote host and port that the memcached server is listening to or a local unix domain socket file listened by the memcached server.
 
 Before actually resolving the host name and connecting to the remote backend, this method will always look up the connection pool for matched idle connections created by previous calls of this method.
+
+[Back to TOC](#table-of-contents)
+
+sslhandshake
+------------
+
+**syntax:** *session, err = memc:sslhandshake(reused_session?, server_name?, ssl_verify?, send_status_req?)*
+
+Does SSL/TLS handshake on the currently established connection. See the
+[tcpsock.sslhandshake](https://github.com/openresty/lua-nginx-module#tcpsocksslhandshake)
+API from OpenResty for more details.
 
 [Back to TOC](#table-of-contents)
 
@@ -507,6 +522,36 @@ verbosity
 Sets the verbosity level used by the memcached server. The `level` argument should be given integers only.
 
 Returns `1` in case of success and `nil` other wise. In case of failures, another string value will also be returned to describe the error.
+
+[Back to TOC](#table-of-contents)
+
+init_pipeline
+---------
+`syntax: err = memc:init_pipeline(n?)`
+
+Enable the Memcache pipelining mode. All subsequent calls to Memcache command methods will automatically get buffer and will send to the server in one run when the commit_pipeline method is called or get cancelled by calling the cancel_pipeline method.
+
+The optional params `n` is buffer tables size. default value 4
+
+[Back to TOC](#table-of-contents)
+
+commit_pipeline
+---------
+`syntax: results, err = memc:commit_pipeline()`
+
+Quits the pipelining mode by committing all the cached Memcache queries to the remote server in a single run. All the replies for these queries will be collected automatically and are returned as if a big multi-bulk reply at the highest level.
+
+This method success return a lua table. failed return a lua string describing the error upon failures.
+
+[Back to TOC](#table-of-contents)
+
+cancel_pipeline
+---------
+`syntax: memc:cancel_pipeline()`
+
+Quits the pipelining mode by discarding all existing buffer Memcache commands since the last call to the init_pipeline method.
+
+the method no return. always succeeds.
 
 [Back to TOC](#table-of-contents)
 

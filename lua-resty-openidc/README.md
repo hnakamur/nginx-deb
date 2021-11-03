@@ -219,6 +219,7 @@ h2JHukolz9xf6qN61QMLSd83+kwoBr2drp6xg3eGDLIkQCQLrkY=
              --     `openidc_logout`
              --
              --  Any, all or none of the hooks may be used. Empty `lifecycle` does nothing.
+             --  A hook that returns a truthy value causes the lifecycle action they are taking part of to fail.
 
              -- Optional : add decorator for HTTP request that is
              -- applied when lua-resty-openidc talks to the OpenID Connect
@@ -298,6 +299,16 @@ local res, err, target, session = require("resty.openidc").authenticate(opts)
 session:close()
 ```
 
+## Caching of Introspection and JWT Verification Results
+
+Note the `jwt_verification` and `introspection` caches are shared
+between all configured locations. If you are using locations with
+different `opts` configuration the shared cache may allow a token that
+is valid for only one location to be accepted by another if it is read
+from the cache. In order to avoid cache confusion it is recommended to
+set `opts.cache_segment` to unique strings for each set of related
+locations.
+
 ## Sample Configuration for OAuth 2.0 JWT Token Validation
 
 Sample `nginx.conf` configuration for verifying Bearer JWT Access Tokens against a pre-configured secret/key.
@@ -315,7 +326,7 @@ http {
   resolver 8.8.8.8;
 
   # cache for JWT verification results
-  lua_shared_dict introspection 10m;
+  lua_shared_dict jwt_verification 10m;
 
   server {
     listen 8080;
@@ -375,6 +386,13 @@ lAc5Csj0o5Q+oEhPUAVBIF07m4rd0OvAVPOCQ2NJhQSL1oWASbf+fg==
              -- the expiration time in seconds for jwk cache, default is 1 day.
              --jwk_expires_in = 24 * 60 * 60
 
+             -- It may be necessary to force verification for a bearer token and ignore the existing cached
+             -- verification results. If so you need to set set the jwt_verification_cache_ignore option to true.
+             -- jwt_verification_cache_ignore = true
+
+             -- optional name of a cache-segment if you need separate
+             -- caches for differently configured locations
+             -- cache_segment = 'api'
           }
 
           -- call bearer_jwt_verify for OAuth 2.0 JWT validation
@@ -443,6 +461,10 @@ http {
              -- Defaults to "exp" - Controls the TTL of the introspection cache
              -- https://tools.ietf.org/html/rfc7662#section-2.2
              -- introspection_expiry_claim = "exp"
+
+             -- optional name of a cache-segment if you need separate
+             -- caches for differently configured locations
+             -- cache_segment = 'api'
           }
 
           -- call introspect for OAuth 2.0 Bearer Access Token validation
@@ -543,6 +565,10 @@ http {
              -- It may be necessary to force an introspection call for an access_token and ignore the existing cached
              -- introspection results. If so you need to set set the introspection_cache_ignore option to true.
              -- introspection_cache_ignore = true
+
+             -- optional name of a cache-segment if you need separate
+             -- caches for differently configured locations
+             -- cache_segment = 'api'
           }
 
           -- call introspect for OAuth 2.0 Bearer Access Token validation

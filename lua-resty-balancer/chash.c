@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <assert.h>
+
 #include "chash.h"
 
 
@@ -8,6 +10,8 @@
 #define u_char  unsigned char
 #endif
 
+#define CHASH_OK    0
+#define CHASH_ERR   -1
 
 #define crc32_final(crc)                                                  \
     crc ^= 0xffffffff
@@ -142,7 +146,7 @@ chash_point_init(chash_point_t *arr, uint32_t base_hash, uint32_t start,
 }
 
 
-void
+int
 chash_point_sort(chash_point_t arr[], uint32_t n)
 {
     chash_point_t *points;
@@ -161,10 +165,15 @@ chash_point_sort(chash_point_t arr[], uint32_t n)
     step = pow(2, 32) / m;
 
     points = (chash_point_t *) calloc(m, sizeof(chash_point_t));
+    if (points == NULL) {
+        return CHASH_ERR;
+    }
 
     for (i = 0; i < n; i++) {
         node = &arr[i];
-        index = node->hash / step; // can not bigger than m
+        index = node->hash / step;
+
+        assert(index < m); // index must less than m
 
         for (end = index; end >= 0; end--) {
             if (points[end].id == 0) {
@@ -188,7 +197,10 @@ chash_point_sort(chash_point_t arr[], uint32_t n)
 
                 /* left shift after end when node->hash is bigger than them */
                 /* only end == index can match this */
-                while (points[end + 1].id != 0 && points[end + 1].hash < node->hash) {
+                while (end + 1 < m
+                       && points[end + 1].id != 0
+                       && points[end + 1].hash < node->hash)
+                {
                     points[end].hash = points[end + 1].hash;
                     points[end].id = points[end + 1].id;
                     end += 1;
@@ -223,6 +235,8 @@ chash_point_sort(chash_point_t arr[], uint32_t n)
         }
 
 insert:
+        assert(end < m && end >= 0);
+
         points[end].id = node->id;
         points[end].hash = node->hash;
     }
@@ -237,10 +251,12 @@ insert:
     }
 
     free(points);
+
+    return CHASH_OK;
 }
 
 
-void
+int
 chash_point_add(chash_point_t *old_points, uint32_t old_length,
     uint32_t base_hash, uint32_t from, uint32_t num, uint32_t id,
     chash_point_t *new_points)
@@ -249,9 +265,16 @@ chash_point_add(chash_point_t *old_points, uint32_t old_length,
     chash_point_t *tmp_points;
 
     tmp_points = (chash_point_t *) calloc(num, sizeof(chash_point_t));
+    if (tmp_points == NULL) {
+        return CHASH_ERR;
+    }
 
     chash_point_init_crc(tmp_points, 0, base_hash, from, num, id);
-    chash_point_sort(tmp_points, num);
+
+    if (chash_point_sort(tmp_points, num) != CHASH_OK) {
+        free(tmp_points);
+        return CHASH_ERR;
+    }
 
     j = num - 1;
     k = old_length + num - 1;
@@ -274,10 +297,12 @@ chash_point_add(chash_point_t *old_points, uint32_t old_length,
     }
 
     free(tmp_points);
+
+    return CHASH_OK;
 }
 
 
-void
+int
 chash_point_reduce(chash_point_t *old_points, uint32_t old_length,
     uint32_t base_hash, uint32_t from, uint32_t num, uint32_t id)
 {
@@ -287,7 +312,11 @@ chash_point_reduce(chash_point_t *old_points, uint32_t old_length,
     tmp_points = (chash_point_t *) calloc(num, sizeof(chash_point_t));
 
     chash_point_init_crc(tmp_points, 0, base_hash, from, num, id);
-    chash_point_sort(tmp_points, num);
+
+    if (chash_point_sort(tmp_points, num) != CHASH_OK) {
+        free(tmp_points);
+        return CHASH_ERR;
+    }
 
     for (i = 0, j = 0, k = 0; i < old_length; i++) {
         if (j < num
@@ -306,6 +335,8 @@ chash_point_reduce(chash_point_t *old_points, uint32_t old_length,
     }
 
     free(tmp_points);
+
+    return CHASH_OK;
 }
 
 

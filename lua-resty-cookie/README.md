@@ -13,7 +13,9 @@ Table of Contents
     * [new](#new)
     * [get](#get)
     * [get_all](#get_all)
+    * [get_cookie_size](#get_cookie_size)
     * [set](#set)
+    * [get_cookie_string](#get_cookie_string)
 * [Installation](#installation)
 * [Authors](#authors)
 * [Copyright and License](#copyright-and-license)
@@ -111,6 +113,14 @@ Get all client cookie key/value pairs in a lua table. On error, returns `nil` an
 
 [Back to TOC](#table-of-contents)
 
+get_cookie_size
+-------
+`syntax: size = cookie_obj:get_cookie_size()`
+
+Get the cookie size, i.e the string length of the cookie header value.
+
+[Back to TOC](#table-of-contents)
+
 set
 ---
 ```lua
@@ -129,6 +139,18 @@ syntax: ok, err = cookie_obj:set({
 
 Set a cookie to client. This will add a new 'Set-Cookie' response header. `key` and `value` are required, all other fields are optional.
 If the same cookie (whole cookie string, e.g. "Name=Bob; Expires=Wed, 09 Jun 2021 10:18:14 GMT; Max-Age=50; Domain=example.com; Path=/; Secure; HttpOnly;") has already been setted, new cookie will be ignored.
+
+[Back to TOC](#table-of-contents)
+
+get_cookie_string
+---
+```lua
+syntax: cookie_string, err = cookie.get_cookie_string({ --[[ see "set" method ]] })
+```
+Returns a cookie string representing the table passed. See the `set` method for details, but unlike `set`, this function doesn't change the
+current request response, but just return the generated string. On error, returns `nil` and an error message.
+
+This is a static function, not a method of the `cookie` object.
 
 [Back to TOC](#table-of-contents)
 

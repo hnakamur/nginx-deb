@@ -14,6 +14,8 @@
 
 #include "ngx_http_lua_worker_thread.h"
 #include "ngx_http_lua_util.h"
+#include "ngx_http_lua_string.h"
+#include "ngx_http_lua_config.h"
 
 
 #if (NGX_THREADS)
@@ -127,8 +129,36 @@ ngx_http_lua_get_task_ctx(lua_State *L, ngx_http_request_t *r)
         /* pop path, cpath and "package" table from L */
         lua_pop(L, 3);
 
-        /* pop the "package" table */
-        lua_pop(vm, 1);
+        /* inject API from C */
+        lua_newtable(L);    /* ngx.* */
+        ngx_http_lua_inject_string_api(vm);
+        ngx_http_lua_inject_config_api(vm);
+        lua_setglobal(vm, "ngx");
+
+        /* inject API via ffi */
+        lua_getglobal(vm, "require");
+        lua_pushstring(vm, "resty.core.regex");
+        if (lua_pcall(vm, 1, 0, 0) != 0) {
+            lua_close(vm);
+            ngx_free(ctx);
+            return NULL;
+        }
+
+        lua_getglobal(vm, "require");
+        lua_pushstring(vm, "resty.core.hash");
+        if (lua_pcall(vm, 1, 0, 0) != 0) {
+            lua_close(vm);
+            ngx_free(ctx);
+            return NULL;
+        }
+
+        lua_getglobal(vm, "require");
+        lua_pushstring(vm, "resty.core.base64");
+        if (lua_pcall(vm, 1, 0, 0) != 0) {
+            lua_close(vm);
+            ngx_free(ctx);
+            return NULL;
+        }
 
     } else {
         ctx = ctxpool->next;
@@ -153,7 +183,7 @@ ngx_http_lua_free_task_ctx(ngx_http_lua_task_ctx_t *ctx)
 
 static int
 ngx_http_lua_xcopy(lua_State *from, lua_State *to, int idx,
-                   const int allow_nil)
+    const int allow_nil)
 {
     size_t           len = 0;
     const char      *str;
@@ -236,7 +266,8 @@ ngx_http_lua_worker_thread_handler(void *data, ngx_log_t *log)
     ngx_http_lua_worker_thread_ctx_t     *ctx = data;
     lua_State                            *vm = ctx->ctx->vm;
 
-    ngx_http_lua_assert(lua_gettop(vm) == ctx->n_args);
+    /* function + args in the lua stack */
+    ngx_http_lua_assert(lua_gettop(vm) == ctx->n_args + 1);
 
     ctx->rc = lua_pcall(vm, ctx->n_args, LUA_MULTRET, 0);
 }
