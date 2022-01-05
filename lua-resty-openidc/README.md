@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/zmartzone/lua-resty-openidc.svg?branch=master)](https://travis-ci.org/zmartzone/lua-resty-openidc)
+[![CI Status](https://github.com/zmartzone/lua-resty-openidc/actions/workflows/docker-ci.yml/badge.svg)](https://github.com/zmartzone/lua-resty-openidc/actions/workflows/docker-ci.yml)
 [<img width="184" height="96" align="right" src="http://openid.net/wordpress-content/uploads/2016/04/oid-l-certification-mark-l-rgb-150dpi-90mm@2x.png" alt="OpenID Certification">](https://openid.net/certification)
 
 # lua-resty-openidc
@@ -212,6 +212,7 @@ h2JHukolz9xf6qN61QMLSd83+kwoBr2drp6xg3eGDLIkQCQLrkY=
              --     `openidc_authorize` immediately prior to saving the session
              --  -- `on_authenticated` hook is invoked *after* receiving authorization response in
              --     `openidc_authorization_response` immediately prior to saving the session
+             --     Starting with lua-resty-openidc 1.7.5 this receives the decoded id_token as second and the response of the token endpoint as third argument      
              --  -- `on_regenerated` is invoked immediately after the
                      a new access token has been obtained via token
                      refresh and is called with the regenerated session table
@@ -299,6 +300,39 @@ local res, err, target, session = require("resty.openidc").authenticate(opts)
 session:close()
 ```
 
+## Caching
+
+lua-resty-openidc can use [shared memory
+caches](https://github.com/openresty/lua-nginx-module/#lua_shared_dict)
+for several things. If you want it to use the caches, you must use
+`lua_shared_dict` in your `nginx.conf` file.
+
+Currently up to four caches are used
+
+* the cache named `discovery` stores the OpenID Connect Disovery
+  metadata of your OpenID Connect Provider. Cache items expire after
+  24 hours unless overriden by `opts.discovery_expires_in` (a value
+  given in seconds) . This cache will store one item per issuer URI
+  and you can look up the discovery document yourself to get an
+  estimate for the size required - usually a few kB per OpenID Connect
+  Provider.
+* the cache named `jwks` stores the key material of your OpenID
+  Connect Provider if it is provided via the JWKS endpoint. Cache
+  items expire after 24 hours unless overriden by
+  `opts.jwks_expires_in`. This cache will store one item per JWKS URI
+  and you can look up the jwks yourself to get an estimate for the
+  size required - usually a few kB per OpenID Connect Provider.
+* the cache named `introspection` stores the result of OAuth2 token
+  introspection. Cache items expire when the corresponding token
+  expires. Tokens with unknown expiry are not cached at all. This
+  cache will contain one entry per introspected access token - usually
+  this will be a few kB per token.
+* the cache named `jwt_verification` stores the result of JWT
+  verification.  Cache items expire when the corresponding token
+  expires. Tokens with unknown expiry are not cached for two
+  minutes. This cache will contain one entry per verified JWT -
+  usually this will be a few kB per token.
+
 ## Caching of Introspection and JWT Verification Results
 
 Note the `jwt_verification` and `introspection` caches are shared
@@ -308,6 +342,12 @@ is valid for only one location to be accepted by another if it is read
 from the cache. In order to avoid cache confusion it is recommended to
 set `opts.cache_segment` to unique strings for each set of related
 locations.
+
+## Revoke tokens
+
+The `revoke_tokens(opts, session)` function revokes the current refresh and access token. In contrast to a full logout, the session cookie will not be destroyed and the endsession endpoint will not be called. The function returns `true` if both tokens were revoked successfully. This function might be helpful in scenarios where you want to destroy/remove a session from the server side.
+
+With `revoke_token(opts, token_type_hint, token)` it is also possible to revoke a specific token. `token_type_hint` can usually be `refresh_token` or `access_token`.
 
 ## Sample Configuration for OAuth 2.0 JWT Token Validation
 

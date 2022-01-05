@@ -14,19 +14,20 @@ compiler:
 addons:
   apt:
     packages:
-    - axel
-    - cpanminus
-    - libtest-base-perl
-    - libtext-diff-perl
-    - liburi-perl
-    - libwww-perl
-    - libtest-longstring-perl
-    - liblist-moreutils-perl
-    - libgd-dev
+      - ack
+      - axel
+      - cpanminus
+      - libtest-base-perl
+      - libtext-diff-perl
+      - liburi-perl
+      - libwww-perl
+      - libtest-longstring-perl
+      - liblist-moreutils-perl
+      - libgd-dev
 
 cache:
   directories:
-  - download-cache
+    - download-cache
 
 env:
   global:
@@ -50,13 +51,13 @@ env:
     - DRIZZLE_VER=2011.07.21
     - TEST_NGINX_SLEEP=0.006
   jobs:
-    - NGINX_VERSION=1.21.3 OPENSSL_VER=1.1.0l OPENSSL_PATCH_VER=1.1.0d
-    - NGINX_VERSION=1.21.3 OPENSSL_VER=1.1.1l OPENSSL_PATCH_VER=1.1.1f
+    - NGINX_VERSION=1.21.4 OPENSSL_VER=1.1.0l OPENSSL_PATCH_VER=1.1.0d
+    - NGINX_VERSION=1.21.4 OPENSSL_VER=1.1.1l OPENSSL_PATCH_VER=1.1.1f
 
 services:
- - memcached
- - redis
- - mysql
+  - memcached
+  - redis
+  - mysql
 
 before_install:
   - sudo apt update
@@ -67,7 +68,7 @@ before_install:
 
 install:
   - if [ ! -f download-cache/drizzle7-$DRIZZLE_VER.tar.gz ]; then wget -P download-cache http://openresty.org/download/drizzle7-$DRIZZLE_VER.tar.gz; fi
-  - if [ ! -f download-cache/pcre-$PCRE_VER.tar.gz ]; then wget -P download-cache https://ftp.pcre.org/pub/pcre/pcre-$PCRE_VER.tar.gz; fi
+  - if [ ! -f download-cache/pcre-$PCRE_VER.tar.gz ]; then wget -P download-cache https://downloads.sourceforge.net/project/pcre/pcre/${PCRE_VER}/pcre-${PCRE_VER}.tar.gz; fi
   - if [ ! -f download-cache/openssl-$OPENSSL_VER.tar.gz ]; then wget -P download-cache https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz || wget -P download-cache https://www.openssl.org/source/old/${OPENSSL_VER//[a-z]/}/openssl-$OPENSSL_VER.tar.gz; fi
   - git clone https://github.com/openresty/test-nginx.git
   - git clone https://github.com/openresty/openresty.git ../openresty

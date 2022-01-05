@@ -17,17 +17,9 @@ specific language governing permissions and limitations
 under the License.
 
 ***************************************************************************
-Copyright (C) 2017-2019 ZmartZone IAM
+Copyright (C) 2017-2022 ZmartZone Holding B.V.
 Copyright (C) 2015-2017 Ping Identity Corporation
 All rights reserved.
-
-For further information please contact:
-
-     Ping Identity Corporation
-     1099 18th St Suite 2950
-     Denver, CO 80202
-     303.468.2900
-     http://www.pingidentity.com
 
 DISCLAIMER OF WARRANTIES:
 
@@ -84,7 +76,7 @@ local supported_token_auth_methods = {
 }
 
 local openidc = {
-  _VERSION = "1.7.4"
+  _VERSION = "1.7.5"
 }
 openidc.__index = openidc
 
@@ -598,7 +590,7 @@ local function openidc_ensure_discovered_data(opts)
   local err
   if type(opts.discovery) == "string" then
     local discovery
-    discovery, err = openidc_discover(opts.discovery, opts.ssl_verify, opts.keepalive, opts.timeout, opts.jwk_expires_in, opts.proxy_opts,
+    discovery, err = openidc_discover(opts.discovery, opts.ssl_verify, opts.keepalive, opts.timeout, opts.discovery_expires_in, opts.proxy_opts,
                                       opts.http_request_decorator)
     if not err then
       opts.discovery = discovery
@@ -847,7 +839,6 @@ local function encode_bit_string(array)
 end
 
 local function openidc_pem_from_x5c(x5c)
-  -- TODO check x5c length
   log(DEBUG, "Found x5c, getting PEM public key from x5c entry of json public key")
   local chunks = split_by_chunk(b64(openidc_base64_url_decode(x5c[1])), 64)
   local pem = "-----BEGIN CERTIFICATE-----\n" ..
@@ -912,10 +903,15 @@ local function openidc_pem_from_jwk(opts, kid)
     return nil, err
   end
 
+  local x5c = jwk.x5c
+  if x5c and #(jwk.x5c) == 0 then
+    log(WARN, "Found invalid JWK with empty x5c array, ignoring x5c claim")
+    x5c = nil
+  end
+
   local pem
-  -- TODO check x5c length
-  if jwk.x5c then
-    pem = openidc_pem_from_x5c(jwk.x5c)
+  if x5c then
+    pem = openidc_pem_from_x5c(x5c)
   elseif jwk.kty == "RSA" and jwk.n and jwk.e then
     pem = openidc_pem_from_rsa_n_and_e(jwk.n, jwk.e)
   else
@@ -1184,7 +1180,7 @@ local function openidc_authorization_response(opts, session)
   end
 
   if opts.lifecycle and opts.lifecycle.on_authenticated then
-    err = opts.lifecycle.on_authenticated(session)
+    err = opts.lifecycle.on_authenticated(session, id_token, json)
     if err then
       log(WARN, "failed in `on_authenticated` handler: " .. err)
       return nil, err, session.data.original_url, session
@@ -1233,6 +1229,36 @@ local function openidc_revoke_token(opts, token_type_hint, token)
     log(DEBUG, "revocation of " .. token_type_log .. " successful")
     return true
   end
+end
+
+function openidc.revoke_token(opts, token_type_hint, token)
+  local err = openidc_ensure_discovered_data(opts)
+  if err then
+    log(ERROR, "revocation of " .. (token_type_hint or "token (no type specified)") .. " unsuccessful: " .. err)
+    return false
+  end
+
+  return openidc_revoke_token(opts, token_type_hint, token)
+end
+
+function openidc.revoke_tokens(opts, session)
+  local err = openidc_ensure_discovered_data(opts)
+  if err then
+    log(ERROR, "revocation of tokens unsuccessful: " .. err)
+    return false
+  end
+
+  local access_token = session.data.access_token
+  local refresh_token = session.data.refresh_token
+
+  local access_token_revoke, refresh_token_revoke
+  if refresh_token then
+    access_token_revoke = openidc_revoke_token(opts, "refresh_token", refresh_token)
+  end
+  if access_token then
+    refresh_token_revoke = openidc_revoke_token(opts, "access_token", access_token)
+  end
+  return access_token_revoke and refresh_token_revoke
 end
 
 local openidc_transparent_pixel = "\137\080\078\071\013\010\026\010\000\000\000\013\073\072\068\082" ..
@@ -1402,8 +1428,12 @@ local function openidc_get_redirect_uri_path(opts)
   return opts.redirect_uri and openidc_get_path(opts.redirect_uri) or opts.redirect_uri_path
 end
 
+local function is_session(o)
+  return o ~= nil and o.start and type(o.start) == "function"
+end
+
 -- main routine for OpenID Connect user authentication
-function openidc.authenticate(opts, target_url, unauth_action, session_opts)
+function openidc.authenticate(opts, target_url, unauth_action, session_or_opts)
 
   if opts.redirect_uri_path then
     log(WARN, "using deprecated option `opts.redirect_uri_path`; switch to using an absolute URI and `opts.redirect_uri` instead")
@@ -1411,10 +1441,16 @@ function openidc.authenticate(opts, target_url, unauth_action, session_opts)
 
   local err
 
-  local session, session_error = r_session.start(session_opts)
-  if session == nil then
-    log(ERROR, "Error starting session: " .. session_error)
-    return nil, session_error, target_url, session
+  local session
+  if is_session(session_or_opts) then
+    session = session_or_opts
+  else
+    local session_error
+    session, session_error = r_session.start(session_or_opts)
+    if session == nil then
+      log(ERROR, "Error starting session: " .. session_error)
+      return nil, session_error, target_url, session
+    end
   end
 
   target_url = target_url or ngx.var.request_uri
