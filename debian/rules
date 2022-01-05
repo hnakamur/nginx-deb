@@ -54,6 +54,7 @@ config.env.%:
 	cp -Pa $(CURDIR)/srcache-nginx-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/nginx-sxg-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/lua-resty-jump-consistent-hash $(BUILDDIR_$*)/
+	cp -Pa $(CURDIR)/njs $(BUILDDIR_$*)/
 	touch $@
 
 config.status.nginx: config.env.nginx
@@ -120,6 +121,7 @@ config.status.nginx: config.env.nginx
 		--add-dynamic-module=./set-misc-nginx-module \
 		--add-dynamic-module=./srcache-nginx-module \
 		--add-dynamic-module=./nginx-sxg-module \
+		--add-dynamic-module=./njs/nginx \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)"
 	touch $@
@@ -189,6 +191,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--add-dynamic-module=./set-misc-nginx-module \
 		--add-dynamic-module=./srcache-nginx-module \
 		--add-dynamic-module=./nginx-sxg-module \
+		--add-dynamic-module=./njs/nginx \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)" \
 		--with-debug
