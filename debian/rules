@@ -122,6 +122,7 @@ config.status.nginx: config.env.nginx
 		--add-dynamic-module=./srcache-nginx-module \
 		--add-dynamic-module=./nginx-sxg-module \
 		--add-dynamic-module=./njs/nginx \
+		--without-pcre2 \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)"
 	touch $@
@@ -192,6 +193,7 @@ config.status.nginx_debug: config.env.nginx_debug
 		--add-dynamic-module=./srcache-nginx-module \
 		--add-dynamic-module=./nginx-sxg-module \
 		--add-dynamic-module=./njs/nginx \
+		--without-pcre2 \
 		--with-cc-opt="$(CFLAGS)" \
 		--with-ld-opt="$(LDFLAGS)" \
 		--with-debug
