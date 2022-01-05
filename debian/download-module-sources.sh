@@ -81,3 +81,4 @@ download_github_repo -b master e98cuenc/ngx_upstream_jdomain
 download_github_repo -b main google/nginx-sxg-module
 download_github_repo -b master woothee/lua-resty-woothee
 download_github_repo -b master ruoshan/lua-resty-jump-consistent-hash
+download_github_repo -b master nginx/njs
