@@ -1,3 +1,68 @@
+nginx (1.21.5+mod.1-1ppa1~focal) focal; urgency=medium
+
+  * New upstream version 1.21.5
+  * Add module sources
+  * Update debian/download-module-sources.sh to add njs
+  * Add libpcre2-dev to Build-Depends and remove libpcre3-dev
+  * Modify debian/rules to build njs
+  * Revert to libpcre3-dev since lua-nginx-module needs it
+  * Add load_module for lua-nginx-module to debian/nginx.conf
+  * Install all shared library to usr/lib/nginx/modules
+  * Build lua-nginx-module as a dynamic module
+  * openresty/echo-nginx-module 267d0e3e8c77b1a55bee9677299908eb34815146
+  * openresty/headers-more-nginx-module a4a0686605161a6777d7d612d5aef79b9e7c13e0
+  * openresty/lua-nginx-module 320f030785e901e4310cb75607541240a771f5af
+  * openresty/lua-upstream-nginx-module 43c358df4e7b321483beb70c4f5d5585900f8043
+  * openresty/memc-nginx-module c507601211b971fc8b22ed2ce642c80b154791f6
+  * openresty/redis2-nginx-module 7c979c71e6f6c97f3ad5be7fb7f50ae4f800d76b
+  * openresty/set-misc-nginx-module 3ea21393340a22a6a4dc3f9c1e07b3aac26a5c56
+  * openresty/srcache-nginx-module d702489a645089a9d3f5788ad2245b9e15c4f71a
+  * openresty/stream-lua-nginx-module e3d9af3f9190ef7be9601ecc07d7518874ec282d
+  * openresty/lua-resty-balancer a7a8b625c6d79d203702709983b736137be2a9bd
+  * openresty/lua-resty-core daa2c1436b9c2cc43c7f853695f30bb4f3a8daed
+  * openresty/lua-resty-dns 184fe07181009004be4a8b9421328014762d0a18
+  * openresty/lua-resty-lock 879ba3c25f8cb78a728e332ac2646d8f204ec698
+  * openresty/lua-resty-limit-traffic fcce9ca9ee125c02e79acac186a4647e7ee5bafd
+  * openresty/lua-resty-lrucache 8166f5fa918efc05f8b8e0473589f07a4d54e116
+  * openresty/lua-resty-memcached c1afc6afe822d3d73dea248c22da7e9c6450183f
+  * openresty/lua-resty-memcached-shdict 32374a1a286506cf4cf9c18a8c1bf01bd1554c21
+  * openresty/lua-resty-mysql 908521368e95a302d06430ed1772e3fdd1e86216
+  * openresty/lua-resty-redis d7c25f1b339d79196ff67f061c547a73a920b580
+  * openresty/lua-resty-shdict-simple 4d27246b16f86de49e6da8b8a6136cddfe7550b4
+  * openresty/lua-resty-shell c9f7efdbe85d9856029986d6a8659fce3bec7515
+  * openresty/lua-resty-signal ee4f0f355508a8e071d0d7c1333d559b91a6428e
+  * openresty/lua-resty-string 78e5020229718c557484191c891a68097907d818
+  * openresty/lua-resty-upload 48a696034f3229b8f86195fdef06efd6a6928645
+  * openresty/lua-resty-upstream-healthcheck 346f3a642b6717a26382e4032160aa766af0188c
+  * openresty/lua-resty-websocket 34f6b41e538151e7a5f013ff9709c1708a9958fa
+  * cloudflare/lua-resty-cookie 99be1005e38ce19ace54515272a2be1b9fdc5da2
+  * zmartzone/lua-resty-openidc f93f8748c23a33a3b667929cfca69b8a0c85d299
+  * bungle/lua-resty-session 2cd1f8484fdd429505ac33abf7a44adda1f367bf
+  * cdbattags/lua-resty-jwt b8b1f6e00be74565111e0cbbc40bc7d26367a646
+  * jkeys089/lua-resty-hmac eb4e8399b7f610bdb1b79dcbbd218e2cd9b84ad5
+  * pintsized/lua-resty-http 7552ac4a20d91240c03a6df111d94fc237c06d37
+  * FRiCKLE/ngx_cache_purge 331fe43e8d9a3d1fa5e0c9fec7d3201d431a9177
+  * arut/nginx-rtmp-module 23e1873aa62acb58b7881eed2a501f5bf35b82e9
+  * arut/nginx-dav-ext-module f5e30888a256136d9c550bf1ada77d6ea78a48af
+  * bpaquet/ngx_http_enhanced_memcached_module b58a4500db3c4ee274be54a18abc767219dcfd36
+  * replay/ngx_http_secure_download f379a1acf2a76f63431a12fa483d9e22e718400b
+  * simplresty/ngx_devel_kit a22dade76c838e5f377d58d007f65d35b5ce1df3
+  * hnakamur/nginx-sorted-querystring-module 1588bd88fe69cba896f2056c04a97707fc1f8b11
+  * pandax381/ngx_http_pipelog_module f59558ebf71c810ceff15d475deb98f15a0a19c9
+  * nginx-shib/nginx-http-shibboleth a6084c7cf46c7ea79f23a541f4bf0a63ecb4c25d
+  * hnakamur/nginx-lua-saml-service-provider ae2c02dc4c56b11d7536d8f7b7d25ef152edf7c7
+  * hnakamur/nginx-lua-session 9c5053a7c9d2e8748f1153193d598dcea16417f4
+  * hamishforbes/lua-ffi-zlib 1fb69ca505444097c82d2b72e87904f3ed923ae9
+  * Phrogz/SLAXML 108970cbcb4370365e79c619b0f06099c9ec9754
+  * leev/ngx_http_geoip2_module a26c6beed77e81553686852dceb6c7fdacc5970d
+  * e98cuenc/ngx_upstream_jdomain a5a8e07f76cbe82b0792f8e3091e011c0c12f230
+  * google/nginx-sxg-module 606cd1a85dbf543feff14cdbc33284a0442e5ae2
+  * woothee/lua-resty-woothee 256e7ccbcc22d037936cd813e5964f41e5a5a885
+  * ruoshan/lua-resty-jump-consistent-hash a01d2683bfe34cc4edaab7ecac7906d51dfbd125
+  * nginx/njs dc207775a557eef78c57d7b04b3e64d1804dc937
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Wed, 05 Jan 2022 16:32:23 +0900
+
 nginx (1.21.4+mod.1-1ppa1~focal) focal; urgency=medium
 
   * New upstream version 1.21.4
