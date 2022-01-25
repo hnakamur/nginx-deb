@@ -4525,6 +4525,16 @@ static njs_unit_test_t  njs_test[] =
                  "Array.prototype.slice.call(1, 0, 2)"),
       njs_str(",") },
 
+    { njs_str("var a = [1, /**/, 3, 4];"
+              "Object.defineProperty(a.__proto__, 1, {"
+              "    get: () => {"
+              "        a.length = 10**6;"
+              "        return 2;"
+              "    }"
+              "});"
+              "a.slice(1)"),
+      njs_str("2,3,4") },
+
     { njs_str("Array.prototype.pop()"),
       njs_str("undefined") },
 
@@ -4801,6 +4811,14 @@ static njs_unit_test_t  njs_test[] =
               ".map(v=>v.join(''))"),
       njs_str(",1345,,1,13,13,13") },
 
+    { njs_str("var o = { toString: () => {"
+              "             for (var i = 0; i < 0x10; i++) {a.push(1)};"
+              "             return {};"
+              "}};"
+              "var a = [o];"
+              "a.join()"),
+      njs_str("TypeError: Cannot convert object to primitive value") },
+
     { njs_str("Array.prototype.splice.call({0:0,1:1,2:2,3:3,length:4},0,3,4,5)"),
       njs_str("0,1,2") },
 
@@ -4864,6 +4882,18 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("[,,,3,2,1].reverse()"),
       njs_str("1,2,3,,,") },
+
+    { njs_str("var a = [,,2,1];"
+              "Object.defineProperty(a.__proto__, 0, {"
+              "    get: () => {"
+              "        a.length = 10**6;"
+              "        return 4;"
+              "    },"
+              "    set: (setval) => { Object.defineProperty(a, 0, { value: setval }); },"
+              "});"
+              "a.reverse();"
+              "a.slice(0, 4)"),
+      njs_str("1,2,,4") },
 
     { njs_str("var o = {1:true, 2:'', length:-2}; Array.prototype.reverse.call(o) === o"),
       njs_str("true") },
@@ -10033,6 +10063,10 @@ static njs_unit_test_t  njs_test[] =
                  "f.apply(123, {})"),
       njs_str("123") },
 
+    { njs_str("(function(index, ...rest){ return rest[index];})"
+              ".apply({}, [1022].concat(Array(1023).fill(1).map((v,i)=>i.toString(16))))"),
+      njs_str("3fe") },
+
     { njs_str("String.prototype.concat.apply('a', "
                  "{length:2, 0:{toString:function() {return 'b'}}, 1:'c'})"),
       njs_str("abc") },
@@ -10533,6 +10567,16 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("function myFoo(a,b,...other) { return other };"
                  "myFoo(1,2);" ),
       njs_str("") },
+
+    { njs_str("function f(...rest) {};"
+              "function f(a, b) {return a + b};"
+              "f(1,2)"),
+      njs_str("3") },
+
+    { njs_str("function f() { function q() {} };"
+              "function f() { };"
+              "f()"),
+      njs_str("undefined") },
 
     /* arrow functions. */
 
@@ -12815,6 +12859,24 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("var o = {}; o[Symbol.isConcatSpreadable] = true; "
               "Object.getOwnPropertyDescriptor(o, Symbol.isConcatSpreadable).value"),
       njs_str("true") },
+
+    { njs_str("var a = [1];"
+              "var b = [2, /**/, 4, 5];"
+              "Object.defineProperty(b.__proto__, 1, {"
+              "    get: () => {"
+              "        b.length = 10**6;"
+              "        return 3;"
+              "    }"
+              "});"
+              "a.concat(b)"),
+      njs_str("1,2,3,4,5") },
+
+    { njs_str("Boolean.prototype.length = 2;"
+              "Boolean.prototype[0] = 'a';"
+              "Boolean.prototype[1] = 'b';"
+              "Boolean.prototype[Symbol.isConcatSpreadable] = true;"
+              "[].concat(new Boolean(true))"),
+      njs_str("a,b") },
 
     { njs_str("var o = {}, n = 5381 /* NJS_DJB_HASH_INIT */;"
               "while(n--) o[Symbol()] = 'test'; o[''];"),
@@ -20060,6 +20122,15 @@ static njs_unit_test_t  njs_buffer_module_test[] =
 
     { njs_str("Buffer.concat([new Uint8Array(2), new Uint8Array(1)], 6).fill('abc')"),
       njs_str("abcabc") },
+
+    { njs_str("Buffer.concat([Buffer.from('ABCD').slice(2,4), Buffer.from('ABCD').slice(0,2)])"),
+      njs_str("CDAB") },
+
+    { njs_str(njs_declare_sparse_array("list", 2)
+              "list[0] = Buffer.from('ABCD').slice(2,4);"
+              "list[1] = Buffer.from('ABCD').slice(0,2);"
+              "Buffer.concat(list);"),
+      njs_str("CDAB") },
 
     { njs_str(njs_declare_sparse_array("list", 2)
               "list[0] = new Uint8Array(2); list[1] = new Uint8Array(3);"

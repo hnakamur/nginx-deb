@@ -608,7 +608,7 @@ njs_function_call2(njs_vm_t *vm, njs_function_t *function,
 
 
 njs_int_t
-njs_function_lambda_call(njs_vm_t *vm)
+njs_function_lambda_call(njs_vm_t *vm, void *promise_cap, void *async_ctx)
 {
     uint32_t               n;
     njs_int_t              ret;
@@ -621,6 +621,8 @@ njs_function_lambda_call(njs_vm_t *vm)
 
     frame = (njs_frame_t *) vm->top_frame;
     function = frame->native.function;
+
+    njs_assert(function->context == NULL);
 
     if (function->global && !function->closure_copied) {
         ret = njs_function_capture_global_closures(vm, function);
@@ -698,7 +700,7 @@ njs_function_lambda_call(njs_vm_t *vm)
         }
     }
 
-    ret = njs_vmcode_interpreter(vm, lambda->start);
+    ret = njs_vmcode_interpreter(vm, lambda->start, promise_cap, async_ctx);
 
     /* Restore current level. */
     vm->levels[NJS_LEVEL_LOCAL] = cur_local;
@@ -775,7 +777,7 @@ njs_function_frame_invoke(njs_vm_t *vm, njs_value_t *retval)
         return njs_function_native_call(vm);
 
     } else {
-        return njs_function_lambda_call(vm);
+        return njs_function_lambda_call(vm, NULL, NULL);
     }
 }
 
@@ -1374,7 +1376,7 @@ njs_function_prototype_apply(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_array_t     *arr;
     njs_function_t  *func;
 
-    if (!njs_is_function(njs_arg(args, nargs, 0))) {
+    if (!njs_is_function(njs_argument(args, 0))) {
         njs_type_error(vm, "\"this\" argument is not a function");
         return NJS_ERROR;
     }
@@ -1385,18 +1387,10 @@ njs_function_prototype_apply(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
     if (njs_is_null_or_undefined(arr_like)) {
         length = 0;
-
         goto activate;
+    }
 
-    } else if (njs_is_array(arr_like)) {
-        arr = arr_like->data.u.array;
-
-        args = arr->start;
-        length = arr->length;
-
-        goto activate;
-
-    } else if (njs_slow_path(!njs_is_object(arr_like))) {
+    if (njs_slow_path(!njs_is_object(arr_like))) {
         njs_type_error(vm, "second argument is not an array-like object");
         return NJS_ERROR;
     }
@@ -1404,6 +1398,11 @@ njs_function_prototype_apply(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     ret = njs_object_length(vm, arr_like, &length);
     if (njs_slow_path(ret != NJS_OK)) {
         return ret;
+    }
+
+    if (njs_slow_path(length > 1024)) {
+        njs_internal_error(vm, "argument list is too long");
+        return NJS_ERROR;
     }
 
     arr = njs_array_alloc(vm, 1, length, NJS_ARRAY_SPARE);

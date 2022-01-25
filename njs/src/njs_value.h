@@ -270,7 +270,6 @@ struct njs_function_s {
     } u;
 
     void                              *context;
-    void                              *await;
 
     njs_value_t                       *bound;
 };
@@ -1028,8 +1027,6 @@ njs_set_object_value(njs_value_t *value, njs_object_value_t *object_value)
         (pq)->lhq.key.length = 0;                                             \
         (pq)->lhq.key.start = NULL;                                           \
         (pq)->lhq.value = NULL;                                               \
-        /* FIXME: False-positive in MSAN?. */                                 \
-        njs_msan_unpoison(&(pq)->key, sizeof(njs_value_t));                   \
         (pq)->own_whiteout = NULL;                                            \
         (pq)->query = _query;                                                 \
         (pq)->shared = 0;                                                     \
@@ -1082,16 +1079,9 @@ njs_inline njs_int_t
 njs_value_property_i64(njs_vm_t *vm, njs_value_t *value, int64_t index,
     njs_value_t *retval)
 {
-    njs_int_t    ret;
     njs_value_t  key;
 
-    /* FIXME: False-positive in MSAN?. */
-    njs_msan_unpoison(&key, sizeof(njs_value_t));
-
-    ret = njs_int64_to_string(vm, &key, index);
-    if (njs_slow_path(ret != NJS_OK)) {
-        return ret;
-    }
+    njs_set_number(&key, index);
 
     return njs_value_property(vm, value, &key, retval);
 }
@@ -1101,16 +1091,9 @@ njs_inline njs_int_t
 njs_value_property_i64_set(njs_vm_t *vm, njs_value_t *value, int64_t index,
     njs_value_t *setval)
 {
-    njs_int_t    ret;
     njs_value_t  key;
 
-    /* FIXME: False-positive in MSAN?. */
-    njs_msan_unpoison(&key, sizeof(njs_value_t));
-
-    ret = njs_int64_to_string(vm, &key, index);
-    if (njs_slow_path(ret != NJS_OK)) {
-        return ret;
-    }
+    njs_set_number(&key, index);
 
     return njs_value_property_set(vm, value, &key, setval);
 }
@@ -1122,9 +1105,6 @@ njs_value_property_i64_delete(njs_vm_t *vm, njs_value_t *value, int64_t index,
 {
     njs_int_t    ret;
     njs_value_t  key;
-
-    /* FIXME: False-positive in MSAN?. */
-    njs_msan_unpoison(&key, sizeof(njs_value_t));
 
     ret = njs_int64_to_string(vm, &key, index);
     if (njs_slow_path(ret != NJS_OK)) {
