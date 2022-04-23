@@ -1,3 +1,9 @@
+nginx (1.21.6+mod.1-1ppa1~jammy) jammy; urgency=medium
+
+  * Port to Ubuntu 22.04 LTS
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Sat, 23 Apr 2022 12:00:49 +0900
+
 nginx (1.21.6+mod.1-1ppa1~focal) focal; urgency=medium
 
   * New upstream version 1.21.6
