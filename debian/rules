@@ -102,7 +102,6 @@ config.status.nginx: config.env.nginx
 		--with-stream_realip_module \
 		--with-stream_ssl_module \
 		--with-stream_ssl_preread_module \
-		--with-ipv6 \
 		--add-module=./ngx_devel_kit \
 		--add-dynamic-module=./lua-nginx-module \
 		--add-dynamic-module=./echo-nginx-module \
@@ -173,7 +172,6 @@ config.status.nginx_debug: config.env.nginx_debug
 		--with-stream_realip_module \
 		--with-stream_ssl_module \
 		--with-stream_ssl_preread_module \
-		--with-ipv6 \
 		--add-module=./ngx_devel_kit \
 		--add-dynamic-module=./lua-nginx-module \
 		--add-dynamic-module=./echo-nginx-module \
