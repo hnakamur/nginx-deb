@@ -22,7 +22,7 @@
  #endif
  
      { ngx_string("proxy_temp_path"),
-@@ -5053,3 +5061,103 @@
+@@ -5058,3 +5066,103 @@
  
      v->uri = u->uri;
  }
@@ -139,7 +139,7 @@
  
 --- a/src/http/ngx_http_file_cache.c
 +++ b/src/http/ngx_http_file_cache.c
-@@ -1832,7 +1832,7 @@
+@@ -1837,7 +1837,7 @@
          }
  
          if (ngx_queue_empty(&cache->sh->queue)) {
@@ -148,7 +148,7 @@
              break;
          }
  
-@@ -1843,7 +1843,7 @@
+@@ -1848,7 +1848,7 @@
          wait = fcn->expire - now;
  
          if (wait > 0) {
@@ -157,7 +157,7 @@
              break;
          }
  
-@@ -1970,11 +1970,16 @@
+@@ -1975,11 +1975,16 @@
      cache->last = ngx_current_msec;
      cache->files = 0;
  
@@ -178,7 +178,7 @@
      }
  
      for ( ;; ) {
-@@ -2327,6 +2332,8 @@
+@@ -2332,6 +2337,8 @@
      ngx_int_t               loader_files, manager_files;
      ngx_msec_t              loader_sleep, manager_sleep, loader_threshold,
                              manager_threshold;
@@ -187,7 +187,7 @@
      ngx_uint_t              i, n, use_temp_path;
      ngx_array_t            *caches;
      ngx_http_file_cache_t  *cache, **ce;
-@@ -2352,6 +2359,8 @@
+@@ -2357,6 +2364,8 @@
      manager_files = 100;
      manager_sleep = 50;
      manager_threshold = 200;
@@ -196,7 +196,7 @@
  
      name.len = 0;
      size = 0;
-@@ -2599,6 +2608,42 @@
+@@ -2604,6 +2613,42 @@
              continue;
          }
  
@@ -239,7 +239,7 @@
          ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                             "invalid parameter \"%V\"", &value[i]);
          return NGX_CONF_ERROR;
-@@ -2622,6 +2667,8 @@
+@@ -2627,6 +2672,8 @@
      cache->manager_files = manager_files;
      cache->manager_sleep = manager_sleep;
      cache->manager_threshold = manager_threshold;
