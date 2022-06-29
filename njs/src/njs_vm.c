@@ -143,26 +143,18 @@ njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end)
     njs_str_t           ast;
     njs_chb_t           chain;
     njs_value_t         **global, **new;
-    njs_lexer_t         lexer;
     njs_parser_t        parser;
     njs_vm_code_t       *code;
     njs_generator_t     generator;
     njs_parser_scope_t  *scope;
 
-    njs_memzero(&parser, sizeof(njs_parser_t));
+    vm->codes = NULL;
 
-    parser.scope = vm->global_scope;
-
-    if (parser.scope != NULL && vm->modules != NULL) {
-        njs_module_reset(vm);
-    }
-
-    ret = njs_lexer_init(vm, &lexer, &vm->options.file, *start, end, 0);
+    ret = njs_parser_init(vm, &parser, vm->global_scope, &vm->options.file,
+                          *start, end, 0);
     if (njs_slow_path(ret != NJS_OK)) {
         return NJS_ERROR;
     }
-
-    parser.lexer = &lexer;
 
     ret = njs_parser(vm, &parser);
     if (njs_slow_path(ret != NJS_OK)) {
@@ -186,10 +178,10 @@ njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end)
         njs_mp_free(vm->mem_pool, ast.start);
     }
 
-    *start = lexer.start;
+    *start = parser.lexer->start;
     scope = parser.scope;
 
-    ret = njs_generator_init(&generator, 0, 0);
+    ret = njs_generator_init(&generator, &vm->options.file, 0, 0);
     if (njs_slow_path(ret != NJS_OK)) {
         njs_internal_error(vm, "njs_generator_init() failed");
         return NJS_ERROR;
@@ -222,8 +214,6 @@ njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end)
 
                 *new++ = *global++;
             }
-
-            njs_mp_free(vm->mem_pool, global);
         }
     }
 
@@ -234,22 +224,83 @@ njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end)
     vm->variables_hash = &scope->variables;
     vm->global_items = scope->items;
 
-    vm->levels[NJS_LEVEL_TEMP] = NULL;
-
-    if (scope->temp != 0) {
-        new = njs_scope_make(vm, scope->temp);
-        if (njs_slow_path(new == NULL)) {
-            return ret;
-        }
-
-        vm->levels[NJS_LEVEL_TEMP] = new;
-    }
-
     if (vm->options.disassemble) {
         njs_disassembler(vm);
     }
 
     return NJS_OK;
+}
+
+
+njs_mod_t *
+njs_vm_compile_module(njs_vm_t *vm, njs_str_t *name, u_char **start,
+    u_char *end)
+{
+    njs_int_t              ret;
+    njs_arr_t              *arr;
+    njs_mod_t              *module;
+    njs_parser_t           parser;
+    njs_vm_code_t          *code;
+    njs_generator_t        generator;
+    njs_parser_scope_t     *scope;
+    njs_function_lambda_t  *lambda;
+
+    module = njs_module_find(vm, name, 1);
+    if (module != NULL) {
+        return module;
+    }
+
+    module = njs_module_add(vm, name);
+    if (njs_slow_path(module == NULL)) {
+        return NULL;
+    }
+
+    ret = njs_parser_init(vm, &parser, NULL, name, *start, end, 1);
+    if (njs_slow_path(ret != NJS_OK)) {
+        return NULL;
+    }
+
+    parser.module = 1;
+
+    ret = njs_parser(vm, &parser);
+    if (njs_slow_path(ret != NJS_OK)) {
+        return NULL;
+    }
+
+    *start = parser.lexer->start;
+
+    ret = njs_generator_init(&generator, &module->name, 0, 0);
+    if (njs_slow_path(ret != NJS_OK)) {
+        njs_internal_error(vm, "njs_generator_init() failed");
+        return NULL;
+    }
+
+    code = njs_generate_scope(vm, &generator, parser.scope, &njs_entry_module);
+    if (njs_slow_path(code == NULL)) {
+        njs_internal_error(vm, "njs_generate_scope() failed");
+
+        return NULL;
+    }
+
+    lambda = njs_mp_zalloc(vm->mem_pool, sizeof(njs_function_lambda_t));
+    if (njs_fast_path(lambda == NULL)) {
+        njs_memory_error(vm);
+        return NULL;
+    }
+
+    scope = parser.scope;
+
+    lambda->start = generator.code_start;
+    lambda->nlocal = scope->items;
+
+    arr = scope->declarations;
+    lambda->declarations = (arr != NULL) ? arr->start : NULL;
+    lambda->ndeclarations = (arr != NULL) ? arr->items : 0;
+
+    module->function.args_offset = 1;
+    module->function.u.lambda = lambda;
+
+    return module;
 }
 
 
@@ -344,6 +395,8 @@ njs_vm_init(njs_vm_t *vm)
     njs_lvlhsh_init(&vm->keywords_hash);
     njs_lvlhsh_init(&vm->modules_hash);
     njs_lvlhsh_init(&vm->events_hash);
+
+    njs_rbtree_init(&vm->global_symbols, njs_symbol_rbtree_cmp);
 
     njs_queue_init(&vm->posted_events);
     njs_queue_init(&vm->promise_events);
@@ -484,11 +537,6 @@ njs_int_t
 njs_vm_start(njs_vm_t *vm)
 {
     njs_int_t  ret;
-
-    ret = njs_module_load(vm);
-    if (njs_slow_path(ret != NJS_OK)) {
-        return ret;
-    }
 
     ret = njs_vmcode_interpreter(vm, vm->start, NULL, NULL);
 

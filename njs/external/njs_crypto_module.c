@@ -231,6 +231,14 @@ static njs_external_t  njs_ext_crypto_hmac[] = {
 static njs_external_t  njs_ext_crypto_crypto[] = {
 
     {
+        .flags = NJS_EXTERN_PROPERTY | NJS_EXTERN_SYMBOL,
+        .name.symbol = NJS_SYMBOL_TO_STRING_TAG,
+        .u.property = {
+            .value = "crypto",
+        }
+    },
+
+    {
         .flags = NJS_EXTERN_METHOD,
         .name.string = njs_str("createHash"),
         .writable = 1,
@@ -638,7 +646,7 @@ njs_crypto_init(njs_vm_t *vm)
         return NJS_ERROR;
     }
 
-    module = njs_module_add(vm, &njs_str_value("crypto"), 1);
+    module = njs_module_add(vm, &njs_str_value("crypto"));
     if (njs_slow_path(module == NULL)) {
         return NJS_ERROR;
     }

@@ -761,13 +761,17 @@ njs_builtin_match_native_function(njs_vm_t *vm, njs_function_t *function,
             break;
         }
 
-        ctx.match = module->name;
+        if (njs_is_object(&module->value)
+            && !njs_object(&module->value)->shared)
+        {
+            ctx.match = module->name;
 
-        ret = njs_object_traverse(vm, njs_object(&module->value), &ctx,
-                                  njs_builtin_traverse);
+            ret = njs_object_traverse(vm, njs_object(&module->value), &ctx,
+                                      njs_builtin_traverse);
 
-        if (ret == NJS_DONE) {
-            goto found;
+            if (ret == NJS_DONE) {
+                goto found;
+            }
         }
     }
 
@@ -1683,6 +1687,14 @@ static const njs_object_prop_t  njs_njs_object_properties[] =
         .type = NJS_PROPERTY,
         .name = njs_string("version"),
         .value = njs_string(NJS_VERSION),
+        .configurable = 1,
+        .enumerable = 1,
+    },
+
+    {
+        .type = NJS_PROPERTY,
+        .name = njs_string("version_number"),
+        .value = njs_value(NJS_NUMBER, 1, NJS_VERSION_NUMBER),
         .configurable = 1,
         .enumerable = 1,
     },

@@ -39,12 +39,12 @@ static ngx_str_t ngx_http_status_lines[] = {
     ngx_string("302 Moved Temporarily"),
     ngx_string("303 See Other"),
     ngx_string("304 Not Modified"),
+    ngx_null_string,  /* "305 Use Proxy" */
+    ngx_null_string,  /* "306 unused" */
+    ngx_string("307 Temporary Redirect"),
+    ngx_string("308 Permanent Redirect"),
 
-    /* ngx_null_string, */  /* "305 Use Proxy" */
-    /* ngx_null_string, */  /* "306 unused" */
-    /* ngx_null_string, */  /* "307 Temporary Redirect" */
-
-#define NGX_HTTP_LAST_LEVEL_300  305
+#define NGX_HTTP_LAST_LEVEL_300  309
 #define NGX_HTTP_LEVEL_300       (NGX_HTTP_LAST_LEVEL_300 - 301)
 
     ngx_string("400 Bad Request"),
@@ -546,15 +546,34 @@ ngx_int_t
 ngx_http_srcache_response_no_cache(ngx_http_request_t *r,
     ngx_http_srcache_loc_conf_t *conf, ngx_http_srcache_ctx_t *ctx)
 {
-    ngx_table_elt_t   **ccp;
     ngx_table_elt_t    *h;
+#if defined(nginx_version) && nginx_version >= 1023000
+    ngx_table_elt_t    *cc;
+#else
+    ngx_table_elt_t   **ccp;
     ngx_uint_t          i;
+#endif
     u_char             *p, *last;
     ngx_int_t           n;
     time_t              expires;
 
     dd("checking response cache control settings");
 
+#if defined(nginx_version) && nginx_version >= 1023000
+    cc = r->headers_out.cache_control;
+
+    if (cc == NULL) {
+        goto check_expires;
+    }
+
+    for (; cc; cc = cc->next) {
+        if (!cc->hash) {
+            continue;
+        }
+
+        p = cc->value.data;
+        last = p + cc->value.len;
+#else
     ccp = r->headers_out.cache_control.elts;
 
     if (ccp == NULL) {
@@ -568,6 +587,7 @@ ngx_http_srcache_response_no_cache(ngx_http_request_t *r,
 
         p = ccp[i]->value.data;
         last = p + ccp[i]->value.len;
+#endif
 
         if (!conf->store_private
             && ngx_strlcasestrn(p, last, (u_char *) "private", 7 - 1) != NULL)

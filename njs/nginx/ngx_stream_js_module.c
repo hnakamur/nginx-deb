@@ -31,9 +31,15 @@ typedef struct {
     ngx_str_t              access;
     ngx_str_t              preread;
     ngx_str_t              filter;
+
+    size_t                 buffer_size;
+    size_t                 max_response_body_size;
+    ngx_msec_t             timeout;
+
 #if (NGX_STREAM_SSL)
     ngx_ssl_t             *ssl;
     ngx_str_t              ssl_ciphers;
+    ngx_flag_t             ssl_verify;
     ngx_uint_t             ssl_protocols;
     ngx_int_t              ssl_verify_depth;
     ngx_str_t              ssl_trusted_certificate;
@@ -124,6 +130,11 @@ static ngx_resolver_t *ngx_stream_js_resolver(njs_vm_t *vm,
     ngx_stream_session_t *s);
 static ngx_msec_t ngx_stream_js_resolver_timeout(njs_vm_t *vm,
     ngx_stream_session_t *s);
+static ngx_msec_t ngx_stream_js_fetch_timeout(njs_vm_t *vm,
+    ngx_stream_session_t *s);
+static size_t ngx_stream_js_buffer_size(njs_vm_t *vm, ngx_stream_session_t *s);
+static size_t ngx_stream_js_max_response_buffer_size(njs_vm_t *vm,
+    ngx_stream_session_t *s);
 static void ngx_stream_js_handle_event(ngx_stream_session_t *s,
     njs_vm_event_t vm_event, njs_value_t *args, njs_uint_t nargs);
 
@@ -145,6 +156,8 @@ static char * ngx_stream_js_set_ssl(ngx_conf_t *cf,
     ngx_stream_js_srv_conf_t *jscf);
 #endif
 static ngx_ssl_t *ngx_stream_js_ssl(njs_vm_t *vm, ngx_stream_session_t *s);
+static ngx_flag_t ngx_stream_js_ssl_verify(njs_vm_t *vm,
+    ngx_stream_session_t *s);
 
 #if (NGX_STREAM_SSL)
 
@@ -209,6 +222,27 @@ static ngx_command_t  ngx_stream_js_commands[] = {
       offsetof(ngx_stream_js_srv_conf_t, filter),
       NULL },
 
+    { ngx_string("js_fetch_buffer_size"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_size_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_js_srv_conf_t, buffer_size),
+      NULL },
+
+    { ngx_string("js_fetch_max_response_buffer_size"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_size_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_js_srv_conf_t, max_response_body_size),
+      NULL },
+
+    { ngx_string("js_fetch_timeout"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_msec_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_js_srv_conf_t, timeout),
+      NULL },
+
 #if (NGX_STREAM_SSL)
 
     { ngx_string("js_fetch_ciphers"),
@@ -224,6 +258,13 @@ static ngx_command_t  ngx_stream_js_commands[] = {
       NGX_STREAM_SRV_CONF_OFFSET,
       offsetof(ngx_stream_js_srv_conf_t, ssl_protocols),
       &ngx_stream_js_ssl_protocols },
+
+    { ngx_string("js_fetch_verify"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_js_srv_conf_t, ssl_verify),
+      NULL },
 
     { ngx_string("js_fetch_verify_depth"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
@@ -456,7 +497,8 @@ static njs_external_t  ngx_stream_js_ext_session[] = {
 
 static njs_vm_ops_t ngx_stream_js_ops = {
     ngx_stream_js_set_timer,
-    ngx_stream_js_clear_timer
+    ngx_stream_js_clear_timer,
+    NULL,
 };
 
 
@@ -467,11 +509,15 @@ static uintptr_t ngx_stream_js_uptr[] = {
     (uintptr_t) ngx_stream_js_resolver_timeout,
     (uintptr_t) ngx_stream_js_handle_event,
     (uintptr_t) ngx_stream_js_ssl,
+    (uintptr_t) ngx_stream_js_ssl_verify,
+    (uintptr_t) ngx_stream_js_fetch_timeout,
+    (uintptr_t) ngx_stream_js_buffer_size,
+    (uintptr_t) ngx_stream_js_max_response_buffer_size,
 };
 
 
 static njs_vm_meta_t ngx_stream_js_metas = {
-    .size = 6,
+    .size = njs_nitems(ngx_stream_js_uptr),
     .values = ngx_stream_js_uptr
 };
 
@@ -1068,6 +1114,11 @@ ngx_stream_js_ext_done(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
     ctx = ngx_stream_get_module_ctx(s, ngx_stream_js_module);
 
+    if (ctx->filter) {
+        njs_vm_error(vm, "should not be called while filtering");
+        return NJS_ERROR;
+    }
+
     ngx_log_debug1(NGX_LOG_DEBUG_STREAM, s->connection->log, 0,
                    "stream js set status: %i", status);
 
@@ -1455,6 +1506,39 @@ ngx_stream_js_resolver_timeout(njs_vm_t *vm, ngx_stream_session_t *s)
 }
 
 
+static ngx_msec_t
+ngx_stream_js_fetch_timeout(njs_vm_t *vm, ngx_stream_session_t *s)
+{
+    ngx_stream_core_srv_conf_t  *cscf;
+
+    cscf = ngx_stream_get_module_srv_conf(s, ngx_stream_js_module);
+
+    return cscf->resolver_timeout;
+}
+
+
+static size_t
+ngx_stream_js_buffer_size(njs_vm_t *vm, ngx_stream_session_t *s)
+{
+    ngx_stream_js_srv_conf_t  *jscf;
+
+    jscf = ngx_stream_get_module_srv_conf(s, ngx_stream_js_module);
+
+    return jscf->buffer_size;
+}
+
+
+static size_t
+ngx_stream_js_max_response_buffer_size(njs_vm_t *vm, ngx_stream_session_t *s)
+{
+    ngx_stream_js_srv_conf_t  *jscf;
+
+    jscf = ngx_stream_get_module_srv_conf(s, ngx_stream_js_module);
+
+    return jscf->max_response_body_size;
+}
+
+
 static void
 ngx_stream_js_handle_event(ngx_stream_session_t *s, njs_vm_event_t vm_event,
     njs_value_t *args, njs_uint_t nargs)
@@ -1512,8 +1596,11 @@ ngx_stream_js_init_main_conf(ngx_conf_t *cf, void *conf)
 
     import = jmcf->imports->elts;
     for (i = 0; i < jmcf->imports->nelts; i++) {
-        size += sizeof("import  from '';\n") - 1 + import[i].name.len
-                + import[i].path.len;
+        /* import <name> from '<path>'; globalThis.<name> = <name>; */
+
+        size += sizeof("import  from '';") - 1 + import[i].name.len * 3
+                + import[i].path.len
+                + sizeof(" globalThis. = ;\n") - 1;
     }
 
     start = ngx_pnalloc(cf->pool, size);
@@ -1524,11 +1611,18 @@ ngx_stream_js_init_main_conf(ngx_conf_t *cf, void *conf)
     p = start;
     import = jmcf->imports->elts;
     for (i = 0; i < jmcf->imports->nelts; i++) {
+
+        /* import <name> from '<path>'; globalThis.<name> = <name>; */
+
         p = ngx_cpymem(p, "import ", sizeof("import ") - 1);
         p = ngx_cpymem(p, import[i].name.data, import[i].name.len);
         p = ngx_cpymem(p, " from '", sizeof(" from '") - 1);
         p = ngx_cpymem(p, import[i].path.data, import[i].path.len);
-        p = ngx_cpymem(p, "';\n", sizeof("';\n") - 1);
+        p = ngx_cpymem(p, "'; globalThis.", sizeof("'; globalThis.") - 1);
+        p = ngx_cpymem(p, import[i].name.data, import[i].name.len);
+        p = ngx_cpymem(p, " = ", sizeof(" = ") - 1);
+        p = ngx_cpymem(p, import[i].name.data, import[i].name.len);
+        p = ngx_cpymem(p, ";\n", sizeof(";\n") - 1);
     }
 
     njs_vm_opt_init(&options);
@@ -1887,7 +1981,12 @@ ngx_stream_js_create_srv_conf(ngx_conf_t *cf)
      *     conf->ssl_trusted_certificate = { 0, NULL };
      */
 
+    conf->buffer_size = NGX_CONF_UNSET_SIZE;
+    conf->max_response_body_size = NGX_CONF_UNSET_SIZE;
+    conf->timeout = NGX_CONF_UNSET_MSEC;
+
 #if (NGX_STREAM_SSL)
+    conf->ssl_verify = NGX_CONF_UNSET;
     conf->ssl_verify_depth = NGX_CONF_UNSET;
 #endif
     return conf;
@@ -1904,6 +2003,11 @@ ngx_stream_js_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->preread, prev->preread, "");
     ngx_conf_merge_str_value(conf->filter, prev->filter, "");
 
+    ngx_conf_merge_msec_value(conf->timeout, prev->timeout, 60000);
+    ngx_conf_merge_size_value(conf->buffer_size, prev->buffer_size, 16384);
+    ngx_conf_merge_size_value(conf->max_response_body_size,
+                              prev->max_response_body_size, 1048576);
+
 #if (NGX_STREAM_SSL)
     ngx_conf_merge_str_value(conf->ssl_ciphers, prev->ssl_ciphers, "DEFAULT");
 
@@ -1911,6 +2015,7 @@ ngx_stream_js_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
                                  (NGX_CONF_BITMASK_SET|NGX_SSL_TLSv1
                                   |NGX_SSL_TLSv1_1|NGX_SSL_TLSv1_2));
 
+    ngx_conf_merge_value(conf->ssl_verify, prev->ssl_verify, 1);
     ngx_conf_merge_value(conf->ssl_verify_depth, prev->ssl_verify_depth, 100);
 
     ngx_conf_merge_str_value(conf->ssl_trusted_certificate,
@@ -2009,5 +2114,20 @@ ngx_stream_js_ssl(njs_vm_t *vm, ngx_stream_session_t *s)
     return jscf->ssl;
 #else
     return NULL;
+#endif
+}
+
+
+static ngx_flag_t
+ngx_stream_js_ssl_verify(njs_vm_t *vm, ngx_stream_session_t *s)
+{
+#if (NGX_STREAM_SSL)
+    ngx_stream_js_srv_conf_t  *jscf;
+
+    jscf = ngx_stream_get_module_srv_conf(s, ngx_stream_js_module);
+
+    return jscf->ssl_verify;
+#else
+    return 0;
 #endif
 }

@@ -122,7 +122,6 @@ typedef enum {
     NJS_LEVEL_CLOSURE,
     NJS_LEVEL_GLOBAL,
     NJS_LEVEL_STATIC,
-    NJS_LEVEL_TEMP,
     NJS_LEVEL_MAX
 } njs_level_type_t;
 
@@ -198,6 +197,7 @@ struct njs_vm_s {
     njs_trace_t              trace;
     njs_random_t             random;
 
+    njs_rbtree_t             global_symbols;
     uint64_t                 symbol_generator;
 };
 
@@ -229,6 +229,7 @@ struct njs_vm_shared_s {
     njs_lvlhsh_t             arguments_object_instance_hash;
     njs_lvlhsh_t             regexp_instance_hash;
 
+    size_t                   module_items;
     njs_lvlhsh_t             modules_hash;
 
     njs_lvlhsh_t             env_hash;
@@ -256,6 +257,9 @@ njs_int_t njs_builtin_objects_create(njs_vm_t *vm);
 njs_int_t njs_builtin_objects_clone(njs_vm_t *vm, njs_value_t *global);
 njs_int_t njs_builtin_match_native_function(njs_vm_t *vm,
     njs_function_t *function, njs_str_t *name);
+
+void njs_disassemble(u_char *start, u_char *end, njs_int_t count,
+    njs_arr_t *lines);
 
 njs_arr_t *njs_vm_completions(njs_vm_t *vm, njs_str_t *expression);
 
