@@ -389,7 +389,7 @@ njs_promise_value_constructor(njs_vm_t *vm, njs_value_t *value,
 
     ret = njs_value_property(vm, value, njs_value_arg(&string_constructor),
                              dst);
-    if (njs_slow_path(ret != NJS_OK)) {
+    if (njs_slow_path(ret == NJS_ERROR)) {
         return ret;
     }
 
@@ -1242,20 +1242,20 @@ njs_promise_all(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_index_t function_type)
 {
     njs_int_t                    ret;
-    njs_value_t                  *promise, resolve;
+    njs_value_t                  *promise_ctor, resolve;
     njs_iterator_handler_t       handler;
     njs_promise_iterator_args_t  pargs;
 
-    promise = njs_argument(args, 0);
+    promise_ctor = njs_argument(args, 0);
 
-    pargs.capability = njs_promise_new_capability(vm, promise);
+    pargs.capability = njs_promise_new_capability(vm, promise_ctor);
     if (njs_slow_path(pargs.capability == NULL)) {
         return NJS_ERROR;
     }
 
-    ret = njs_value_property(vm, promise, njs_value_arg(&string_resolve),
+    ret = njs_value_property(vm, promise_ctor, njs_value_arg(&string_resolve),
                              &resolve);
-    if (njs_slow_path(ret != NJS_OK)) {
+    if (njs_slow_path(ret == NJS_ERROR)) {
         return ret;
     }
 
@@ -1265,7 +1265,7 @@ njs_promise_all(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     }
 
     pargs.function = njs_function(&resolve);
-    pargs.constructor = promise;
+    pargs.constructor = promise_ctor;
 
     switch (function_type) {
     case NJS_PROMISE_ALL_SETTLED:
@@ -1308,7 +1308,7 @@ njs_promise_perform_all(njs_vm_t *vm, njs_value_t *iterator,
         return ret;
     }
 
-    pargs->args.data = njs_array_alloc(vm, 1, length, 0);
+    pargs->args.data = njs_array_alloc(vm, 1, 0, NJS_ARRAY_SPARE);
     if (njs_slow_path(pargs->args.data == NULL)) {
         return NJS_ERROR;
     }
@@ -1363,18 +1363,28 @@ njs_promise_perform_all_handler(njs_vm_t *vm, njs_iterator_args_t *args,
 {
     njs_int_t                    ret;
     njs_array_t                  *array;
-    njs_value_t                  arguments[2], next;
+    njs_value_t                  arguments[2], next, arr_value;
     njs_function_t               *on_fulfilled;
     njs_promise_capability_t     *capability;
     njs_promise_all_context_t    *context;
     njs_promise_iterator_args_t  *pargs;
+
+    if (!njs_is_valid(value)) {
+        value = njs_value_arg(&njs_value_undefined);
+    }
 
     pargs = (njs_promise_iterator_args_t *) args;
 
     capability = pargs->capability;
 
     array = args->data;
-    njs_set_undefined(&array->start[index]);
+    njs_set_array(&arr_value, array);
+
+    ret = njs_value_property_i64_set(vm, &arr_value, index,
+                                     njs_value_arg(&njs_value_undefined));
+    if (njs_slow_path(ret == NJS_ERROR)) {
+        return ret;
+    }
 
     ret = njs_function_call(vm, pargs->function, pargs->constructor, value,
                             1, &next);
@@ -1417,7 +1427,8 @@ static njs_int_t
 njs_promise_all_resolve_element_functions(njs_vm_t *vm, njs_value_t *args,
     njs_uint_t nargs, njs_index_t unused)
 {
-    njs_value_t                arguments;
+    njs_int_t                  ret;
+    njs_value_t                arr_value;
     njs_promise_all_context_t  *context;
 
     context = vm->top_frame->function->context;
@@ -1428,16 +1439,21 @@ njs_promise_all_resolve_element_functions(njs_vm_t *vm, njs_value_t *args,
     }
 
     context->already_called = 1;
-    context->values->start[context->index] = *njs_arg(args, nargs, 1);
+
+    njs_set_array(&arr_value, context->values);
+
+    ret = njs_value_property_i64_set(vm, &arr_value, context->index,
+                                     njs_arg(args, nargs, 1));
+    if (njs_slow_path(ret == NJS_ERROR)) {
+        return ret;
+    }
 
     if (--(*context->remaining_elements) == 0) {
         njs_mp_free(vm->mem_pool, context->remaining_elements);
 
-        njs_set_array(&arguments, context->values);
-
         return njs_function_call(vm,
                                  njs_function(&context->capability->resolve),
-                                 &njs_value_undefined, &arguments, 1,
+                                 &njs_value_undefined, &arr_value, 1,
                                  &vm->retval);
     }
 
@@ -1453,18 +1469,28 @@ njs_promise_perform_all_settled_handler(njs_vm_t *vm, njs_iterator_args_t *args,
 {
     njs_int_t                    ret;
     njs_array_t                  *array;
-    njs_value_t                  arguments[2], next;
+    njs_value_t                  arguments[2], next, arr_value;
     njs_function_t               *on_fulfilled, *on_rejected;
     njs_promise_capability_t     *capability;
     njs_promise_all_context_t    *context;
     njs_promise_iterator_args_t  *pargs;
+
+    if (!njs_is_valid(value)) {
+        value = njs_value_arg(&njs_value_undefined);
+    }
 
     pargs = (njs_promise_iterator_args_t *) args;
 
     capability = pargs->capability;
 
     array = args->data;
-    njs_set_undefined(&array->start[index]);
+    njs_set_array(&arr_value, array);
+
+    ret = njs_value_property_i64_set(vm, &arr_value, index,
+                                     njs_value_arg(&njs_value_undefined));
+    if (njs_slow_path(ret == NJS_ERROR)) {
+        return ret;
+    }
 
     ret = njs_function_call(vm, pargs->function, pargs->constructor, value,
                             1, &next);
@@ -1519,7 +1545,7 @@ njs_promise_all_settled_element_functions(njs_vm_t *vm,
     njs_value_t *args, njs_uint_t nargs, njs_index_t rejected)
 {
     njs_int_t                  ret;
-    njs_value_t                arguments, *value;
+    njs_value_t                obj_value, arr_value;
     njs_object_t               *obj;
     const njs_value_t          *status, *set;
     njs_promise_all_context_t  *context;
@@ -1544,9 +1570,7 @@ njs_promise_all_settled_element_functions(njs_vm_t *vm,
         return NJS_ERROR;
     }
 
-    value = &context->values->start[context->index];
-
-    njs_set_object(value, obj);
+    njs_set_object(&obj_value, obj);
 
     if (rejected) {
         status = &string_rejected;
@@ -1557,14 +1581,22 @@ njs_promise_all_settled_element_functions(njs_vm_t *vm,
         set = &string_value;
     }
 
-    ret = njs_value_property_set(vm, value, njs_value_arg(&string_status),
+    ret = njs_value_property_set(vm, &obj_value, njs_value_arg(&string_status),
                                  njs_value_arg(status));
     if (njs_slow_path(ret == NJS_ERROR)) {
         return ret;
     }
 
-    ret = njs_value_property_set(vm, value, njs_value_arg(set),
+    ret = njs_value_property_set(vm, &obj_value, njs_value_arg(set),
                                  njs_arg(args, nargs, 1));
+    if (njs_slow_path(ret == NJS_ERROR)) {
+        return ret;
+    }
+
+    njs_set_array(&arr_value, context->values);
+
+    ret = njs_value_property_i64_set(vm, &arr_value, context->index,
+                                     &obj_value);
     if (njs_slow_path(ret == NJS_ERROR)) {
         return ret;
     }
@@ -1572,11 +1604,9 @@ njs_promise_all_settled_element_functions(njs_vm_t *vm,
     if (--(*context->remaining_elements) == 0) {
         njs_mp_free(vm->mem_pool, context->remaining_elements);
 
-        njs_set_array(&arguments, context->values);
-
         return njs_function_call(vm,
                                  njs_function(&context->capability->resolve),
-                                 &njs_value_undefined, &arguments, 1,
+                                 &njs_value_undefined, &arr_value, 1,
                                  &vm->retval);
     }
 
@@ -1592,18 +1622,28 @@ njs_promise_perform_any_handler(njs_vm_t *vm, njs_iterator_args_t *args,
 {
     njs_int_t                    ret;
     njs_array_t                  *array;
-    njs_value_t                  arguments[2], next;
+    njs_value_t                  arguments[2], next, arr_value;
     njs_function_t               *on_rejected;
     njs_promise_capability_t     *capability;
     njs_promise_all_context_t    *context;
     njs_promise_iterator_args_t  *pargs;
 
+    if (!njs_is_valid(value)) {
+        value = njs_value_arg(&njs_value_undefined);
+    }
+
     pargs = (njs_promise_iterator_args_t *) args;
 
     capability = pargs->capability;
 
-    array = pargs->args.data;
-    njs_set_undefined(&array->start[index]);
+    array = args->data;
+    njs_set_array(&arr_value, array);
+
+    ret = njs_value_property_i64_set(vm, &arr_value, index,
+                                     njs_value_arg(&njs_value_undefined));
+    if (njs_slow_path(ret == NJS_ERROR)) {
+        return ret;
+    }
 
     ret = njs_function_call(vm, pargs->function, pargs->constructor, value, 1,
                             &next);
@@ -1646,7 +1686,8 @@ static njs_int_t
 njs_promise_any_reject_element_functions(njs_vm_t *vm, njs_value_t *args,
     njs_uint_t nargs, njs_index_t unused)
 {
-    njs_value_t                argument;
+    njs_int_t                  ret;
+    njs_value_t                argument, arr_value;
     njs_object_t               *error;
     njs_promise_all_context_t  *context;
 
@@ -1658,15 +1699,20 @@ njs_promise_any_reject_element_functions(njs_vm_t *vm, njs_value_t *args,
     }
 
     context->already_called = 1;
-    context->values->start[context->index] = *njs_arg(args, nargs, 1);
+
+    njs_set_array(&arr_value, context->values);
+
+    ret = njs_value_property_i64_set(vm, &arr_value, context->index,
+                                     njs_arg(args, nargs, 1));
+    if (njs_slow_path(ret == NJS_ERROR)) {
+        return ret;
+    }
 
     if (--(*context->remaining_elements) == 0) {
         njs_mp_free(vm->mem_pool, context->remaining_elements);
 
-        njs_set_array(&argument, context->values);
-
         error = njs_error_alloc(vm, NJS_OBJ_TYPE_AGGREGATE_ERROR,
-                                NULL, &string_any_rejected, &argument);
+                                NULL, &string_any_rejected, &arr_value);
         if (njs_slow_path(error == NULL)) {
             return NJS_ERROR;
         }
@@ -1690,20 +1736,20 @@ njs_promise_race(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 {
     int64_t                      length;
     njs_int_t                    ret;
-    njs_value_t                  *promise, *iterator, resolve;
+    njs_value_t                  *promise_ctor, *iterator, resolve;
     njs_promise_iterator_args_t  pargs;
 
-    promise = njs_argument(args, 0);
+    promise_ctor = njs_argument(args, 0);
     iterator = njs_arg(args, nargs, 1);
 
-    pargs.capability = njs_promise_new_capability(vm, promise);
+    pargs.capability = njs_promise_new_capability(vm, promise_ctor);
     if (njs_slow_path(pargs.capability == NULL)) {
         return NJS_ERROR;
     }
 
-    ret = njs_value_property(vm, promise, njs_value_arg(&string_resolve),
+    ret = njs_value_property(vm, promise_ctor, njs_value_arg(&string_resolve),
                              &resolve);
-    if (njs_slow_path(ret != NJS_OK)) {
+    if (njs_slow_path(ret == NJS_ERROR)) {
         return ret;
     }
 
@@ -1720,7 +1766,7 @@ njs_promise_race(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_memzero(&pargs.args, sizeof(njs_iterator_args_t));
 
     pargs.function = njs_function(&resolve);
-    pargs.constructor = promise;
+    pargs.constructor = promise_ctor;
 
     pargs.args.value = iterator;
     pargs.args.to = length;
@@ -1744,6 +1790,10 @@ njs_promise_perform_race_handler(njs_vm_t *vm, njs_iterator_args_t *args,
     njs_value_t                  arguments[2], next;
     njs_promise_capability_t     *capability;
     njs_promise_iterator_args_t  *pargs;
+
+    if (!njs_is_valid(value)) {
+        value = njs_value_arg(&njs_value_undefined);
+    }
 
     pargs = (njs_promise_iterator_args_t *) args;
 

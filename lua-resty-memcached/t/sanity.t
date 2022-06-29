@@ -187,7 +187,7 @@ dog: 56
 
 
 
-=== TEST 4: set an exsistent key
+=== TEST 4: set an existent key
 --- http_config eval: $::HttpConfig
 --- config
     location /t {
@@ -245,7 +245,7 @@ dog: 56
 
 
 
-=== TEST 5: replace an exsistent key
+=== TEST 5: replace an existent key
 --- http_config eval: $::HttpConfig
 --- config
     location /t {
@@ -407,7 +407,7 @@ dog not found
 
 
 
-=== TEST 8: prepend to an exsistent key
+=== TEST 8: prepend to an existent key
 --- http_config eval: $::HttpConfig
 --- config
     location /t {
@@ -515,7 +515,7 @@ dog not found
 
 
 
-=== TEST 10: append to an exsistent key
+=== TEST 10: append to an existent key
 --- http_config eval: $::HttpConfig
 --- config
     location /t {
@@ -571,7 +571,7 @@ dog: 3256
 
 
 
-=== TEST 11: delete an exsistent key
+=== TEST 11: delete an existent key
 --- http_config eval: $::HttpConfig
 --- config
     location /t {
@@ -686,7 +686,7 @@ dog not found
 
 
 
-=== TEST 13: delete an exsistent key with delay
+=== TEST 13: delete an existent key with delay
 --- SKIP
 --- http_config eval: $::HttpConfig
 --- config
@@ -1607,6 +1607,7 @@ failed to connect: timeout
 lua tcp socket connect timed out
 
 
+
 === TEST 30: set keepalive and get reused times
 --- http_config eval: $::HttpConfig
 --- config
@@ -2255,6 +2256,7 @@ NOT_FOUND
 [error]
 
 
+
 === TEST 40: pipeline commands buffer empty
 --- http_config eval: $::HttpConfig
 --- config
@@ -2291,6 +2293,8 @@ GET /t
 commit: no more cmds
 --- no_error_log
 [error]
+
+
 
 === TEST 41: pipeline repeat commit
 --- http_config eval: $::HttpConfig
@@ -2356,6 +2360,8 @@ commit: no pipeline
 --- no_error_log
 [error]
 
+
+
 === TEST 42: pipeline repeat init
 --- http_config eval: $::HttpConfig
 --- config
@@ -2396,6 +2402,7 @@ GET /t
 init: already init pipeline
 --- no_error_log
 [error]
+
 
 
 === TEST 43: pipeline cancel
@@ -2439,6 +2446,7 @@ GET /t
 init: no pipeline
 --- no_error_log
 [error]
+
 
 
 === TEST 44: pipeline init buffer size error

@@ -49,6 +49,7 @@ enum {
     NJS_VMCODE_THIS,
     NJS_VMCODE_ARGUMENTS,
     NJS_VMCODE_PROTO_INIT,
+    NJS_VMCODE_IMPORT,
 
     NJS_VMCODE_AWAIT,
 
@@ -421,6 +422,13 @@ typedef struct {
 
 typedef struct {
     njs_vmcode_t               code;
+    njs_index_t                retval;
+    njs_mod_t                  *module;
+} njs_vmcode_import_t;
+
+
+typedef struct {
+    njs_vmcode_t               code;
     njs_index_t                dst;
 } njs_vmcode_variable_t;
 
@@ -442,5 +450,19 @@ njs_int_t njs_vmcode_interpreter(njs_vm_t *vm, u_char *pc,
 
 njs_object_t *njs_function_new_object(njs_vm_t *vm, njs_value_t *constructor);
 
+#ifdef NJS_OPCODE_DEBUG
+#define njs_vmcode_debug(vm, pc, prefix) {                                    \
+        do {                                                                  \
+            njs_vm_code_t  *code;                                             \
+                                                                              \
+            code = njs_lookup_code(vm, pc);                                   \
+                                                                              \
+            njs_printf("%s %V\n", prefix,                                     \
+                       (code != NULL) ? &code->name : &njs_entry_unknown);    \
+        } while (0);                                                          \
+    }
+#else
+#define njs_vmcode_debug(vm, pc, prefix)
+#endif
 
 #endif /* _NJS_VMCODE_H_INCLUDED_ */

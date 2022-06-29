@@ -6,7 +6,7 @@ flags: [async]
 let stages = [];
 
 async function f(v) {
-    if (v == 3) {
+    if (v == 1000) {
         return;
     }
 

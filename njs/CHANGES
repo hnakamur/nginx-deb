@@ -1,3 +1,108 @@
+Changes with njs 0.7.5                                        21 Jun 2022
+
+    nginx modules:
+
+    *) Change: adapting to changes in nginx header structures.
+
+    *) Bugfix: fixed r.headersOut special getters when value
+       is absent.
+
+    *) Change: returning undefined value instead of an empty string
+       for Content-Type when the header is absent.
+
+    Core:
+
+    *) Bugfix: fixed catching of the exception thrown from an
+       awaited function.
+
+    *) Bugfix: fixed function value initialization.
+
+    *) Bugfix: fixed interpreter when await fails.
+
+    *) Bugfix: fixed typed-array constructor when source array
+       is changed while iterating.
+
+    *) Bugfix: fixed String.prototype.replace() with byte strings.
+
+    *) Bugfix: fixed template literal from producing byte-strings.
+
+    *) Bugfix: fixed array iterator with sparse arrays.
+
+    *) Bugfix: fixed memory free while converting a flat array to
+       a slow array.
+
+    *) Bugfix: properly handling NJS_DECLINE in promise native
+       functions.
+
+    *) Bugfix: fixed working with an array-like object in Promise.all()
+       and friends.
+
+
+Changes with njs 0.7.4                                        24 May 2022
+
+    nginx modules:
+
+    *) Feature: added extended directive to configure Fetch API.
+       The following directives were added: "js_fetch_timeout",
+       "js_fetch_verify", "js_fetch_buffer_size",
+       "js_fetch_max_response_buffer_size".
+
+    *) Change: r.internalRedirect() now accepts escaped URIs.
+
+    *) Bugfix: fixed Response parsing with more than 8 headers
+       in Fetch API.
+
+    Core:
+
+    *) Feature: added njs.version_number property.
+
+    *) Feature: added compatibility with BoringSSL for
+       WebCrypto API.
+
+    *) Bugfix: fixed Array.prototype.sort() when arr size is changed
+       in a comparator.
+
+    *) Bugfix: fixed Array.prototype.slice() with slow "this" argument.
+
+    *) Bugfix: fixed aggregation methods of Promise ctor with
+       array-like object.
+
+    *) Bugfix: fixed Array.prototype.lastIndexOf() with unicode
+       string as "this".
+
+    *) Bugfix: fixed JSON.parse() when reviver function is provided.
+
+    *) Bugfix: fixed Object.defineProperty() when a recursive descriptor
+       is provided.
+
+    *) Bugfix: fixed Array.prototype.fill() for typed-arrays.
+
+    *) Bugfix: making function expression binding immutable according
+       the specs.
+
+    *) Bugfix: fixed redefinition of special props in
+       Object.defineProperty().
+
+Changes with njs 0.7.3                                        12 Apr 2022
+
+    Core:
+
+    *) Feature: added support of module resolution callback.
+       This feature allows a host environment to control
+       how imported modules are loaded.
+
+    *) Bugfix: fixed backtraces while traversing imported user
+       modules.
+
+    *) Bugfix: fixed Array.prototype.concat() when "this" is a slow
+       array.
+
+    *) Bugfix: fixed frame allocation from an awaited frame.
+
+    *) Bugfix: fixed allocation of large array literals.
+
+    *) Bugfix: fixed interpreter when "toString" conversion fails.
+
 Changes with njs 0.7.2                                        25 Jan 2022
 
     Core:

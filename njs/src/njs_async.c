@@ -29,7 +29,7 @@ njs_async_function_frame_invoke(njs_vm_t *vm, njs_value_t *retval)
         return NJS_ERROR;
     }
 
-    ret = njs_function_lambda_call(vm, capability, NULL);
+    ret = njs_function_lambda_call(vm, capability);
 
     if (ret == NJS_OK) {
         ret = njs_function_call(vm, njs_function(&capability->resolve),
@@ -59,7 +59,7 @@ njs_await_fulfilled(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_index_t unused)
 {
     njs_int_t           ret;
-    njs_value_t         **cur_local, **cur_closures, **cur_temp, *value;
+    njs_value_t         **cur_local, **cur_closures, *value;
     njs_frame_t         *frame, *async_frame;
     njs_async_ctx_t     *ctx;
     njs_native_frame_t  *top, *async;
@@ -67,9 +67,6 @@ njs_await_fulfilled(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     ctx = vm->top_frame->function->context;
 
     value = njs_arg(args, nargs, 1);
-    if (njs_is_error(value)) {
-        goto failed;
-    }
 
     async_frame = ctx->await;
     async = &async_frame->native;
@@ -77,13 +74,11 @@ njs_await_fulfilled(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
     cur_local = vm->levels[NJS_LEVEL_LOCAL];
     cur_closures = vm->levels[NJS_LEVEL_CLOSURE];
-    cur_temp = vm->levels[NJS_LEVEL_TEMP];
     top = vm->top_frame;
     frame = vm->active_frame;
 
     vm->levels[NJS_LEVEL_LOCAL] = async->local;
     vm->levels[NJS_LEVEL_CLOSURE] = njs_function_closures(async->function);
-    vm->levels[NJS_LEVEL_TEMP] = async->temp;
 
     vm->top_frame = async;
     vm->active_frame = async_frame;
@@ -97,7 +92,6 @@ njs_await_fulfilled(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
     vm->levels[NJS_LEVEL_LOCAL] = cur_local;
     vm->levels[NJS_LEVEL_CLOSURE] = cur_closures;
-    vm->levels[NJS_LEVEL_TEMP] = cur_temp;
 
     vm->top_frame = top;
     vm->active_frame = frame;
@@ -146,6 +140,7 @@ njs_await_rejected(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     value = njs_arg(args, nargs, 1);
 
     if (ctx->await->native.pc == ctx->pc) {
+        /* No catch block was set before await. */
         (void) njs_function_call(vm, njs_function(&ctx->capability->reject),
                                  &njs_value_undefined, value, 1, &vm->retval);
 
@@ -153,6 +148,8 @@ njs_await_rejected(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
         return NJS_ERROR;
     }
+
+    /* ctx->await->native.pc points to a catch block here. */
 
     ctx->pc = ctx->await->native.pc;
 

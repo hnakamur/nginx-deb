@@ -70,7 +70,7 @@ typedef enum {
     NJS_DATA_TAG_TEXT_ENCODER,
     NJS_DATA_TAG_TEXT_DECODER,
     NJS_DATA_TAG_ARRAY_ITERATOR,
-    NJS_DATA_TAG_FS_STAT,
+    NJS_DATA_TAG_FOREACH_NEXT,
     NJS_DATA_TAG_MAX
 } njs_data_tag_t;
 
@@ -135,7 +135,6 @@ union njs_value_s {
             njs_promise_t             *promise;
             njs_prop_handler_t        prop_handler;
             njs_value_t               *value;
-            njs_property_next_t       *next;
             void                      *data;
         } u;
     } data;
@@ -375,6 +374,7 @@ typedef struct {
     njs_object_prop_t           *own_whiteout;
     uint8_t                     query;
     uint8_t                     shared;
+    uint8_t                     temp;
     uint8_t                     own;
 } njs_property_query_t;
 
@@ -875,11 +875,12 @@ njs_set_uint32(njs_value_t *value, uint32_t num)
 
 
 njs_inline void
-njs_set_symbol(njs_value_t *value, uint32_t symbol)
+njs_set_symbol(njs_value_t *value, uint32_t symbol, njs_value_t *name)
 {
     value->data.magic32 = symbol;
     value->type = NJS_SYMBOL;
     value->data.truth = 1;
+    value->data.u.value = name;
 }
 
 
@@ -1031,6 +1032,7 @@ njs_set_object_value(njs_value_t *value, njs_object_value_t *object_value)
         (pq)->query = _query;                                                 \
         (pq)->shared = 0;                                                     \
         (pq)->own = _own;                                                     \
+        (pq)->temp = 0;                                                       \
     } while (0)
 
 
@@ -1063,7 +1065,7 @@ njs_int_t njs_value_property(njs_vm_t *vm, njs_value_t *value,
 njs_int_t njs_value_property_set(njs_vm_t *vm, njs_value_t *value,
     njs_value_t *key, njs_value_t *setval);
 njs_int_t njs_value_property_delete(njs_vm_t *vm, njs_value_t *value,
-    njs_value_t *key, njs_value_t *removed);
+    njs_value_t *key, njs_value_t *removed, njs_bool_t thrw);
 njs_int_t njs_value_to_object(njs_vm_t *vm, njs_value_t *value);
 
 void njs_symbol_conversion_failed(njs_vm_t *vm, njs_bool_t to_string);
@@ -1111,7 +1113,7 @@ njs_value_property_i64_delete(njs_vm_t *vm, njs_value_t *value, int64_t index,
         return ret;
     }
 
-    return njs_value_property_delete(vm, value, &key, removed);
+    return njs_value_property_delete(vm, value, &key, removed, 1);
 }
 
 

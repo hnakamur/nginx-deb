@@ -560,10 +560,13 @@ njs_object_iterate_reverse(njs_vm_t *vm, njs_iterator_args_t *args,
         } else {
             /* UTF-8 string. */
 
-            p = njs_string_offset(string_prop.start, end, from);
-            p = njs_utf8_next(p, end);
-
+            p = NULL;
             i = from + 1;
+
+            if (i > to) {
+                p = njs_string_offset(string_prop.start, end, from);
+                p = njs_utf8_next(p, end);
+            }
 
             while (i-- > to) {
                 pos = njs_utf8_prev(p);
@@ -683,7 +686,8 @@ njs_iterator_to_array(njs_vm_t *vm, njs_value_t *iterator)
         return NULL;
     }
 
-    args.data = njs_array_alloc(vm, 1, length, 0);
+    args.data = njs_array_alloc(vm, 0, 0,
+                                njs_min(length, NJS_ARRAY_LARGE_OBJECT_LENGTH));
     if (njs_slow_path(args.data == NULL)) {
         return NULL;
     }
@@ -705,10 +709,9 @@ static njs_int_t
 njs_iterator_to_array_handler(njs_vm_t *vm, njs_iterator_args_t *args,
     njs_value_t *value, int64_t index)
 {
-    njs_array_t  *array;
+    njs_value_t  array;
 
-    array = args->data;
-    array->start[index] = *value;
+    njs_set_array(&array, args->data);
 
-    return NJS_OK;
+    return njs_value_property_i64_set(vm, &array, index, value);
 }

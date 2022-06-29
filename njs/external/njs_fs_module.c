@@ -228,6 +228,14 @@ static njs_fs_entry_t njs_flags_table[] = {
 static njs_external_t  njs_ext_fs[] = {
 
     {
+        .flags = NJS_EXTERN_PROPERTY | NJS_EXTERN_SYMBOL,
+        .name.symbol = NJS_SYMBOL_TO_STRING_TAG,
+        .u.property = {
+            .value = "fs",
+        }
+    },
+
+    {
         .flags = NJS_EXTERN_METHOD,
         .name.string = njs_str("access"),
         .writable = 1,
@@ -3082,7 +3090,7 @@ njs_fs_init(njs_vm_t *vm)
         return NJS_ERROR;
     }
 
-    module = njs_module_add(vm, &njs_str_value("fs"), 1);
+    module = njs_module_add(vm, &njs_str_value("fs"));
     if (njs_slow_path(module == NULL)) {
         return NJS_ERROR;
     }
