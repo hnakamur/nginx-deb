@@ -210,7 +210,7 @@ sslv3 alert handshake failure
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -309,7 +309,7 @@ lua ssl server name: "test.com"
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -409,7 +409,7 @@ read SNI name from Lua: test.com
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -525,7 +525,7 @@ read SNI name from Lua: nil, type: nil
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -646,7 +646,7 @@ qr/Using unix socket file .*?nginx\.sock/
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -765,7 +765,7 @@ Using IPv4 address: 127.0.0.1
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -888,7 +888,7 @@ Using IPv6 address: 0.0.0.1
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -1015,7 +1015,7 @@ lua ssl server name: "test.com"
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -1540,7 +1540,7 @@ ssl cert by lua done
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -1673,7 +1673,7 @@ lua ssl server name: "test.com"
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -2148,7 +2148,7 @@ qr/\[error\] .*? failed to parse pem key: PEM_read_bio_PrivateKey\(\) failed/
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -2513,7 +2513,7 @@ client certificate subject: nil
     lua_package_path "$TEST_NGINX_LUA_PACKAGE_PATH";
 
     server {
-        listen 127.0.0.1:12345 ssl;
+        listen 127.0.0.1:$TEST_NGINX_RAND_PORT_2 ssl;
         server_name   test.com;
         ssl_certificate_by_lua_block {
             local ssl = require "ngx.ssl"
@@ -2541,7 +2541,7 @@ client certificate subject: nil
 
                 sock:settimeout(3000)
 
-                local ok, err = sock:connect("127.0.0.1", 12345)
+                local ok, err = sock:connect("127.0.0.1", $TEST_NGINX_RAND_PORT_2)
                 if not ok then
                     ngx.say("failed to connect: ", err)
                     return
@@ -2587,7 +2587,7 @@ client certificate subject: nil
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -2598,8 +2598,8 @@ received:
 received: foo
 close: 1 nil
 
---- error_log
-read server port from Lua: 12345
+--- error_log eval
+qr/read server port from Lua: \d+/
 
 --- no_error_log
 [error]
@@ -2687,7 +2687,7 @@ read server port from Lua: 12345
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx
@@ -2819,7 +2819,7 @@ read server port from Lua: nilunix domain has no port
 GET /t
 --- response_body
 connected: 1
-ssl handshake: userdata
+ssl handshake: cdata
 sent http request: 56 bytes.
 received: HTTP/1.1 201 Created
 received: Server: nginx

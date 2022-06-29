@@ -61,11 +61,11 @@ njs_number_dec_parse(const u_char **start, const u_char *end,
 }
 
 
-uint64_t
+double
 njs_number_oct_parse(const u_char **start, const u_char *end)
 {
     u_char        c;
-    uint64_t      num;
+    double        num;
     const u_char  *p, *_;
 
     p = *start;
@@ -95,11 +95,11 @@ njs_number_oct_parse(const u_char **start, const u_char *end)
 }
 
 
-uint64_t
+double
 njs_number_bin_parse(const u_char **start, const u_char *end)
 {
     u_char        c;
-    uint64_t      num;
+    double        num;
     const u_char  *p, *_;
 
     p = *start;
@@ -129,11 +129,11 @@ njs_number_bin_parse(const u_char **start, const u_char *end)
 }
 
 
-uint64_t
+double
 njs_number_hex_parse(const u_char **start, const u_char *end,
     njs_bool_t literal)
 {
-    uint64_t      num;
+    double        num;
     njs_int_t     n;
     const u_char  *p, *_;
 
@@ -163,12 +163,11 @@ njs_number_hex_parse(const u_char **start, const u_char *end,
 }
 
 
-int64_t
+static double
 njs_number_radix_parse(const u_char **start, const u_char *end, uint8_t radix)
 {
     uint8_t       d;
-    int64_t       num;
-    uint64_t      n;
+    double        num, n;
     const u_char  *p;
 
     static const int8_t  digits[256]
@@ -192,7 +191,7 @@ njs_number_radix_parse(const u_char **start, const u_char *end, uint8_t radix)
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     };
 
-    num = -1;
+    num = NAN;
     n = 0;
 
     for (p = *start; p < end; p++) {
@@ -1065,43 +1064,31 @@ njs_int_t
 njs_number_parse_int(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_index_t unused)
 {
-    double        num;
-    int64_t       n;
-    int32_t       radix;
-    njs_int_t     ret;
-    njs_str_t     string;
-    njs_bool_t    minus, test_prefix;
-    njs_value_t   *value;
-    const u_char  *p, *end;
+    double             num;
+    int32_t            radix;
+    njs_int_t          ret;
+    njs_bool_t         minus, test_prefix;
+    njs_value_t        *value;
+    const u_char       *p, *end;
+    njs_string_prop_t  string;
 
     num = NAN;
 
-    if (nargs < 2) {
+    value = njs_arg(args, nargs, 1);
+
+    ret = njs_value_to_string(vm, value, value);
+    if (njs_slow_path(ret != NJS_OK)) {
+        return ret;
+    }
+
+    (void) njs_string_trim(value, &string, NJS_TRIM_START);
+
+    if (string.size == 0) {
         goto done;
     }
 
-    value = njs_argument(args, 1);
-
-    if (!njs_is_string(value)) {
-        ret = njs_value_to_string(vm, value, value);
-        if (njs_slow_path(ret != NJS_OK)) {
-            return ret;
-        }
-    }
-
-    njs_string_get(value, &string);
-
-    end = string.start + string.length;
-
-    for (p = string.start; p < end; p++) {
-        if (*p != ' ') {
-            goto found;
-        }
-    }
-
-    goto done;
-
-found:
+    p = string.start;
+    end = p + string.size;
 
     minus = 0;
 
@@ -1142,12 +1129,9 @@ found:
         radix = 16;
     }
 
-    n = njs_number_radix_parse(&p, end, radix);
+    num = njs_number_radix_parse(&p, end, radix);
 
-    if (n >= 0) {
-        num = n;
-        num = minus ? -num : num;
-    }
+    num = minus ? -num : num;
 
 done:
 
@@ -1161,21 +1145,17 @@ njs_int_t
 njs_number_parse_float(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_index_t unused)
 {
-    double     num;
-    njs_int_t  ret;
+    njs_int_t    ret;
+    njs_value_t  *value;
 
-    num = NAN;
+    value = njs_arg(args, nargs, 1);
 
-    if (nargs > 1) {
-        ret = njs_value_to_string(vm, &args[1], &args[1]);
-        if (njs_slow_path(ret != NJS_OK)) {
-            return ret;
-        }
-
-        num = njs_string_to_number(&args[1], 1);
+    ret = njs_value_to_string(vm, value, value);
+    if (njs_slow_path(ret != NJS_OK)) {
+        return ret;
     }
 
-    njs_set_number(&vm->retval, num);
+    njs_set_number(&vm->retval, njs_string_to_number(value, 1));
 
     return NJS_OK;
 }

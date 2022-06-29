@@ -96,7 +96,7 @@ Synopsis
      set $key $uri$args;
      srcache_fetch GET /memc $key;
      srcache_store PUT /memc $key;
-     srcache_store_statuses 200 301 302;
+     srcache_store_statuses 200 301 302 307 308;
 
      # proxy_pass/fastcgi_pass/drizzle_pass/echo/etc...
      # or even static files on the disk
@@ -264,7 +264,112 @@ Caching with Redis
 
 Redis is an alternative key-value store with many additional features.
 
-Here is a working example by using Redis:
+Here is a working example using the lua-resty-redis module:
+
+```
+  location ~ '\.php$|^/update.php' {
+    # cache setup
+    set $key $request_uri;
+    try_files $uri =404;
+
+    srcache_fetch_skip $skip_cache;
+    srcache_store_skip $skip_cache;
+
+    srcache_response_cache_control off;
+    srcache_store_statuses 200 201 301 302 307 308 404 503;
+
+    set_escape_uri $escaped_key $key;
+
+    srcache_fetch GET /redis-fetch $key;
+    srcache_store PUT /redis-store key=$escaped_key;
+
+    more_set_headers 'X-Cache-Fetch-Status $srcache_fetch_status';
+    more_set_headers 'X-Cache-Store-Status $srcache_store_status';
+
+    fastcgi_split_path_info ^(.+?\.php)(|/.*)$;
+    # Security note: If you're running a version of PHP older than the
+    # latest 5.3, you should have "cgi.fix_pathinfo = 0;" in php.ini.
+    # See http://serverfault.com/q/627903/94922 for details.
+    include fastcgi_params;
+    # Block httproxy attacks. See https://httpoxy.org/.
+    fastcgi_param HTTP_PROXY "";
+    fastcgi_param SCRIPT_FILENAME /var/www/html/$fastcgi_script_name;
+    fastcgi_param PATH_INFO $fastcgi_path_info;
+    fastcgi_param QUERY_STRING $query_string;
+    fastcgi_intercept_errors on;
+
+    fastcgi_pass upstream-name;
+  }
+
+  location /redis-fetch {
+    internal;
+
+    resolver 8.8.8.8 valid=300s;
+    resolver_timeout 10s;
+
+    content_by_lua_block {
+      local key = assert(ngx.var.request_uri, "no key found")
+      local redis = require "resty.redis"
+      local red, err = redis:new()
+      if not red then
+        ngx.log(ngx.ERR, "Failed to create redis variable, error -> ", err)
+        ngx.exit(500)
+      end
+      assert(red:connect("redis-master.default.svc.cluster.local", 6379))
+      if not red then
+        ngx.log(ngx.ERR, "Failed to connect to redis, error -> ", err)
+        ngx.exit(500)
+      end
+      local res, err = red:auth("redispassword")
+      if not res then
+        ngx.say("failed to authenticate, ", err)
+        ngx.exit(500)
+      end
+      local data = assert(red:get(key))
+      assert(red:set_keepalive(10000, 100))
+      if res == ngx.null then
+        return ngx.exit(404)
+      end
+      ngx.print(data)
+    }
+  }
+
+  location /redis-store {
+    internal;
+
+    resolver 8.8.8.8 valid=300s;
+    resolver_timeout 10s;
+
+    content_by_lua_block {
+      local value = assert(ngx.req.get_body_data(), "no value found")
+      local key = assert(ngx.var.request_uri, "no key found")
+      local redis = require "resty.redis"
+      local red, err = redis:new()
+      if not red then
+        ngx.log(ngx.ERR, "Failed to create redis variable, error -> ", err)
+        ngx.exit(500)
+      end
+      assert(red:connect("redis-master.default.svc.cluster.local", 6379))
+      if not red then
+        ngx.log(ngx.ERR, "Failed to connect to redis, error -> ", err)
+        ngx.exit(500)
+      end
+      local res, err = red:auth("redispassword")
+      if not res then
+        ngx.say("failed to authenticate, ", err)
+        ngx.exit(500)
+      end
+      local data = assert(red:set(key, value))
+      assert(red:set_keepalive(10000, 100))
+      if res == ngx.null then
+        return ngx.exit(404)
+      end
+    }
+  }
+```
+
+
+Here is a working example by using the HTTPRedis (fetch) and Redis2 (store) modules:
 
 ```nginx
 
@@ -534,7 +639,7 @@ srcache_store_statuses
 ----------------------
 **syntax:** *srcache_store_statuses &lt;status1&gt; &lt;status2&gt; ..*
 
-**default:** *srcache_store_statuses 200 301 302*
+**default:** *srcache_store_statuses 200 301 302 307 308*
 
 **context:** *http, server, location, location if*
 
@@ -542,13 +647,13 @@ srcache_store_statuses
 
 This directive controls what responses to store to the cache according to their status code.
 
-By default, only `200`, `301`, and `302` responses will be stored to cache and any other responses will skip [srcache_store](#srcache_store).
+By default, only `200`, `301`, `302`, `307` and `308` responses will be stored to cache and any other responses will skip [srcache_store](#srcache_store).
 
 You can specify arbitrary positive numbers for the response status code that you'd like to cache, even including error code like `404` and `503`. For example:
 
 ```nginx
 
- srcache_store_statuses 200 201 301 302 404 503;
+ srcache_store_statuses 200 201 301 302 307 308 404 503;
 ```
 
 At least one argument should be given to this directive.

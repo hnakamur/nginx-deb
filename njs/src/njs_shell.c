@@ -36,6 +36,7 @@ typedef struct {
     uint8_t                 version;
     uint8_t                 ast;
     uint8_t                 unhandled_rejection;
+    int                     exit_code;
 
     char                    *file;
     char                    *command;
@@ -202,7 +203,8 @@ static const njs_lvlhsh_proto_t  njs_timelabel_hash_proto njs_aligned(64) = {
 
 static njs_vm_ops_t njs_console_ops = {
     njs_console_set_timer,
-    njs_console_clear_timer
+    njs_console_clear_timer,
+    NULL,
 };
 
 
@@ -229,7 +231,6 @@ static njs_console_t  njs_console;
 int
 main(int argc, char **argv)
 {
-    char          path[MAXPATHLEN], *p;
     njs_vm_t      *vm;
     njs_int_t     ret;
     njs_opts_t    opts;
@@ -256,21 +257,8 @@ main(int argc, char **argv)
     njs_vm_opt_init(&vm_options);
 
     if (opts.file == NULL) {
-        p = getcwd(path, sizeof(path));
-        if (p == NULL) {
-            njs_stderror("getcwd() failed:%s\n", strerror(errno));
-            ret = NJS_ERROR;
-            goto done;
-        }
-
-        if (opts.command == NULL) {
-            memcpy(path + njs_strlen(path), "/shell", sizeof("/shell"));
-
-        } else {
-            memcpy(path + njs_strlen(path), "/string", sizeof("/string"));
-        }
-
-        opts.file = path;
+        opts.file = (opts.command == NULL) ? (char *) "shell"
+                                           : (char *) "string";
     }
 
     vm_options.file.start = (u_char *) opts.file;
@@ -319,7 +307,7 @@ done:
 
     njs_options_free(&opts);
 
-    return (ret == NJS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return (ret == NJS_OK) ? EXIT_SUCCESS : opts.exit_code;
 }
 
 
@@ -344,6 +332,7 @@ njs_options_parse(njs_opts_t *opts, int argc, char **argv)
         "  -a                print AST.\n"
         "  -c                specify the command to execute.\n"
         "  -d                print disassembled code.\n"
+        "  -e                set failure exit code.\n"
         "  -f                disabled denormals mode.\n"
         "  -p                set path prefix for modules.\n"
         "  -q                disable interactive introduction prompt.\n"
@@ -357,7 +346,13 @@ njs_options_parse(njs_opts_t *opts, int argc, char **argv)
     ret = NJS_DONE;
 
     opts->denormals = 1;
+    opts->exit_code = EXIT_FAILURE;
     opts->unhandled_rejection = NJS_VM_OPT_UNHANDLED_REJECTION_THROW;
+
+    p = getenv("NJS_EXIT_CODE");
+    if (p != NULL) {
+        opts->exit_code = atoi(p);
+    }
 
     for (i = 1; i < argc; i++) {
 
@@ -395,6 +390,15 @@ njs_options_parse(njs_opts_t *opts, int argc, char **argv)
         case 'd':
             opts->disassemble = 1;
             break;
+
+        case 'e':
+            if (++i < argc) {
+                opts->exit_code = atoi(argv[i]);
+                break;
+            }
+
+            njs_stderror("option \"-e\" requires argument\n");
+            return NJS_ERROR;
 
         case 'f':
 

@@ -376,9 +376,11 @@ ngx_js_ext_fetch(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     }
 
     http->external = external;
+    http->timeout = ngx_external_fetch_timeout(vm, external);
     http->event_handler = ngx_external_event_handler(vm, external);
-    http->buffer_size = 4096;
-    http->max_response_body_size = 32 * 1024;
+    http->buffer_size = ngx_external_buffer_size(vm, external);
+    http->max_response_body_size =
+                           ngx_external_max_response_buffer_size(vm, external);
 
     ret = ngx_js_string(vm, njs_arg(args, nargs, 1), &http->url);
     if (ret != NJS_OK) {
@@ -408,7 +410,7 @@ ngx_js_ext_fetch(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
         u.url.data += 8;
         u.default_port = 443;
         http->ssl = ngx_external_ssl(vm, external);
-        http->ssl_verify = 1;
+        http->ssl_verify = ngx_external_ssl_verify(vm, external);
 #endif
 
     } else {
@@ -2234,10 +2236,10 @@ ngx_response_js_ext_keys(njs_vm_t *vm, njs_value_t *value, njs_value_t *keys)
 
     length = 0;
     headers = http->headers.elts;
-    start = njs_vm_array_start(vm, keys);
 
     for (i = 0; i < http->headers.nelts; i++) {
         h = &headers[i];
+        start = njs_vm_array_start(vm, keys);
 
         for (k = 0; k < length; k++) {
             njs_value_string_get(njs_argument(start, k), &hdr);
