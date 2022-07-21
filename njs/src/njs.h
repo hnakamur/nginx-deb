@@ -250,6 +250,12 @@ typedef struct {
     uint8_t                         unsafe;          /* 1 bit */
     uint8_t                         module;          /* 1 bit */
     uint8_t                         ast;             /* 1 bit */
+#ifdef NJS_DEBUG_OPCODE
+    uint8_t                         opcode_debug;    /* 1 bit */
+#endif
+#ifdef NJS_DEBUG_GENERATOR
+    uint8_t                         generator_debug; /* 1 bit */
+#endif
     uint8_t                         unhandled_rejection;
 } njs_vm_opt_t;
 
@@ -444,6 +450,9 @@ NJS_EXPORT njs_int_t njs_vm_json_parse(njs_vm_t *vm, njs_value_t *args,
     njs_uint_t nargs);
 NJS_EXPORT njs_int_t njs_vm_json_stringify(njs_vm_t *vm, njs_value_t *args,
     njs_uint_t nargs);
+
+NJS_EXPORT njs_int_t njs_vm_query_string_parse(njs_vm_t *vm, u_char *start,
+    u_char *end, njs_value_t *retval);
 
 NJS_EXPORT njs_int_t njs_vm_promise_create(njs_vm_t *vm, njs_value_t *retval,
     njs_value_t *callbacks);

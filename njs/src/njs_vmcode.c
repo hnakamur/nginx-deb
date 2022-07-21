@@ -165,8 +165,10 @@ next:
          * as a single unsigned comparision.
          */
 
-#ifdef NJS_OPCODE_DEBUG
-        njs_disassemble(pc, NULL, 1, NULL);
+#ifdef NJS_DEBUG_OPCODE
+        if (vm->options.opcode_debug) {
+            njs_disassemble(pc, NULL, 1, NULL);
+        }
 #endif
 
         if (op > NJS_VMCODE_NORET) {
@@ -2120,6 +2122,7 @@ njs_vmcode_finally(njs_vm_t *vm, njs_value_t *invld, njs_value_t *retval,
     u_char *pc)
 {
     njs_value_t           *exception_value, *exit_value;
+    njs_jump_off_t        offset;
     njs_vmcode_finally_t  *finally;
 
     exception_value = njs_scope_value(vm, (njs_index_t) retval);
@@ -2146,9 +2149,19 @@ njs_vmcode_finally(njs_vm_t *vm, njs_value_t *invld, njs_value_t *retval,
         return njs_vmcode_return(vm, NULL, exit_value);
 
     } else if (njs_number(exit_value) != 0) {
-        return (njs_jump_off_t) (njs_number(exit_value) > 0)
-                                ? finally->break_offset
-                                : finally->continue_offset;
+        offset = (njs_number(exit_value) > 0) ? finally->break_offset
+                                              : finally->continue_offset;
+
+        if (njs_slow_path(offset
+                          < (njs_jump_off_t) sizeof(njs_vmcode_finally_t)))
+        {
+            njs_internal_error(vm, "unset %s offset for FINALLY block",
+                               (njs_number(exit_value) > 0) ? "exit"
+                                                            : "continuaion");
+            return NJS_ERROR;
+        }
+
+        return offset;
     }
 
     return sizeof(njs_vmcode_finally_t);
