@@ -3411,19 +3411,51 @@ static njs_unit_test_t  njs_test[] =
       njs_str("a,2") },
 
     { njs_str("function f(n) { "
-                 "  var r1 = 0, r2 = 0, r3 = 0;"
-                 "  a:{ try { try { "
-                 "              if (n == 0) { break a; } "
-                 "              if (n == 1) { throw 'a'; } "
-                 "            } "
-                 "            catch (e) { break a; } finally { r1++; } } "
-                 "      catch (e) {} "
-                 "      finally { r2++; } "
-                 "      r3++;  "
-                 "  }; "
-                 "return [r1, r2, r3]"
-                 "}; njs.dump([f(0), f(1), f(3)])"),
+              "  var r1 = 0, r2 = 0, r3 = 0;"
+              "  a:{ try { try { "
+              "              if (n == 0) { break a; } "
+              "              if (n == 1) { throw 'a'; } "
+              "            } "
+              "            catch (e) { break a; } finally { r1++; } } "
+              "      catch (e) {} "
+              "      finally { r2++; } "
+              "      r3++;  "
+              "  }; "
+              "return [r1, r2, r3]"
+              "}; njs.dump([f(0), f(1), f(3)])"),
       njs_str("[[1,1,0],[1,1,0],[1,1,1]]") },
+
+
+    { njs_str("function f(n) {"
+              "    while (1)"
+              "           try {"
+              "              if (n == 0) { break; }"
+              "              if (n == 1) { throw 'a'; }"
+              ""
+              "              try { return 42; }"
+              "              catch (a) {}"
+              ""
+              "            } catch (b) { return b; }"
+              "};"
+              "njs.dump([f(0), f(1), f(2)])"),
+      njs_str("[undefined,'a',42]") },
+
+    { njs_str("function f(n, r) {"
+              "    while (1)"
+              "           try {"
+              "              if (n == 0) { break; }"
+              "              if (n == 1) { throw 'a'; }"
+              ""
+              "              try { return 42; }"
+              "              catch (a) {}"
+              "              finally { r.push('in');}"
+              ""
+              "            } catch (b) { return b; }"
+              "            finally { r.push('out'); }"
+              "};"
+              "function g(n) { var r = []; return [f(n, r), r]}"
+              "njs.dump([g(0), g(1), g(2)])"),
+      njs_str("[[undefined,['out']],['a',['out']],[42,['in','out']]]") },
 
     /**/
 
@@ -7425,6 +7457,66 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("'r' !== '\\r'"),
       njs_str("true") },
 
+    /* Octal escape sequences are not allowed in strict mode.*/
+
+    { njs_str("'\\0a'"),
+      njs_str("\0a") },
+
+    { njs_str("'\\1a'"),
+      njs_str("SyntaxError: Octal escape sequences can't be used in untagged template literals or in strict mode code in 1") },
+
+    { njs_str("'a\\2a'"),
+      njs_str("SyntaxError: Octal escape sequences can't be used in untagged template literals or in strict mode code in 1") },
+
+    { njs_str("'\\3a'"),
+      njs_str("SyntaxError: Octal escape sequences can't be used in untagged template literals or in strict mode code in 1") },
+
+    { njs_str("'a\\4a'"),
+      njs_str("SyntaxError: Octal escape sequences can't be used in untagged template literals or in strict mode code in 1") },
+
+    { njs_str("'\\5a'"),
+      njs_str("SyntaxError: Octal escape sequences can't be used in untagged template literals or in strict mode code in 1") },
+
+    { njs_str("'a\\6a'"),
+      njs_str("SyntaxError: Octal escape sequences can't be used in untagged template literals or in strict mode code in 1") },
+
+    { njs_str("'\\7a'"),
+      njs_str("SyntaxError: Octal escape sequences can't be used in untagged template literals or in strict mode code in 1") },
+
+    { njs_str("'\\8a'"),
+      njs_str("SyntaxError: The escapes \\8 and \\9 can't be used in untagged template literals or in strict mode code in 1") },
+
+    { njs_str("'\\9a'"),
+      njs_str("SyntaxError: The escapes \\8 and \\9 can't be used in untagged template literals or in strict mode code in 1") },
+
+    { njs_str("'\\aa'"),
+      njs_str("aa") },
+
+    { njs_str("'\\*a'"),
+      njs_str("*a") },
+
+    { njs_str("`\\7`"),
+      njs_str("SyntaxError: Octal escape sequences can't be used in untagged template literals or in strict mode code in 1") },
+
+    { njs_str("`\\9`"),
+      njs_str("SyntaxError: The escapes \\8 and \\9 can't be used in untagged template literals or in strict mode code in 1") },
+
+    /* Octal escape sequences are allowed in tagged template literals in strict mode.*/
+
+#if 0  /* FIXME: tag function runtime semantics */
+    { njs_str("function x (s) {return s[0]}; x`\\7`"),
+      njs_str("undefined") },
+
+    { njs_str("function x (s) {return s[0]}; x`\\9`"),
+      njs_str("undefined") },
+
+    { njs_str("function x (s) {return s.raw[0]}; x`\\9`"),
+      njs_str("\\9") },
+
+    { njs_str("function x (s) {return s.raw[0]}; x`\\7`"),
+      njs_str("\\7") },
+#endif
+
     /* Broken UTF-8 literals.*/
 
     { njs_str("'\\a\x96\xE5\x9C\xE3\x81\xB6'"),
@@ -9345,6 +9437,70 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("[encodeURI, encodeURIComponent, decodeURI, decodeURIComponent]"
               ".every(v=>{var r = v(); return (typeof r === 'string') && r === 'undefined';})"),
+      njs_str("true")},
+
+    /* btoa() */
+
+    { njs_str("["
+              " undefined,"
+              " '',"
+              " '\\x00',"
+              " '\\x00\\x01',"
+              " '\\x00\\x01\\x02',"
+              " '\\x00\\xfe\\xff',"
+              " String.fromCodePoint(0x100),"
+              " String.fromCodePoint(0x00, 0x100),"
+              " String.fromCodePoint(0x00, 0x01, 0x100),"
+              " String.bytesFrom([0x80]),"
+              " String.bytesFrom([0x60, 0x80]),"
+              " String.bytesFrom([0x60, 0x60, 0x80]),"
+              "].map(v => { try { return btoa(v); } catch (e) { return '#'} })"),
+      njs_str("dW5kZWZpbmVk,,AA==,AAE=,AAEC,AP7/,#,#,#,#,#,#")},
+
+    /* atob() */
+
+    { njs_str("function c(s) {"
+              "    let cp = [];"
+              "    for (var i = 0; i < s.length; i++) {"
+              "        cp.push(s.codePointAt(i));"
+              "    }"
+              "    return cp;"
+              "};"
+              ""
+              "["
+              " undefined,"
+              " '',"
+              " '=',"
+              " '==',"
+              " '===',"
+              " '====',"
+              " 'AA@',"
+              " '@',"
+              " 'A==A',"
+              " btoa(String.fromCharCode.apply(null, [1])),"
+              " btoa(String.fromCharCode.apply(null, [1, 2])),"
+              " btoa(String.fromCharCode.apply(null, [1, 2, 255])),"
+              " btoa(String.fromCharCode.apply(null, [255, 1, 2, 3])),"
+              "].map(v => { try { return njs.dump(c(atob(v))); } catch (e) { return '#'} })"),
+      njs_str("#,[],#,#,#,#,#,#,#,[1],[1,2],[1,2,255],[255,1,2,3]")},
+
+    { njs_str("function c(s) {"
+              "    let cp = [];"
+              "    for (var i = 0; i < s.length; i++) {"
+              "        cp.push(s.codePointAt(i));"
+              "    }"
+              "    return cp;"
+              "};"
+              ""
+              "["
+              " 'CDRW',"
+              " ' CDRW',"
+              " 'C DRW',"
+              " 'CD RW',"
+              " 'CDR W',"
+              " 'CDRW    ',"
+              " ' C D R W ',"
+              "].every(v => c(atob(v)).toString() == '8,52,86')"),
       njs_str("true")},
 
     /* Functions. */
@@ -13269,7 +13425,7 @@ static njs_unit_test_t  njs_test[] =
       njs_str("5") },
 
     { njs_str("var a = (new Function('return [' + ','.repeat(2**16) + ']'))();"
-			  "njs.dump(a)"),
+              "njs.dump(a)"),
       njs_str("[<65536 empty items>]") },
 
     { njs_str("(new Function('var a = 7; return a' + '= a'.repeat(2**13)))()"),
@@ -23415,6 +23571,43 @@ njs_to_int32_test(njs_vm_t *vm, njs_opts_t *opts, njs_stat_t *stat)
 }
 
 
+#ifdef NJS_HAVE_ADDR2LINE
+static njs_int_t
+njs_addr2line_test(njs_vm_t *vm, njs_opts_t *opts, njs_stat_t *stat)
+{
+    njs_str_t   v;
+    njs_uint_t  i;
+    u_char      buf[512];
+
+    static const struct {
+        void         *fp;
+        const char   *name;
+    } tests[] = {
+        { njs_addr2line_test, njs_stringify(njs_addr2line_test) },
+        { njs_to_int32_test, njs_stringify(njs_to_int32_test) },
+    };
+
+    for (i = 0; i < njs_nitems(tests); i++) {
+        v.start = buf;
+        v.length = njs_sprintf(buf, &buf[512], "%P", tests[i].fp) - buf;
+
+        if (memcmp(buf, tests[i].name, njs_strlen(tests[i].name))) {
+            njs_printf("njs_addr2line_test(%p):\n"
+                       "expected: %s\n     got: %V\n",
+                       tests[i].fp, tests[i].name, &v);
+
+            stat->failed++;
+            continue;
+        }
+
+        stat->passed++;
+    }
+
+    return NJS_OK;
+}
+#endif
+
+
 static njs_int_t
 njs_vm_internal_api_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
     njs_opts_t *opts, njs_stat_t *stat)
@@ -23443,6 +23636,10 @@ njs_vm_internal_api_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
           njs_str("njs_string_to_index_test") },
         { njs_to_int32_test,
           njs_str("njs_to_int32_test") },
+#ifdef NJS_HAVE_ADDR2LINE
+        { njs_addr2line_test,
+          njs_str("njs_addr2line_test") },
+#endif
     };
 
     vm = NULL;
