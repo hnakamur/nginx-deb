@@ -12,6 +12,7 @@ static njs_int_t njs_vm_init(njs_vm_t *vm);
 static njs_int_t njs_vm_handle_events(njs_vm_t *vm);
 
 
+const njs_str_t  njs_entry_empty =          njs_str("");
 const njs_str_t  njs_entry_main =           njs_str("main");
 const njs_str_t  njs_entry_module =         njs_str("module");
 const njs_str_t  njs_entry_native =         njs_str("native");
@@ -23,6 +24,8 @@ void
 njs_vm_opt_init(njs_vm_opt_t *options)
 {
     njs_memzero(options, sizeof(njs_vm_opt_t));
+
+    options->log_level = NJS_LOG_LEVEL_INFO;
 }
 
 
@@ -297,7 +300,6 @@ njs_vm_compile_module(njs_vm_t *vm, njs_str_t *name, u_char **start,
     lambda->declarations = (arr != NULL) ? arr->start : NULL;
     lambda->ndeclarations = (arr != NULL) ? arr->items : 0;
 
-    module->function.args_offset = 1;
     module->function.u.lambda = lambda;
 
     return module;
@@ -576,8 +578,8 @@ njs_vm_handle_events(njs_vm_t *vm)
         }
 
         if (njs_vm_unhandled_rejection(vm)) {
-            ret = njs_value_to_string(vm, &string,
-                                      &vm->promise_reason->start[0]);
+            njs_value_assign(&string, &vm->promise_reason->start[0]);
+            ret = njs_value_to_string(vm, &string, &string);
             if (njs_slow_path(ret != NJS_OK)) {
                 return ret;
             }
@@ -878,6 +880,30 @@ njs_noinline void
 njs_vm_memory_error(njs_vm_t *vm)
 {
     njs_memory_error_set(vm, &vm->retval);
+}
+
+
+njs_noinline void
+njs_vm_logger(njs_vm_t *vm, njs_log_level_t level, const char *fmt, ...)
+{
+    u_char        *p;
+    va_list       args;
+    njs_logger_t  logger;
+    u_char        buf[NJS_MAX_ERROR_STR];
+
+    if (vm->options.ops == NULL) {
+        return;
+    }
+
+    logger = vm->options.ops->logger;
+
+    if (logger != NULL && vm->options.log_level >= level) {
+        va_start(args, fmt);
+        p = njs_vsprintf(buf, buf + sizeof(buf), fmt, args);
+        va_end(args);
+
+        logger(vm, vm->external, level, buf, p - buf);
+    }
 }
 
 

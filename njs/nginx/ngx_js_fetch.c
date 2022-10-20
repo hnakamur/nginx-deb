@@ -66,6 +66,8 @@ struct ngx_js_http_s {
     njs_str_t                      url;
     ngx_array_t                    headers;
 
+    unsigned                       header_only;
+
 #if (NGX_SSL)
     ngx_str_t                      tls_name;
     ngx_ssl_t                     *ssl;
@@ -276,8 +278,9 @@ static njs_external_t  ngx_js_ext_http_response[] = {
         .name.string = njs_str("redirected"),
         .enumerable = 1,
         .u.property = {
-            .handler = ngx_js_ext_boolean,
+            .handler = ngx_js_ext_constant,
             .magic32 = 0,
+            .magic16 = NGX_JS_BOOLEAN,
         }
     },
 
@@ -472,6 +475,8 @@ ngx_js_ext_fetch(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
     njs_chb_init(&http->chain, njs_vm_memory_pool(vm));
 
+    http->header_only = njs_strstr_case_eq(&method, &njs_str_value("HEAD"));
+
     njs_chb_append(&http->chain, method.start, method.length);
     njs_chb_append_literal(&http->chain, " ");
 
@@ -622,6 +627,8 @@ ngx_js_http_alloc(njs_vm_t *vm, ngx_pool_t *pool, ngx_log_t *log)
     http->vm = vm;
 
     http->timeout = 10000;
+
+    http->http_parse.content_length_n = -1;
 
     ret = njs_vm_promise_create(vm, njs_value_arg(&http->promise),
                                 njs_value_arg(&http->promise_callbacks));
@@ -905,10 +912,8 @@ ngx_js_http_connect(ngx_js_http_t *http)
 
     http->process = ngx_js_http_process_status_line;
 
-    if (http->timeout) {
-        ngx_add_timer(http->peer.connection->read, http->timeout);
-        ngx_add_timer(http->peer.connection->write, http->timeout);
-    }
+    ngx_add_timer(http->peer.connection->read, http->timeout);
+    ngx_add_timer(http->peer.connection->write, http->timeout);
 
 #if (NGX_SSL)
     if (http->ssl != NULL && http->peer.connection->ssl == NULL) {
@@ -1173,7 +1178,7 @@ ngx_js_http_write_handler(ngx_event_t *wev)
         }
     }
 
-    if (!wev->timer_set && http->timeout) {
+    if (!wev->timer_set) {
         ngx_add_timer(wev, http->timeout);
     }
 }
@@ -1388,7 +1393,7 @@ ngx_js_http_process_headers(ngx_js_http_t *http)
 static ngx_int_t
 ngx_js_http_process_body(ngx_js_http_t *http)
 {
-    ssize_t     size, need;
+    ssize_t     size, chsize, need;
     ngx_int_t   rc;
     njs_int_t   ret;
     ngx_buf_t  *b;
@@ -1403,7 +1408,18 @@ ngx_js_http_process_body(ngx_js_http_t *http)
             return NGX_ERROR;
         }
 
-        if (size == http->http_parse.content_length_n) {
+        if (!http->header_only
+            && http->http_parse.chunked
+            && http->http_parse.content_length_n == -1)
+        {
+            ngx_js_http_error(http, 0, "invalid fetch chunked response");
+            return NGX_ERROR;
+        }
+
+        if (http->header_only
+            || http->http_parse.content_length_n == -1
+            || size == http->http_parse.content_length_n)
+        {
             ret = njs_vm_external_create(http->vm, njs_value_arg(&http->reply),
                                          ngx_http_js_fetch_proto_id, http, 0);
             if (ret != NJS_OK) {
@@ -1413,13 +1429,6 @@ ngx_js_http_process_body(ngx_js_http_t *http)
 
             ngx_js_http_fetch_done(http, &http->reply, NJS_OK);
             return NGX_DONE;
-        }
-
-        if (http->http_parse.chunked
-            && http->http_parse.content_length_n == 0)
-        {
-            ngx_js_http_error(http, 0, "invalid fetch chunked response");
-            return NGX_ERROR;
         }
 
         if (size < http->http_parse.content_length_n) {
@@ -1454,17 +1463,31 @@ ngx_js_http_process_body(ngx_js_http_t *http)
         b->pos = http->http_chunk_parse.pos;
 
     } else {
-        need = http->http_parse.content_length_n - njs_chb_size(&http->chain);
-        size = ngx_min(need, b->last - b->pos);
+        size = njs_chb_size(&http->chain);
 
-        if (size > 0) {
-            njs_chb_append(&http->chain, b->pos, size);
-            b->pos += size;
-            rc = NGX_AGAIN;
+        if (http->header_only) {
+            need = 0;
+
+        } else  if (http->http_parse.content_length_n == -1) {
+            need = http->max_response_body_size - size;
 
         } else {
-            rc = NGX_DONE;
+            need = http->http_parse.content_length_n - size;
         }
+
+        chsize = ngx_min(need, b->last - b->pos);
+
+        if (size + chsize > http->max_response_body_size) {
+            ngx_js_http_error(http, 0, "fetch response body is too large");
+            return NGX_ERROR;
+        }
+
+        if (chsize > 0) {
+            njs_chb_append(&http->chain, b->pos, chsize);
+            b->pos += chsize;
+        }
+
+        rc = (need > chsize) ? NGX_AGAIN : NGX_DONE;
     }
 
     if (b->pos == b->end) {

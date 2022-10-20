@@ -1983,6 +1983,10 @@ njs_parser_property_definition(njs_parser_t *parser, njs_lexer_token_t *token,
                                     njs_parser_computed_property_async_after);
         }
 
+        if (token->type == NJS_TOKEN_COLON) {
+            return njs_parser_property_name(parser, current, 2);
+        }
+
         if (!njs_lexer_token_is_identifier_name(token)) {
             return njs_parser_failed(parser);
         }
@@ -6868,9 +6872,9 @@ njs_parser_function_parse(njs_parser_t *parser, njs_lexer_token_t *token,
 }
 
 
-static const njs_lexer_entry_t njs_parser_anonymous_entry =
+static const njs_lexer_entry_t njs_parser_empty_entry =
 {
-    .name = njs_str("anonymous")
+    .name = njs_str("")
 };
 
 
@@ -6905,7 +6909,7 @@ njs_parser_function_expression(njs_parser_t *parser, njs_lexer_token_t *token,
         }
 
     } else {
-        unique_id = (uintptr_t) &njs_parser_anonymous_entry;
+        unique_id = (uintptr_t) &njs_parser_empty_entry;
     }
 
     if (token->type != NJS_TOKEN_OPEN_PARENTHESIS) {
@@ -7151,7 +7155,7 @@ njs_parser_arrow_function(njs_parser_t *parser, njs_lexer_token_t *token,
 
     node->left = name;
 
-    unique_id = (uintptr_t) &njs_parser_anonymous_entry;
+    unique_id = (uintptr_t) &njs_parser_empty_entry;
 
     var = njs_variable_scope_add(parser, parser->scope, parser->scope,
                                  unique_id, NJS_VARIABLE_FUNCTION, 1);
@@ -8303,32 +8307,19 @@ njs_int_t
 njs_parser_string_create(njs_vm_t *vm, njs_lexer_token_t *token,
     njs_value_t *value)
 {
-    u_char                *dst;
-    size_t                size, length;
-    njs_str_t             *src;
-    const u_char          *p, *end;
-    njs_unicode_decode_t  ctx;
+    size_t     length;
+    njs_str_t  dst;
 
-    src = &token->text;
-
-    njs_utf8_decode_init(&ctx);
-
-    length = njs_utf8_stream_length(&ctx, src->start, src->length, 1, 0, &size);
-
-    dst = njs_string_alloc(vm, value, size, length);
-    if (njs_slow_path(dst == NULL)) {
+    length = njs_decode_utf8_length(&token->text, &dst.length);
+    dst.start = njs_string_alloc(vm, value, dst.length, length);
+    if (njs_slow_path(dst.start == NULL)) {
         return NJS_ERROR;
     }
 
-    p = src->start;
-    end = src->start + src->length;
+    njs_decode_utf8(&dst, &token->text);
 
-    njs_utf8_decode_init(&ctx);
-
-    (void) njs_utf8_stream_encode(&ctx, p, end, dst, 1, 0);
-
-    if (length > NJS_STRING_MAP_STRIDE && size != length) {
-        njs_string_offset_map_init(value->long_string.data->start, size);
+    if (length > NJS_STRING_MAP_STRIDE && dst.length != length) {
+        njs_string_offset_map_init(value->long_string.data->start, dst.length);
     }
 
     return NJS_OK;
