@@ -15,9 +15,18 @@
 #include <njs.h>
 
 
-#define NGX_JS_UNSET   0
-#define NGX_JS_STRING  1
-#define NGX_JS_BUFFER  2
+#define NGX_JS_UNSET        0
+#define NGX_JS_DEPRECATED   1
+#define NGX_JS_STRING       2
+#define NGX_JS_BUFFER       4
+#define NGX_JS_BOOLEAN      8
+#define NGX_JS_NUMBER       16
+
+#define NGX_JS_BOOL_FALSE   0
+#define NGX_JS_BOOL_TRUE    1
+#define NGX_JS_BOOL_UNSET   2
+
+#define ngx_js_buffer_type(btype) ((btype) & ~NGX_JS_DEPRECATED)
 
 
 typedef ngx_pool_t *(*ngx_external_pool_pt)(njs_vm_t *vm, njs_external_ptr_t e);
@@ -32,6 +41,47 @@ typedef ngx_flag_t (*ngx_external_flag_pt)(njs_vm_t *vm,
 typedef ngx_flag_t (*ngx_external_size_pt)(njs_vm_t *vm,
     njs_external_ptr_t e);
 typedef ngx_ssl_t *(*ngx_external_ssl_pt)(njs_vm_t *vm, njs_external_ptr_t e);
+
+typedef struct {
+    ngx_str_t              name;
+    ngx_str_t              path;
+    u_char                *file;
+    ngx_uint_t             line;
+} ngx_js_named_path_t;
+
+
+#define _NGX_JS_COMMON_CONF                                                   \
+    njs_vm_t              *vm;                                                \
+    ngx_array_t           *imports;                                           \
+    ngx_array_t           *paths;                                             \
+                                                                              \
+    njs_vm_t              *preload_vm;                                        \
+    ngx_array_t           *preload_objects;                                   \
+                                                                              \
+    size_t                 buffer_size;                                       \
+    size_t                 max_response_body_size;                            \
+    ngx_msec_t             timeout
+
+
+#if defined(NGX_HTTP_SSL) || defined(NGX_STREAM_SSL)
+#define NGX_JS_COMMON_CONF                                                    \
+    _NGX_JS_COMMON_CONF;                                                      \
+                                                                              \
+    ngx_ssl_t             *ssl;                                               \
+    ngx_str_t              ssl_ciphers;                                       \
+    ngx_uint_t             ssl_protocols;                                     \
+    ngx_flag_t             ssl_verify;                                        \
+    ngx_int_t              ssl_verify_depth;                                  \
+    ngx_str_t              ssl_trusted_certificate
+
+#else
+#define NGX_JS_COMMON_CONF _NGX_JS_COMMON_CONF
+#endif
+
+
+typedef struct {
+    NGX_JS_COMMON_CONF;
+} ngx_js_conf_t;
 
 
 #define ngx_external_connection(vm, e)                                        \
@@ -68,6 +118,20 @@ ngx_int_t ngx_js_retval(njs_vm_t *vm, njs_opaque_value_t *retval,
 
 njs_int_t ngx_js_ext_log(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_index_t level);
+void ngx_js_logger(njs_vm_t *vm, njs_external_ptr_t external,
+    njs_log_level_t level, const u_char *start, size_t length);
+char * ngx_js_import(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+char * ngx_js_preload_object(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+ngx_int_t ngx_js_init_preload_vm(ngx_conf_t *cf, ngx_js_conf_t *conf);
+ngx_int_t ngx_js_merge_vm(ngx_conf_t *cf, ngx_js_conf_t *conf,
+    ngx_js_conf_t *prev,
+    ngx_int_t (*init_vm)(ngx_conf_t *cf, ngx_js_conf_t *conf));
+ngx_int_t ngx_js_init_conf_vm(ngx_conf_t *cf, ngx_js_conf_t *conf,
+    njs_vm_opt_t *options,
+    ngx_int_t (*externals_init)(ngx_conf_t *cf, ngx_js_conf_t *conf));
+ngx_js_conf_t *ngx_js_create_conf(ngx_conf_t *cf, size_t size);
+char * ngx_js_merge_conf(ngx_conf_t *cf, void *parent, void *child,
+   ngx_int_t (*init_vm)(ngx_conf_t *cf, ngx_js_conf_t *conf));
 
 njs_int_t ngx_js_ext_string(njs_vm_t *vm, njs_object_prop_t *prop,
     njs_value_t *value, njs_value_t *setval, njs_value_t *retval);
@@ -75,7 +139,7 @@ njs_int_t ngx_js_ext_uint(njs_vm_t *vm, njs_object_prop_t *prop,
     njs_value_t *value, njs_value_t *setval, njs_value_t *retval);
 njs_int_t ngx_js_ext_constant(njs_vm_t *vm, njs_object_prop_t *prop,
     njs_value_t *value, njs_value_t *setval, njs_value_t *retval);
-njs_int_t ngx_js_ext_boolean(njs_vm_t *vm, njs_object_prop_t *prop,
+njs_int_t ngx_js_ext_flags(njs_vm_t *vm, njs_object_prop_t *prop,
     njs_value_t *value, njs_value_t *setval, njs_value_t *retval);
 
 ngx_int_t ngx_js_core_init(njs_vm_t *vm, ngx_log_t *log);

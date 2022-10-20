@@ -54,6 +54,7 @@ const njs_value_t  njs_string_external =    njs_string("external");
 const njs_value_t  njs_string_invalid =     njs_string("invalid");
 const njs_value_t  njs_string_object =      njs_string("object");
 const njs_value_t  njs_string_function =    njs_string("function");
+const njs_value_t  njs_string_anonymous =   njs_string("anonymous");
 const njs_value_t  njs_string_memory_error = njs_string("MemoryError");
 
 
@@ -535,20 +536,11 @@ njs_property_query(njs_vm_t *vm, njs_property_query_t *pq, njs_value_t *value,
     uint32_t        index;
     njs_int_t       ret;
     njs_object_t    *obj;
-    njs_value_t     prop;
     njs_function_t  *function;
 
-    if (njs_slow_path(!njs_is_primitive(key))) {
-        ret = njs_value_to_string(vm, &prop, key);
-        if (ret != NJS_OK) {
-            return ret;
-        }
-
-        key = &prop;
-    }
+    njs_assert(njs_is_index_or_key(key));
 
     switch (value->type) {
-
     case NJS_BOOLEAN:
     case NJS_NUMBER:
     case NJS_SYMBOL:
@@ -595,12 +587,14 @@ njs_property_query(njs_vm_t *vm, njs_property_query_t *pq, njs_value_t *value,
 
         if (njs_fast_path(ret == NJS_OK)) {
             njs_string_get(&pq->key, &pq->lhq.key);
-            njs_type_error(vm, "cannot get property \"%V\" of undefined",
-                           &pq->lhq.key);
+            njs_type_error(vm, "cannot get property \"%V\" of %s",
+                           &pq->lhq.key, njs_is_null(value) ? "null"
+                                                            : "undefined");
             return NJS_ERROR;
         }
 
-        njs_type_error(vm, "cannot get property \"unknown\" of undefined");
+        njs_type_error(vm, "cannot get property \"unknown\" of %s",
+                       njs_is_null(value) ? "null" : "undefined");
 
         return NJS_ERROR;
     }
@@ -790,7 +784,7 @@ njs_array_property_query(njs_vm_t *vm, njs_property_query_t *pq,
         }
 
         if ((index + 1) > length) {
-            ret = njs_array_length_redefine(vm, &value, index + 1);
+            ret = njs_array_length_redefine(vm, &value, index + 1, 1);
             if (njs_slow_path(ret != NJS_OK)) {
                 return ret;
             }
@@ -1004,6 +998,8 @@ njs_value_property(njs_vm_t *vm, njs_value_t *value, njs_value_t *key,
     njs_typed_array_t     *tarray;
     njs_property_query_t  pq;
 
+    njs_assert(njs_is_index_or_key(key));
+
     if (njs_fast_path(njs_is_number(key))) {
         num = njs_number(key);
 
@@ -1135,6 +1131,8 @@ njs_value_property_set(njs_vm_t *vm, njs_value_t *value, njs_value_t *key,
 
     static const njs_str_t  length_key = njs_str("length");
 
+    njs_assert(njs_is_index_or_key(key));
+
     if (njs_fast_path(njs_is_number(key))) {
         num = njs_number(key);
 
@@ -1223,11 +1221,10 @@ slow_path:
         if (pq.own) {
             switch (prop->type) {
             case NJS_PROPERTY:
-                if (njs_slow_path(pq.lhq.key_hash == NJS_LENGTH_HASH)) {
-                    if (njs_strstr_eq(&pq.lhq.key, &length_key)) {
-                        ret = njs_array_length_set(vm, value, prop, setval);
-                        if (ret != NJS_DECLINED) {
-                            return ret;
+                if (njs_is_array(value)) {
+                    if (njs_slow_path(pq.lhq.key_hash == NJS_LENGTH_HASH)) {
+                        if (njs_strstr_eq(&pq.lhq.key, &length_key)) {
+                            return njs_array_length_set(vm, value, prop, setval);
                         }
                     }
                 }
@@ -1331,8 +1328,18 @@ njs_value_property_delete(njs_vm_t *vm, njs_value_t *value, njs_value_t *key,
     njs_value_t *removed, njs_bool_t thrw)
 {
     njs_int_t             ret;
+    njs_value_t           primitive;
     njs_object_prop_t     *prop;
     njs_property_query_t  pq;
+
+    if (njs_slow_path(!njs_is_key(key))) {
+        ret = njs_value_to_key(vm, &primitive, key);
+        if (njs_slow_path(ret != NJS_OK)) {
+            return NJS_ERROR;
+        }
+
+        key = &primitive;
+    }
 
     njs_property_query_init(&pq, NJS_PROPERTY_QUERY_DELETE, 1);
 

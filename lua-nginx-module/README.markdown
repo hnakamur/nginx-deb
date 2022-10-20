@@ -3529,7 +3529,7 @@ lua_max_running_timers
 
 Controls the maximum number of "running timers" allowed.
 
-Running timers are those timers whose user callback functions are still running.
+Running timers are those timers whose user callback functions are still running or `lightthreads` spawned in callback functions are still running.
 
 When exceeding this limit, Nginx will stop running the callbacks of newly expired timers and log an error message "N lua_max_running_timers are not enough" where "N" is the current value of this directive.
 
@@ -3714,6 +3714,7 @@ Nginx API for Lua
 * [ngx.config.ngx_lua_version](#ngxconfigngx_lua_version)
 * [ngx.worker.exiting](#ngxworkerexiting)
 * [ngx.worker.pid](#ngxworkerpid)
+* [ngx.worker.pids](#ngxworkerpids)
 * [ngx.worker.count](#ngxworkercount)
 * [ngx.worker.id](#ngxworkerid)
 * [ngx.semaphore](#ngxsemaphore)
@@ -4112,7 +4113,7 @@ Because HTTP request is created after SSL handshake, the `ngx.ctx` created
 in [ssl_certificate_by_lua*](#ssl_certificate_by_lua), [ssl_session_store_by_lua*](#ssl_session_store_by_lua), [ssl_session_fetch_by_lua*](#ssl_session_fetch_by_lua) and [ssl_client_hello_by_lua*](#ssl_client_hello_by_lua)
 is not available in the following phases like [rewrite_by_lua*](#rewrite_by_lua).
 
-Since `dev`, the `ngx.ctx` created during a SSL handshake
+Since `v0.10.18`, the `ngx.ctx` created during a SSL handshake
 will be inherited by the requests which share the same TCP connection established by the handshake.
 Note that overwrite values in `ngx.ctx` in the http request phases (like `rewrite_by_lua*`) will only take affect in the current http request.
 
@@ -8749,7 +8750,7 @@ be any Lua function, which will be invoked later in a background
 called automatically by the Nginx core with the arguments `premature`,
 `user_arg1`, `user_arg2`, and etc, where the `premature`
 argument takes a boolean value indicating whether it is a premature timer
-expiration or not, and `user_arg1`, `user_arg2`, and etc, are
+expiration or not(for the `0` delay timer it is always `false`), and `user_arg1`, `user_arg2`, and etc, are
 those (extra) user arguments specified when calling `ngx.timer.at`
 as the remaining arguments.
 
@@ -9022,6 +9023,19 @@ ngx.worker.pid
 This function returns a Lua number for the process ID (PID) of the current Nginx worker process. This API is more efficient than `ngx.var.pid` and can be used in contexts where the [ngx.var.VARIABLE](#ngxvarvariable) API cannot be used (like [init_worker_by_lua](#init_worker_by_lua)).
 
 This API was first introduced in the `0.9.5` release.
+
+[Back to TOC](#nginx-api-for-lua)
+
+ngx.worker.pids
+--------------
+
+**syntax:** *pids = ngx.worker.pids()*
+
+**context:** *set_by_lua&#42;, rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, header_filter_by_lua&#42;, body_filter_by_lua&#42;, log_by_lua&#42;, ngx.timer.&#42;, exit_worker_by_lua&#42;*
+
+This function returns a Lua table for all Nginx worker process ID (PID). Nginx uses channel to send the current worker PID to another worker in the worker process start or restart. So this API can get all current worker PID.
+
+This API was first introduced in the `0.10.23` release.
 
 [Back to TOC](#nginx-api-for-lua)
 
@@ -9377,6 +9391,8 @@ Example1: do md5 calculation.
 local function md5()
     return ngx.md5("hello")
 end
+
+return { md5=md5, }
 ```
 
 Example2: write logs into the log file.

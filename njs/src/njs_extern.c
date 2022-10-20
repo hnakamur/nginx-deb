@@ -77,7 +77,6 @@ njs_external_add(njs_vm_t *vm, njs_arr_t *protos,
             function->object.type = NJS_FUNCTION;
             function->object.shared = 1;
             function->object.extensible = 1;
-            function->args_offset = 1;
             function->native = 1;
             function->u.native = external->u.method.native;
             function->magic8 = external->u.method.magic8;
@@ -92,7 +91,7 @@ njs_external_add(njs_vm_t *vm, njs_arr_t *protos,
                 prop->type = NJS_PROPERTY_HANDLER;
                 prop->value.type = NJS_INVALID;
                 prop->value.data.truth = 1;
-                prop->value.data.magic16 = 0;
+                prop->value.data.magic16 = external->u.property.magic16;
                 prop->value.data.magic32 = external->u.property.magic32;
                 prop->value.data.u.prop_handler = external->u.property.handler;
 
@@ -342,4 +341,40 @@ njs_value_external_tag(const njs_value_t *value)
     }
 
     return -1;
+}
+
+
+njs_int_t
+njs_external_property(njs_vm_t *vm, njs_object_prop_t *prop, njs_value_t *value,
+    njs_value_t *setval, njs_value_t *retval)
+{
+    char        *p;
+    njs_int_t   i;
+    njs_uint_t  ui;
+
+    p = njs_vm_external(vm, NJS_PROTO_ID_ANY, value);
+    if (p == NULL) {
+        njs_value_undefined_set(retval);
+        return NJS_DECLINED;
+    }
+
+    switch (njs_vm_prop_magic16(prop)) {
+    case NJS_EXTERN_TYPE_INT:
+        i = *(njs_int_t *) (p + njs_vm_prop_magic32(prop));
+        njs_value_number_set(retval, i);
+        break;
+
+    case NJS_EXTERN_TYPE_UINT:
+        ui = *(njs_uint_t *) (p + njs_vm_prop_magic32(prop));
+        njs_value_number_set(retval, ui);
+        break;
+
+    case NJS_EXTERN_TYPE_VALUE:
+    default:
+        njs_value_assign(retval,
+                         (njs_value_t *) (p + njs_vm_prop_magic32(prop)));
+
+    }
+
+    return NJS_OK;
 }
