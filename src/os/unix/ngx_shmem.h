@@ -19,6 +19,7 @@ typedef struct {
     ngx_str_t    name;
     ngx_log_t   *log;
     ngx_uint_t   exists;   /* unsigned  exists:1;  */
+    int          fd;
 } ngx_shm_t;
 
 
