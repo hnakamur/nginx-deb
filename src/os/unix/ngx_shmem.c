@@ -11,6 +11,56 @@
 
 #if (NGX_HAVE_MAP_ANON)
 
+#if 1
+ngx_int_t
+ngx_shm_alloc(ngx_shm_t *shm)
+{
+    u_char name[NAME_MAX];
+
+    name[0] = '/';
+    ngx_cpystrn(name + 1, shm->name.data, shm->name.len + 1);
+
+    shm->fd = shm_open((const char *) name, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
+    if (shm->fd == -1) {
+        ngx_log_error(NGX_LOG_ALERT, shm->log, ngx_errno,
+                      "shm_open(%s, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR) failed", name);
+        return NGX_ERROR;
+    }
+
+    if (ftruncate(shm->fd, shm->size) == -1) {
+        ngx_log_error(NGX_LOG_ALERT, shm->log, ngx_errno,
+                      "ftruncate(%d, %uz) failed", shm->fd, shm->size);
+        return NGX_ERROR;
+    }
+
+    shm->addr = (u_char *) mmap(NULL, shm->size,
+                                PROT_READ|PROT_WRITE,
+                                MAP_SHARED, shm->fd, 0);
+
+    if (shm->addr == MAP_FAILED) {
+        ngx_log_error(NGX_LOG_ALERT, shm->log, ngx_errno,
+                      "mmap(MAP_ANON|MAP_SHARED, %uz) failed", shm->size);
+        return NGX_ERROR;
+    }
+
+    return NGX_OK;
+}
+
+
+void
+ngx_shm_free(ngx_shm_t *shm)
+{
+    if (munmap((void *) shm->addr, shm->size) == -1) {
+        ngx_log_error(NGX_LOG_ALERT, shm->log, ngx_errno,
+                      "munmap(%p, %uz) failed", shm->addr, shm->size);
+    }
+
+    if (close(shm->fd) == -1) {
+        ngx_log_error(NGX_LOG_ALERT, shm->log, ngx_errno,
+                      "close(%d) failed", shm->fd);
+    }
+}
+#else
 ngx_int_t
 ngx_shm_alloc(ngx_shm_t *shm)
 {
@@ -36,6 +86,7 @@ ngx_shm_free(ngx_shm_t *shm)
                       "munmap(%p, %uz) failed", shm->addr, shm->size);
     }
 }
+#endif
 
 #elif (NGX_HAVE_MAP_DEVZERO)
 
