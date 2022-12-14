@@ -1,3 +1,80 @@
+Changes with njs 0.7.9                                        17 Nov 2022
+    nginx modules:
+
+    *) Bugfix: fixed Fetch Response prototype reinitialization.
+       When at least one js_import directive was declared in both HTTP
+       and Stream, ngx.fetch() returned inapproriate response in Stream.
+       The bug was introduced in 0.7.7.
+
+    Core:
+
+    *) Bugfix: fixed String.prototype.replace(re) if re.exec() returns
+       non-flat array.
+
+    *) Bugfix: fixed Array.prototype.fill() when start object changes
+       "this".
+
+    *) Bugfix: fixed description for fs.mkdir() and fs.rmdir() methods.
+
+    *) Bugfix: fixed %TypedArray%.prototype.set(s) when s element changes
+       "this".
+
+    *) Bugfix: fixed Array.prototype.splice(s, d) when d resizes "this"
+       during evaluation.
+
+    *) Bugfix: fixed for-in loop with left and right hand side
+       expressions.
+
+Changes with njs 0.7.8                                        25 Oct 2022
+
+    nginx modules:
+
+    *) Feature: added js_preload_object directive.
+
+    *) Feature: added ngx.conf_prefix property.
+
+    *) Feature: added s.sendUpstream() and s.sendDownstream()
+       in stream module.
+
+    *) Feature: added support for HEAD method in Fetch API.
+
+    *) Improvement: improved async callback support for s.send()
+       in stream module.
+
+    Core:
+
+    *) Feature: added "name" instance property for a function
+       object.
+
+    *) Feature: added njs.memoryStats object.
+
+    *) Bugfix: fixed String.prototype.trimEnd() with unicode
+       string.
+
+    *) Bugfix: fixed Object.freeze() with fast arrays.
+
+    *) Bugfix: fixed Object.defineProperty() with fast arrays.
+
+    *) Bugfix: fixed async token as a property name of an object.
+
+    *) Bugfix: fixed property set instruction when key modifies
+       base binding.
+
+    *) Bugfix: fixed complex assignments.
+
+    *) Bugfix: fixed handling of unhandled promise rejection.
+
+    *) Bugfix: fixed process.env when duplicate environ variables
+       are present.
+
+    *) Bugfix: fixed double declaration detection in modules.
+
+    *) Bugfix: fixed bound function calls according to the spec.
+
+    *) Bugfix: fixed break label for if statement.
+
+    *) Bugfix: fixed labeled empty statements.
+
 Changes with njs 0.7.7                                        30 Aug 2022
 
     nginx modules:

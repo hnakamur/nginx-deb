@@ -26,6 +26,7 @@ njs_vm_opt_init(njs_vm_opt_t *options)
     njs_memzero(options, sizeof(njs_vm_opt_t));
 
     options->log_level = NJS_LOG_LEVEL_INFO;
+    options->max_stack_size = NJS_MAX_STACK_SIZE;
 }
 
 
@@ -70,6 +71,8 @@ njs_vm_create(njs_vm_opt_t *options)
     }
 
     vm->external = options->external;
+
+    vm->spare_stack_size = options->max_stack_size;
 
     vm->trace.level = NJS_LEVEL_TRACE;
     vm->trace.size = 2048;
@@ -660,6 +663,13 @@ njs_vm_memory_pool(njs_vm_t *vm)
 }
 
 
+njs_external_ptr_t
+njs_vm_external_ptr(njs_vm_t *vm)
+{
+    return vm->external;
+}
+
+
 uintptr_t
 njs_vm_meta(njs_vm_t *vm, njs_uint_t index)
 {
@@ -833,14 +843,14 @@ njs_vm_function(njs_vm_t *vm, const njs_str_t *path)
 uint16_t
 njs_vm_prop_magic16(njs_object_prop_t *prop)
 {
-    return prop->value.data.magic16;
+    return njs_prop_magic16(prop);
 }
 
 
 uint32_t
 njs_vm_prop_magic32(njs_object_prop_t *prop)
 {
-    return prop->value.data.magic32;
+    return njs_prop_magic32(prop);
 }
 
 
@@ -1294,6 +1304,13 @@ njs_vm_value_to_bytes(njs_vm_t *vm, njs_str_t *dst, njs_value_t *src)
     }
 
     return ret;
+}
+
+
+njs_int_t
+njs_vm_string_compare(const njs_value_t *v1, const njs_value_t *v2)
+{
+    return njs_string_cmp(v1, v2);
 }
 
 
