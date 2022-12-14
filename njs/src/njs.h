@@ -11,8 +11,8 @@
 
 #include <njs_auto_config.h>
 
-#define NJS_VERSION                 "0.7.8"
-#define NJS_VERSION_NUMBER          0x000708
+#define NJS_VERSION                 "0.7.10"
+#define NJS_VERSION_NUMBER          0x00070a
 
 
 #include <unistd.h>                 /* STDOUT_FILENO, STDERR_FILENO */
@@ -132,9 +132,17 @@ typedef enum {
 
 
 typedef enum {
+    /*
+     * Extern property type.
+     */
     NJS_EXTERN_PROPERTY = 0,
     NJS_EXTERN_METHOD = 1,
     NJS_EXTERN_OBJECT = 2,
+    NJS_EXTERN_SELF = 3,
+#define NJS_EXTERN_TYPE_MASK    3
+    /*
+     * Extern property flags.
+     */
     NJS_EXTERN_SYMBOL = 4,
 } njs_extern_flag_t;
 
@@ -253,6 +261,8 @@ typedef struct {
 
     char                            **argv;
     njs_uint_t                      argc;
+
+    njs_uint_t                      max_stack_size;
 
     njs_log_level_t                 log_level;
 
@@ -374,7 +384,7 @@ NJS_EXPORT njs_int_t njs_external_property(njs_vm_t *vm,
 NJS_EXPORT uintptr_t njs_vm_meta(njs_vm_t *vm, njs_uint_t index);
 
 NJS_EXPORT njs_function_t *njs_vm_function_alloc(njs_vm_t *vm,
-    njs_function_native_t native);
+    njs_function_native_t native, njs_bool_t shared, njs_bool_t ctor);
 
 NJS_EXPORT void njs_disassembler(njs_vm_t *vm);
 
@@ -387,6 +397,7 @@ NJS_EXPORT njs_function_t *njs_vm_function(njs_vm_t *vm, const njs_str_t *name);
 NJS_EXPORT njs_value_t *njs_vm_retval(njs_vm_t *vm);
 NJS_EXPORT void njs_vm_retval_set(njs_vm_t *vm, const njs_value_t *value);
 NJS_EXPORT njs_mp_t *njs_vm_memory_pool(njs_vm_t *vm);
+NJS_EXPORT njs_external_ptr_t njs_vm_external_ptr(njs_vm_t *vm);
 
 /*  Gets string value, no copy. */
 NJS_EXPORT void njs_value_string_get(njs_value_t *value, njs_str_t *dst);
@@ -400,6 +411,8 @@ NJS_EXPORT u_char *njs_vm_value_string_alloc(njs_vm_t *vm, njs_value_t *value,
     uint32_t size);
 NJS_EXPORT njs_int_t njs_vm_value_string_copy(njs_vm_t *vm, njs_str_t *retval,
     njs_value_t *value, uintptr_t *next);
+NJS_EXPORT njs_int_t njs_vm_string_compare(const njs_value_t *v1,
+    const njs_value_t *v2);
 
 NJS_EXPORT njs_int_t njs_vm_value_array_buffer_set(njs_vm_t *vm,
     njs_value_t *value, const u_char *start, uint32_t size);
@@ -447,6 +460,8 @@ NJS_EXPORT void njs_value_null_set(njs_value_t *value);
 NJS_EXPORT void njs_value_invalid_set(njs_value_t *value);
 NJS_EXPORT void njs_value_boolean_set(njs_value_t *value, int yn);
 NJS_EXPORT void njs_value_number_set(njs_value_t *value, double num);
+NJS_EXPORT void njs_value_function_set(njs_value_t *value,
+    njs_function_t *function);
 
 NJS_EXPORT uint8_t njs_value_bool(const njs_value_t *value);
 NJS_EXPORT double njs_value_number(const njs_value_t *value);
