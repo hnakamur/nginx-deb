@@ -49,11 +49,11 @@ stitch
         end
         ngx.say(t > 1400960598)
         local diff = os.time() - t
-        ngx.say(diff <= 1)
+        ngx.say("<= 1: ", diff <= 1)
     }
 --- stream_response
 true
-true
+<= 1: true
 
 --- error_log eval
 qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):3 loop\]/
@@ -158,11 +158,11 @@ stitch
         end
         ngx.say(t >= uptime)
         local diff = t - uptime
-        ngx.say(diff < 10)
+        ngx.say("< 10: ", diff < 10)
     }
 --- stream_response
 true
-true
+< 10: true
 
 --- error_log eval
 qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):11 loop\]/
@@ -190,11 +190,11 @@ stitch
         end
         ngx.say(t >= uptime)
         local diff = t - uptime
-        ngx.say(diff < 0.1)
+        ngx.say("< 0.1: ", diff < 0.1)
     }
 --- stream_response
 true
-true
+< 0.1: true
 
 --- error_log eval
 qr/\[TRACE\s+\d+ content_by_lua\(nginx\.conf:\d+\):11 loop\]/

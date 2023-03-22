@@ -1744,7 +1744,7 @@ ngx_http_lua_ffi_socket_tcp_sslhandshake(ngx_http_request_t *r,
 
         /* read rest of the chain */
 
-        for (i = 1; i < sk_X509_num(chain); i++) {
+        for (i = 1; i < (ngx_int_t) sk_X509_num(chain); i++) {
             x509 = sk_X509_value(chain, i);
             if (x509 == NULL) {
                 ERR_clear_error();
@@ -2534,6 +2534,14 @@ ngx_http_lua_socket_tcp_read(ngx_http_request_t *r,
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, c->log, 0,
                    "lua tcp socket read data: wait:%d",
                    (int) u->read_waiting);
+
+    /* ngx_shutdown_timer_handler will set c->close and c->error on timeout
+     * when worker_shutdown_timeout is configured.
+     * The rev->ready is false at that time, so we need to set u->eof.
+     */
+    if (c->close && c->error) {
+        u->eof = 1;
+    }
 
     b = &u->buffer;
     read = 0;
@@ -4736,6 +4744,7 @@ ngx_http_lua_socket_read_until(void *data, ssize_t bytes)
     u_char                                   c;
     u_char                                  *pat;
     size_t                                   pat_len;
+    size_t                                   pending_len;
     int                                      i;
     int                                      state;
     int                                      old_state = 0; /* just to make old
@@ -4864,11 +4873,12 @@ ngx_http_lua_socket_read_until(void *data, ssize_t bytes)
 
         /* matched */
 
-        dd("adding pending data: %.*s", (int) (old_state + 1 - state),
-           (char *) pat);
+        pending_len = old_state + 1 - state;
+
+        dd("adding pending data: %.*s", (int) pending_len, (char *) pat);
 
         rc = ngx_http_lua_socket_add_pending_data(r, u, b->pos, i, pat,
-                                                  old_state + 1 - state,
+                                                  pending_len,
                                                   old_state);
 
         if (rc != NGX_OK) {
@@ -4879,14 +4889,14 @@ ngx_http_lua_socket_read_until(void *data, ssize_t bytes)
         i++;
 
         if (u->length) {
-            if (u->rest <= (size_t) state) {
+            if (u->rest <= pending_len) {
                 u->rest = 0;
                 cp->state = state;
                 b->pos += i;
                 return NGX_OK;
 
             } else {
-                u->rest -= state;
+                u->rest -= pending_len;
             }
         }
 
@@ -6473,7 +6483,7 @@ ngx_http_lua_ffi_socket_tcp_getoption(ngx_http_lua_socket_tcp_upstream_t *u,
 
     fd = u->peer.connection->fd;
 
-    if (fd == (ngx_socket_t) -1) {
+    if (fd == (int) -1) {
         *errlen = ngx_snprintf(err, *errlen, "invalid socket fd") - err;
         return NGX_ERROR;
     }
@@ -6530,7 +6540,7 @@ ngx_http_lua_ffi_socket_tcp_setoption(ngx_http_lua_socket_tcp_upstream_t *u,
 
     fd = u->peer.connection->fd;
 
-    if (fd == (ngx_socket_t) -1) {
+    if (fd == (int) -1) {
         *errlen = ngx_snprintf(err, *errlen, "invalid socket fd") - err;
         return NGX_ERROR;
     }
@@ -6591,7 +6601,7 @@ ngx_http_lua_ffi_socket_tcp_hack_fd(ngx_http_lua_socket_tcp_upstream_t *u,
     }
 
     rc = u->peer.connection->fd;
-    if (rc == (ngx_socket_t) -1) {
+    if (rc == (int) -1) {
         *errlen = ngx_snprintf(err, *errlen, "invalid socket fd") - err;
         return -1;
     }
