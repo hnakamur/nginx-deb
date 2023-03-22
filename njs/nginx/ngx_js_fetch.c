@@ -47,6 +47,16 @@ typedef struct {
 } ngx_js_http_chunk_parse_t;
 
 
+typedef struct ngx_js_tb_elt_s  ngx_js_tb_elt_t;
+
+struct ngx_js_tb_elt_s {
+    ngx_uint_t        hash;
+    ngx_str_t         key;
+    ngx_str_t         value;
+    ngx_js_tb_elt_t  *next;
+};
+
+
 typedef struct {
     enum {
         GUARD_NONE = 0,
@@ -651,7 +661,7 @@ ngx_js_ext_fetch(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_value_t         *init, *value;
     ngx_js_http_t       *http;
     ngx_list_part_t     *part;
-    ngx_table_elt_t     *h;
+    ngx_js_tb_elt_t     *h;
     ngx_js_request_t     request;
     ngx_connection_t    *c;
     ngx_resolver_ctx_t  *ctx;
@@ -850,7 +860,9 @@ ngx_js_ext_headers_constructor(njs_vm_t *vm, njs_value_t *args,
         return NJS_ERROR;
     }
 
-    rc = ngx_list_init(&headers->header_list, pool, 4, sizeof(ngx_table_elt_t));
+    headers->guard = GUARD_NONE;
+
+    rc = ngx_list_init(&headers->header_list, pool, 4, sizeof(ngx_js_tb_elt_t));
     if (rc != NGX_OK) {
         njs_vm_memory_error(vm);
         return NJS_ERROR;
@@ -933,7 +945,7 @@ ngx_js_ext_response_constructor(njs_vm_t *vm, njs_value_t *args,
     pool = ngx_external_pool(vm, njs_vm_external_ptr(vm));
 
     rc = ngx_list_init(&response->headers.header_list, pool, 4,
-                       sizeof(ngx_table_elt_t));
+                       sizeof(ngx_js_tb_elt_t));
     if (rc != NGX_OK) {
         njs_vm_memory_error(vm);
         return NJS_ERROR;
@@ -1076,7 +1088,7 @@ ngx_js_headers_inherit(njs_vm_t *vm, ngx_js_headers_t *headers,
     njs_int_t         ret;
     ngx_uint_t        i;
     ngx_list_part_t  *part;
-    ngx_table_elt_t  *h;
+    ngx_js_tb_elt_t  *h;
 
     part = &orig->header_list.part;
     h = part->elts;
@@ -1341,7 +1353,7 @@ failed:
 static void
 ngx_js_http_close_connection(ngx_connection_t *c)
 {
-    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, c->log, 0,
+    ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0,
                    "close js http connection: %d", c->fd);
 
 #if (NGX_SSL)
@@ -1655,7 +1667,7 @@ ngx_js_http_ssl_name(ngx_js_http_t *http)
 
     name->data = p;
 
-    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, http->log, 0,
+    ngx_log_debug1(NGX_LOG_DEBUG_EVENT, http->log, 0,
                    "js http SSL server name: \"%s\"", name->data);
 
     if (SSL_set_tlsext_host_name(http->peer.connection->ssl->connection,
@@ -1900,7 +1912,7 @@ ngx_js_request_constructor(njs_vm_t *vm, ngx_js_request_t *request,
     pool = ngx_external_pool(vm, external);
 
     rc = ngx_list_init(&request->headers.header_list, pool, 4,
-                       sizeof(ngx_table_elt_t));
+                       sizeof(ngx_js_tb_elt_t));
     if (rc != NGX_OK) {
         njs_vm_memory_error(vm);
         return NJS_ERROR;
@@ -2031,7 +2043,7 @@ ngx_js_request_constructor(njs_vm_t *vm, ngx_js_request_t *request,
              */
 
             rc = ngx_list_init(&request->headers.header_list, pool, 4,
-                               sizeof(ngx_table_elt_t));
+                               sizeof(ngx_js_tb_elt_t));
             if (rc != NGX_OK) {
                 njs_vm_memory_error(vm);
                 return NJS_ERROR;
@@ -2161,7 +2173,7 @@ ngx_js_headers_append(njs_vm_t *vm, ngx_js_headers_t *headers,
 {
     u_char           *p, *end;
     ngx_uint_t        i;
-    ngx_table_elt_t  *h, **ph;
+    ngx_js_tb_elt_t  *h, **ph;
     ngx_list_part_t  *part;
     const njs_str_t  *f;
 
@@ -2360,7 +2372,7 @@ ngx_js_http_process_headers(ngx_js_http_t *http)
 
     if (http->response.headers.header_list.size == 0) {
         rc = ngx_list_init(&http->response.headers.header_list, http->pool, 4,
-                           sizeof(ngx_table_elt_t));
+                           sizeof(ngx_js_tb_elt_t));
         if (rc != NGX_OK) {
             ngx_js_http_error(http, 0, "alloc failed");
             return NGX_ERROR;
@@ -3149,7 +3161,7 @@ ngx_headers_js_get(njs_vm_t *vm, njs_value_t *value, njs_str_t *name,
     size_t             len;
     njs_int_t          rc;
     ngx_uint_t         i;
-    ngx_table_elt_t   *h, *ph;
+    ngx_js_tb_elt_t   *h, *ph;
     ngx_list_part_t   *part;
     ngx_js_headers_t  *headers;
 
@@ -3296,7 +3308,7 @@ ngx_headers_js_ext_delete(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_str_t          name;
     ngx_uint_t         i;
     ngx_list_part_t   *part;
-    ngx_table_elt_t   *h;
+    ngx_js_tb_elt_t   *h;
     ngx_js_headers_t  *headers;
 
     headers = njs_vm_external(vm, ngx_http_js_fetch_headers_proto_id,
@@ -3478,7 +3490,7 @@ ngx_headers_js_ext_keys(njs_vm_t *vm, njs_value_t *value, njs_value_t *keys)
     ngx_uint_t         i, k, length;
     njs_value_t       *start;
     ngx_list_part_t   *part;
-    ngx_table_elt_t   *h;
+    ngx_js_tb_elt_t   *h;
     ngx_js_headers_t  *headers;
 
     headers = njs_vm_external(vm, ngx_http_js_fetch_headers_proto_id, value);
@@ -3558,7 +3570,7 @@ ngx_headers_js_ext_set(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_str_t          name, value;
     ngx_uint_t         i;
     ngx_list_part_t   *part;
-    ngx_table_elt_t   *h, **ph, **pp;
+    ngx_js_tb_elt_t   *h, **ph, **pp;
     ngx_js_headers_t  *headers;
 
     headers = njs_vm_external(vm, ngx_http_js_fetch_headers_proto_id,

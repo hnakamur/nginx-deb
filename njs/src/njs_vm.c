@@ -239,6 +239,13 @@ njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end)
 
 
 njs_mod_t *
+njs_vm_add_module(njs_vm_t *vm, njs_str_t *name, njs_value_t *value)
+{
+    return njs_module_add(vm, name, value);
+}
+
+
+njs_mod_t *
 njs_vm_compile_module(njs_vm_t *vm, njs_str_t *name, u_char **start,
     u_char *end)
 {
@@ -256,7 +263,7 @@ njs_vm_compile_module(njs_vm_t *vm, njs_str_t *name, u_char **start,
         return module;
     }
 
-    module = njs_module_add(vm, name);
+    module = njs_module_add(vm, name, NULL);
     if (njs_slow_path(module == NULL)) {
         return NULL;
     }
@@ -825,6 +832,22 @@ njs_vm_value_string_alloc(njs_vm_t *vm, njs_value_t *value, uint32_t size)
 }
 
 
+njs_int_t
+njs_vm_value_string_create(njs_vm_t *vm, njs_value_t *value,
+    const u_char *start, uint32_t size)
+{
+    return njs_string_create(vm, value, (const char *) start, size);
+}
+
+
+njs_int_t
+njs_vm_value_string_create_chb(njs_vm_t *vm, njs_value_t *value,
+    njs_chb_t *chain)
+{
+    return njs_string_create_chb(vm, value, chain);
+}
+
+
 njs_function_t *
 njs_vm_function(njs_vm_t *vm, const njs_str_t *path)
 {
@@ -899,7 +922,7 @@ njs_vm_logger(njs_vm_t *vm, njs_log_level_t level, const char *fmt, ...)
     u_char        *p;
     va_list       args;
     njs_logger_t  logger;
-    u_char        buf[NJS_MAX_ERROR_STR];
+    u_char        buf[32768];
 
     if (vm->options.ops == NULL) {
         return;
@@ -1231,6 +1254,46 @@ njs_vm_value_to_string(njs_vm_t *vm, njs_str_t *dst, njs_value_t *src)
     }
 
     return ret;
+}
+
+
+/*
+ * If string value is null-terminated the corresponding C string
+ * is returned as is, otherwise the new copy is allocated with
+ * the terminating zero byte.
+ */
+const char *
+njs_vm_value_to_c_string(njs_vm_t *vm, njs_value_t *value)
+{
+    u_char  *p, *data, *start;
+    size_t  size;
+
+    njs_assert(njs_is_string(value));
+
+    if (value->short_string.size != NJS_STRING_LONG) {
+        start = value->short_string.start;
+        size = value->short_string.size;
+
+        if (size < NJS_STRING_SHORT) {
+            start[size] = '\0';
+            return (const char *) start;
+        }
+
+    } else {
+        start = value->long_string.data->start;
+        size = value->long_string.size;
+    }
+
+    data = njs_mp_alloc(vm->mem_pool, size + njs_length("\0"));
+    if (njs_slow_path(data == NULL)) {
+        njs_memory_error(vm);
+        return NULL;
+    }
+
+    p = njs_cpymem(data, start, size);
+    *p++ = '\0';
+
+    return (const char *) data;
 }
 
 
