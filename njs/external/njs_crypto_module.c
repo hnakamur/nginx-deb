@@ -67,6 +67,8 @@ static njs_int_t njs_hash_prototype_update(njs_vm_t *vm, njs_value_t *args,
     njs_uint_t nargs, njs_index_t hmac);
 static njs_int_t njs_hash_prototype_digest(njs_vm_t *vm, njs_value_t *args,
     njs_uint_t nargs, njs_index_t hmac);
+static njs_int_t njs_hash_prototype_copy(njs_vm_t *vm, njs_value_t *args,
+    njs_uint_t nargs, njs_index_t hmac);
 static njs_int_t njs_crypto_create_hmac(njs_vm_t *vm, njs_value_t *args,
     njs_uint_t nargs, njs_index_t unused);
 
@@ -168,6 +170,16 @@ static njs_external_t  njs_ext_crypto_hash[] = {
         .u.method = {
             .native = njs_hash_prototype_digest,
             .magic8 = 0,
+        }
+    },
+
+    {
+        .flags = NJS_EXTERN_METHOD,
+        .name.string = njs_str("copy"),
+        .writable = 1,
+        .configurable = 1,
+        .u.method = {
+            .native = njs_hash_prototype_copy,
         }
     },
 
@@ -471,6 +483,36 @@ exception:
 
 
 static njs_int_t
+njs_hash_prototype_copy(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
+    njs_index_t unused)
+{
+    njs_digest_t  *dgst, *copy;
+
+    dgst = njs_vm_external(vm, njs_crypto_hash_proto_id, njs_argument(args, 0));
+    if (njs_slow_path(dgst == NULL)) {
+        njs_type_error(vm, "\"this\" is not a hash object");
+        return NJS_ERROR;
+    }
+
+    if (njs_slow_path(dgst->alg == NULL)) {
+        njs_error(vm, "Digest already called");
+        return NJS_ERROR;
+    }
+
+    copy = njs_mp_alloc(njs_vm_memory_pool(vm), sizeof(njs_digest_t));
+    if (njs_slow_path(copy == NULL)) {
+        njs_memory_error(vm);
+        return NJS_ERROR;
+    }
+
+    memcpy(copy, dgst, sizeof(njs_digest_t));
+
+    return njs_vm_external_create(vm, njs_vm_retval(vm),
+                                  njs_crypto_hash_proto_id, copy, 0);
+}
+
+
+static njs_int_t
 njs_crypto_create_hmac(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     njs_index_t unused)
 {
@@ -646,13 +688,11 @@ njs_crypto_init(njs_vm_t *vm)
         return NJS_ERROR;
     }
 
-    module = njs_module_add(vm, &njs_str_value("crypto"));
+    module = njs_vm_add_module(vm, &njs_str_value("crypto"),
+                               njs_value_arg(&value));
     if (njs_slow_path(module == NULL)) {
         return NJS_ERROR;
     }
-
-    njs_value_assign(&module->value, &value);
-    module->function.native = 1;
 
     return NJS_OK;
 }

@@ -200,6 +200,8 @@ njs_int_t njs_string_new(njs_vm_t *vm, njs_value_t *value, const u_char *start,
     uint32_t size, uint32_t length);
 njs_int_t njs_string_create(njs_vm_t *vm, njs_value_t *value, const char *src,
     size_t size);
+njs_int_t njs_string_create_chb(njs_vm_t *vm, njs_value_t *value,
+    njs_chb_t *chain);
 
 void njs_encode_hex(njs_str_t *dst, const njs_str_t *src);
 size_t njs_encode_hex_length(const njs_str_t *src, size_t *out_size);
@@ -235,18 +237,16 @@ uint32_t njs_string_trim(const njs_value_t *value, njs_string_prop_t *string,
 void njs_string_copy(njs_value_t *dst, njs_value_t *src);
 njs_int_t njs_string_validate(njs_vm_t *vm, njs_string_prop_t *string,
     njs_value_t *value);
-size_t njs_string_prop(njs_string_prop_t *string, const njs_value_t *value);
 njs_int_t njs_string_cmp(const njs_value_t *val1, const njs_value_t *val2);
 void njs_string_slice_string_prop(njs_string_prop_t *dst,
     const njs_string_prop_t *string, const njs_slice_prop_t *slice);
 njs_int_t njs_string_slice(njs_vm_t *vm, njs_value_t *dst,
     const njs_string_prop_t *string, const njs_slice_prop_t *slice);
-const u_char *njs_string_offset(const u_char *start, const u_char *end,
+const u_char *njs_string_utf8_offset(const u_char *start, const u_char *end,
     size_t index);
 uint32_t njs_string_index(njs_string_prop_t *string, uint32_t offset);
-void njs_string_offset_map_init(const u_char *start, size_t size);
+void njs_string_utf8_offset_map_init(const u_char *start, size_t size);
 double njs_string_to_index(const njs_value_t *value);
-const char *njs_string_to_c_string(njs_vm_t *vm, njs_value_t *value);
 njs_int_t njs_string_encode_uri(njs_vm_t *vm, njs_value_t *args,
     njs_uint_t nargs, njs_index_t component);
 njs_int_t njs_string_decode_uri(njs_vm_t *vm, njs_value_t *args,
@@ -263,6 +263,45 @@ njs_int_t njs_string_split_part_add(njs_vm_t *vm, njs_array_t *array,
 njs_int_t njs_string_get_substitution(njs_vm_t *vm, njs_value_t *matched,
     njs_value_t *string, int64_t pos, njs_value_t *captures, int64_t ncaptures,
     njs_value_t *groups, njs_value_t *replacement, njs_value_t *retval);
+
+
+njs_inline const u_char *
+njs_string_offset(njs_string_prop_t *string, int64_t index)
+{
+    if (njs_is_byte_or_ascii_string(string)) {
+        return string->start + index;
+    }
+
+    /* UTF-8 string. */
+
+    return njs_string_utf8_offset(string->start, string->start + string->size,
+                                  index);
+}
+
+
+njs_inline size_t
+njs_string_prop(njs_string_prop_t *string, const njs_value_t *value)
+{
+    size_t     size;
+    uintptr_t  length;
+
+    size = value->short_string.size;
+
+    if (size != NJS_STRING_LONG) {
+        string->start = (u_char *) value->short_string.start;
+        length = value->short_string.length;
+
+    } else {
+        string->start = (u_char *) value->long_string.data->start;
+        size = value->long_string.size;
+        length = value->long_string.data->length;
+    }
+
+    string->size = size;
+    string->length = length;
+
+    return (length == 0) ? size : length;
+}
 
 
 extern const njs_object_init_t  njs_string_instance_init;
