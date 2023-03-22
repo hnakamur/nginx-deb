@@ -11,8 +11,8 @@
 
 #include <njs_auto_config.h>
 
-#define NJS_VERSION                 "0.7.10"
-#define NJS_VERSION_NUMBER          0x00070a
+#define NJS_VERSION                 "0.7.12"
+#define NJS_VERSION_NUMBER          0x00070c
 
 
 #include <unistd.h>                 /* STDOUT_FILENO, STDERR_FILENO */
@@ -310,6 +310,8 @@ NJS_EXPORT njs_vm_t *njs_vm_create(njs_vm_opt_t *options);
 NJS_EXPORT void njs_vm_destroy(njs_vm_t *vm);
 
 NJS_EXPORT njs_int_t njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end);
+NJS_EXPORT njs_mod_t *njs_vm_add_module(njs_vm_t *vm, njs_str_t *name,
+    njs_value_t *value);
 NJS_EXPORT njs_mod_t *njs_vm_compile_module(njs_vm_t *vm, njs_str_t *name,
     u_char **start, u_char *end);
 NJS_EXPORT njs_vm_t *njs_vm_clone(njs_vm_t *vm, njs_external_ptr_t external);
@@ -409,6 +411,10 @@ NJS_EXPORT njs_int_t njs_vm_value_string_set(njs_vm_t *vm, njs_value_t *value,
     const u_char *start, uint32_t size);
 NJS_EXPORT u_char *njs_vm_value_string_alloc(njs_vm_t *vm, njs_value_t *value,
     uint32_t size);
+NJS_EXPORT njs_int_t njs_vm_value_string_create(njs_vm_t *vm,
+    njs_value_t *value, const u_char *start, uint32_t size);
+NJS_EXPORT njs_int_t njs_vm_value_string_create_chb(njs_vm_t *vm,
+    njs_value_t *value, njs_chb_t *chain);
 NJS_EXPORT njs_int_t njs_vm_value_string_copy(njs_vm_t *vm, njs_str_t *retval,
     njs_value_t *value, uintptr_t *next);
 NJS_EXPORT njs_int_t njs_vm_string_compare(const njs_value_t *v1,
@@ -441,6 +447,13 @@ NJS_EXPORT njs_int_t njs_vm_value_to_string(njs_vm_t *vm, njs_str_t *dst,
  */
 NJS_EXPORT njs_int_t njs_vm_value_string(njs_vm_t *vm, njs_str_t *dst,
     njs_value_t *src);
+/*
+ * If string value is null-terminated the corresponding C string
+ * is returned as is, otherwise the new copy is allocated with
+ * the terminating zero byte.
+ */
+NJS_EXPORT const char *njs_vm_value_to_c_string(njs_vm_t *vm,
+	njs_value_t *value);
 NJS_EXPORT njs_int_t njs_vm_retval_string(njs_vm_t *vm, njs_str_t *dst);
 
 NJS_EXPORT njs_int_t njs_vm_value_dump(njs_vm_t *vm, njs_str_t *dst,

@@ -13,13 +13,13 @@ This module allows to send HTTP access log to an external program via pipe.
     ./configure --add-module=/path/to/ngx_http_pipelog_module
     make && sudo make install
 
-Note: This module has been tested with nginx 1.5.6 and 1.4.3
+Note: This module has been tested with nginx 1.23.3 and 1.22.1 and 1.14.2
 
 ## Directives
 
 ***pipelog_format***
   
-    pipelog_format name string ...
+    pipelog_format name [escape=default|json|none] string ...
 
   * syntax is same as log_format of HttpLogModule.
   * default value is *combined*.
@@ -39,7 +39,7 @@ Note: This module has been tested with nginx 1.5.6 and 1.4.3
                         '$status $body_bytes_sent "$http_referer" '
                         '"$http_user_agent" "$http_x_forwarded_for"';
       
-      pipelog "cat >> /var/log/nginx/access.log" main;
+      pipelog "logger -t nginx" main;
 
 ## License
 
@@ -74,8 +74,8 @@ SUCH DAMAGE.
 ### Additional Code
 
 ```
-Copyright (c) 2013-2017 YAMAMOTO Masaya
-Copyright (c) 2013-2017 KLab Inc.
+Copyright (c) 2013-2022 YAMAMOTO Masaya
+Copyright (c) 2013-2022 KLab Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

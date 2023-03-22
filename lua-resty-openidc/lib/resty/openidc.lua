@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 
 ***************************************************************************
-Copyright (C) 2017-2022 ZmartZone Holding B.V.
+Copyright (C) 2017-2023 ZmartZone Holding B.V.
 Copyright (C) 2015-2017 Ping Identity Corporation
 All rights reserved.
 
@@ -76,7 +76,7 @@ local supported_token_auth_methods = {
 }
 
 local openidc = {
-  _VERSION = "1.7.5"
+  _VERSION = "1.7.6"
 }
 openidc.__index = openidc
 
@@ -844,7 +844,7 @@ end
 
 local function openidc_pem_from_x5c(x5c)
   log(DEBUG, "Found x5c, getting PEM public key from x5c entry of json public key")
-  local chunks = split_by_chunk(b64(openidc_base64_url_decode(x5c[1])), 64)
+  local chunks = split_by_chunk(x5c[1], 64)
   local pem = "-----BEGIN CERTIFICATE-----\n" ..
       table.concat(chunks, "\n") ..
       "\n-----END CERTIFICATE-----"
@@ -908,6 +908,10 @@ local function openidc_pem_from_jwk(opts, kid)
   end
 
   local x5c = jwk.x5c
+  if x5c and type(x5c) ~= 'table' then
+    log(WARN, "Found invalid JWK with x5c claim not being an array but a " .. type(x5c))
+    x5c = nil
+  end
   if x5c and #(jwk.x5c) == 0 then
     log(WARN, "Found invalid JWK with empty x5c array, ignoring x5c claim")
     x5c = nil
@@ -1647,7 +1651,7 @@ local function openidc_get_bearer_access_token(opts)
   end
 
   local divider = header:find(' ')
-  if divider == 0 or string.lower(header:sub(0, divider - 1)) ~= string.lower("Bearer") then
+  if divider == nil or divider == 0 or string.lower(header:sub(0, divider - 1)) ~= string.lower("Bearer") then
     err = "no Bearer authorization header value found"
     log(ERROR, err)
     return nil, err

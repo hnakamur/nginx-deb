@@ -157,7 +157,7 @@ njs_value_to_primitive(njs_vm_t *vm, njs_value_t *dst, njs_value_t *value,
             lhq.key_hash = hashes[hint];
             lhq.key = names[hint];
 
-            ret = njs_object_property(vm, value, &lhq, &method);
+            ret = njs_object_property(vm, njs_object(value), &lhq, &method);
 
             if (njs_slow_path(ret == NJS_ERROR)) {
                 return ret;
@@ -231,25 +231,80 @@ njs_array_t *
 njs_value_own_enumerate(njs_vm_t *vm, njs_value_t *value,
     njs_object_enum_t kind, njs_object_enum_type_t type, njs_bool_t all)
 {
-    njs_int_t           ret;
-    njs_value_t         keys;
+    njs_int_t           ret, len;
+    njs_array_t         *values, *entry;
+    njs_value_t         keys, *k, *dst, *end;
     njs_object_value_t  obj_val;
     njs_exotic_slots_t  *slots;
 
     if (njs_is_object(value)) {
-        if (kind == NJS_ENUM_KEYS && (type & NJS_ENUM_STRING)) {
-            slots = njs_object_slots(value);
-            if (slots != NULL && slots->keys != NULL) {
-                ret = slots->keys(vm, value, &keys);
+        slots = njs_object_slots(value);
+        if (slots == NULL || slots->keys == NULL) {
+            return njs_object_own_enumerate(vm, njs_object(value), kind, type,
+                                            all);
+        }
+
+        ret = slots->keys(vm, value, &keys);
+        if (njs_slow_path(ret != NJS_OK)) {
+            return NULL;
+        }
+
+        switch (kind) {
+        case NJS_ENUM_KEYS:
+            return njs_array(&keys);
+
+        case NJS_ENUM_VALUES:
+            len = njs_array_len(&keys);
+            k = njs_array(&keys)->start;
+            end = k + len;
+
+            values = njs_array_alloc(vm, 1, len, 0);
+            if (njs_slow_path(values == NULL)) {
+                return NULL;
+            }
+
+            dst = values->start;
+
+            while (k < end) {
+                ret = njs_value_property(vm, value, k++, dst++);
+                if (njs_slow_path(ret != NJS_OK)) {
+                    return NULL;
+                }
+            }
+
+            return values;
+
+        case NJS_ENUM_BOTH:
+        default:
+            len = njs_array_len(&keys);
+            k = njs_array(&keys)->start;
+            end = k + len;
+
+            values = njs_array_alloc(vm, 1, len, 0);
+            if (njs_slow_path(values == NULL)) {
+                return NULL;
+            }
+
+            dst = values->start;
+
+            while (k < end) {
+                entry = njs_array_alloc(vm, 1, 2, 0);
+                if (njs_slow_path(entry == NULL)) {
+                    return NULL;
+                }
+
+                ret = njs_value_property(vm, value, k, &entry->start[1]);
                 if (njs_slow_path(ret != NJS_OK)) {
                     return NULL;
                 }
 
-                return njs_array(&keys);
-            }
-        }
+                njs_value_assign(&entry->start[0], k++);
 
-        return njs_object_own_enumerate(vm, njs_object(value), kind, type, all);
+                njs_set_array(dst++, entry);
+            }
+
+            return values;
+        }
     }
 
     if (value->type != NJS_STRING) {
@@ -1432,13 +1487,16 @@ slow_path:
         return NJS_ERROR;
     }
 
-    /* GC: release value. */
     if (removed != NULL) {
-        njs_value_assign(removed, njs_prop_value(prop));
+        if (njs_is_valid(njs_prop_value(prop))) {
+            njs_value_assign(removed, njs_prop_value(prop));
+
+        } else {
+            njs_set_undefined(removed);
+        }
     }
 
     prop->type = NJS_WHITEOUT;
-    njs_set_invalid(njs_prop_value(prop));
 
     return NJS_OK;
 }

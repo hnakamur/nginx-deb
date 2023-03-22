@@ -1,6 +1,7 @@
 import fs from 'fs';
 import qs from 'querystring';
 import cr from 'crypto';
+import xml from 'xml';
 
 async function http_module(r: NginxHTTPRequest) {
     var bs: NjsByteString;
@@ -43,6 +44,8 @@ async function http_module(r: NginxHTTPRequest) {
 
     r.headersOut['Set-Cookie'] = ['aaa', 'bbb'];
     r.headersOut['Foo'] = ['aaa', 'bbb'];
+
+    let values: Array<string> = r.rawHeadersIn.filter(v=>v[0].toLowerCase() == 'foo').map(v=>v[1]);
 
     // r.log
 
@@ -90,12 +93,24 @@ async function http_module(r: NginxHTTPRequest) {
             throw 'oops'
         };
 
+        let out: Array<string> = reply.headers.getAll("foo");
+        let has: boolean = reply.headers.has("foo");
+
+        reply.headers.append("foo", "xxx");
+        reply.headers.delete("xxx");
+        reply.headers.forEach((name, value) => { /* do something. */ });
+
         return reply.text()
     })
     .then(body => r.return(200, body))
     .catch(e => r.return(501, e.message))
 
+
     let response = await ngx.fetch('http://nginx.org/');
+    let response2 = new Response("xxx", {headers: {"Content-Type": "text/plain"}, status: 404});
+
+    let req = new Request("http://nginx.org", {method: "POST", headers: new Headers(["Foo", "bar"])});
+    let response3 = await ngx.fetch(req);
 
     // js_body_filter
     r.sendBuffer(Buffer.from("xxx"), {last:true});
@@ -147,6 +162,25 @@ function qs_module(str: NjsByteString) {
     s = qs.stringify(o);
 }
 
+function xml_module(str: NjsByteString) {
+    let doc;
+    let node;
+    let children, selectedChildren;
+
+    doc = xml.parse(str);
+    node = doc.$root;
+
+    node.$ns;
+    children = node.$tags;
+    selectedChildren = node.$tags$xxx;
+
+    node?.xxx?.yyy?.$attr$zzz;
+
+    let buf:Buffer = xml.exclusiveC14n(node);
+    buf = xml.exclusiveC14n(doc, node.xxx, false);
+    buf = xml.exclusiveC14n(node, null, true, "aa bb");
+}
+
 function crypto_module(str: NjsByteString) {
     var h;
     var b:Buffer;
@@ -166,6 +200,10 @@ async function crypto_object(keyData: ArrayBuffer, data: ArrayBuffer) {
                                              {name: 'RSA-OAEP', hash: "SHA-256"},
                                              false, ['decrypt']);
 
+    let jkey = await crypto.subtle.importKey("jwk", { kty: "RSA" },
+                                             {name: 'RSA-OAEP', hash: "SHA-256"},
+                                             true, ['decrypt']);
+
     let skey = await crypto.subtle.importKey("raw", keyData, 'AES-CBC',
                                              false, ['encrypt']);
 
@@ -176,6 +214,22 @@ async function crypto_object(keyData: ArrayBuffer, data: ArrayBuffer) {
 
     let r:boolean;
     r = await crypto.subtle.verify({name: 'RSA-PSS', saltLength:32}, skey, sig, data);
+
+    let jwk = await crypto.subtle.exportKey('jwk', ekey);
+
+    let pair = await crypto.subtle.generateKey({name: "RSASSA-PKCS1-v1_5",
+                                                hash: "SHA-512",
+                                                modulusLength: 2048,
+                                                publicExponent: new Uint8Array([1, 0, 1])},
+                                                true, ['sign', 'verify']);
+
+    let hkey = await crypto.subtle.generateKey({name: "HMAC",
+                                                hash: "SHA-384"},
+                                                true, ['sign', 'verify']);
+
+    let akey = await crypto.subtle.generateKey({name: "AES-GCM",
+                                                length: 256},
+                                                true, ['encrypt', 'decrypt']);
 }
 
 function buffer(b: Buffer) {

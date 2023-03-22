@@ -7276,6 +7276,34 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("var a = [1,2]; a.sort(() => {a.length = 65535}); a.length"),
       njs_str("65535") },
 
+    { njs_str("var a = [];"
+              "var shift = true;"
+              "for (let i = 0; i < 64; i++) {"
+              "    a[i] = { toString() {"
+              "                 if (shift) { a.shift() };"
+              "                 return (63 - i).toString().padStart(2, '0');"
+              "             }"
+              "           };"
+              "}"
+              "a.sort();"
+              "shift = false;"
+              "[a.length, a[0].toString(), a[63].toString()]"),
+      njs_str("64,00,63") },
+
+    { njs_str("var a = [];"
+              "var shift = true;"
+              "for (let i = 0; i < 64; i++) {"
+              "    a[i] = { toString() {"
+              "                 if (shift) { a.shift() };"
+              "                 return (i).toString().padStart(2, '0');"
+              "             }"
+              "           };"
+              "}"
+              "a.sort();"
+              "shift = false;"
+              "[a.length, a[0].toString(), a[63].toString()]"),
+      njs_str("64,00,63") },
+
     /*
       Array.prototype.keys()
       Array.prototype.values()
@@ -8750,196 +8778,406 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("'abc'.replace()"),
       njs_str("abc") },
 
+    { njs_str("'abc'.replaceAll()"),
+      njs_str("abc") },
+
     { njs_str("'ABC'.replace('B')"),
       njs_str("AundefinedC") },
+
+    { njs_str("'ABCB'.replaceAll('B')"),
+      njs_str("AundefinedCundefined") },
 
     { njs_str("'ABC'.replace('B', undefined)"),
       njs_str("AundefinedC") },
 
+    { njs_str("'ABBC'.replaceAll('B', undefined)"),
+      njs_str("AundefinedundefinedC") },
+
     { njs_str("'a'.repeat(16).replace('a'.repeat(17)) === 'a'.repeat(16)"),
+      njs_str("true") },
+
+    { njs_str("'a'.repeat(16).replaceAll('a'.repeat(17)) === 'a'.repeat(16)"),
       njs_str("true") },
 
     { njs_str("'α'.repeat(16).replace('α'.repeat(17)) === 'α'.repeat(16)"),
       njs_str("true") },
 
+    { njs_str("'α'.repeat(16).replaceAll('α'.repeat(17)) === 'α'.repeat(16)"),
+      njs_str("true") },
+
     { njs_str("'ABC'.replace('B', null)"),
       njs_str("AnullC") },
+
+    { njs_str("'BABCB'.replaceAll('B', null)"),
+      njs_str("nullAnullCnull") },
 
     { njs_str("'abc'.replace('c', 1)"),
       njs_str("ab1") },
 
+    { njs_str("'cacbc'.replaceAll('c', 1)"),
+      njs_str("1a1b1") },
+
     { njs_str("'abc'.replace('a', 'X')"),
       njs_str("Xbc") },
 
+    { njs_str("'cabac'.replaceAll('a', 'X')"),
+      njs_str("cXbXc") },
+
     { njs_str("'abc'.replace('b', 'X')"),
+      njs_str("aXc") },
+
+    { njs_str("'abc'.replaceAll('b', 'X')"),
       njs_str("aXc") },
 
     { njs_str("('a'.repeat(33) + 'bb').replace('bb', 'CC').slice(31)"),
       njs_str("aaCC") },
 
+    { njs_str("('a'.repeat(33) + 'bb').replaceAll('b', 'C').slice(31)"),
+      njs_str("aaCC") },
+
     { njs_str("var r = 'abc'.replace('c', 'X'); [r, r.length]"),
       njs_str("abX,3") },
+
+    { njs_str("var r = 'acbc'.replaceAll('c', 'X'); [r, r.length]"),
+      njs_str("aXbX,4") },
 
     { njs_str("var r = 'αβγ'.replace('α', 'X'); [r, r.length]"),
       njs_str("Xβγ,3") },
 
+    { njs_str("var r = 'αβαγα'.replaceAll('α', 'X'); [r, r.length]"),
+      njs_str("XβXγX,5") },
+
     { njs_str("var r = 'αβγ'.replace('β', 'X'); [r, r.length]"),
+      njs_str("αXγ,3") },
+
+    { njs_str("var r = 'αβγ'.replaceAll('β', 'X'); [r, r.length]"),
       njs_str("αXγ,3") },
 
     { njs_str("var r = 'αβγ'.replace('γ', 'X'); [r, r.length]"),
       njs_str("αβX,3") },
 
+    { njs_str("var r = 'αβγγ'.replaceAll('γ', 'X'); [r, r.length]"),
+      njs_str("αβXX,4") },
+
     { njs_str("var r = 'αβγ'.replace('', 'X'); [r, r.length]"),
       njs_str("Xαβγ,4") },
+
+    { njs_str("var r = 'αβγ'.replaceAll('', 'X'); [r, r.length]"),
+      njs_str("XαXβXγX,7") },
 
     { njs_str("var s = 'αz'.toUTF8();"
               "var r = s.replace('z', 'β');"
               "r.length"),
       njs_str("4") },
 
+    { njs_str("var s = 'αzz'.toUTF8();"
+              "var r = s.replaceAll('z', 'β');"
+              "r.length"),
+      njs_str("3") },
+
     { njs_str("'abc'.replace('b', (m, o, s) => `|${s}|${o}|${m}|`)"),
       njs_str("a|abc|1|b|c") },
+
+    { njs_str("'abcb'.replaceAll('b', (m, o, s) => `|${s}|${o}|${m}|`)"),
+      njs_str("a|abcb|1|b|c|abcb|3|b|") },
 
     { njs_str("'abcdbe'.replace('b', '|$`X$\\'|')"),
       njs_str("a|aXcdbe|cdbe") },
 
+    { njs_str("'abcdbe'.replaceAll('b', '|$`X$\\'|')"),
+      njs_str("a|aXcdbe|cd|abcdXe|e") },
+
+    { njs_str("var r = 'αβγ'.replace('β', \"$'\"); [r, r.length]"),
+      njs_str("αγγ,3") },
+
+    { njs_str("var r = 'αβγαβγ'.replaceAll('β', \"$'\"); [r, r.length]"),
+      njs_str("αγαβγγαγγ,9") },
+
+    { njs_str("var r = 'αβγ'.replace('β', \"$`\"); [r, r.length]"),
+      njs_str("ααγ,3") },
+
+    { njs_str("var r = 'αβγαβγ'.replaceAll('β', \"$`\"); [r, r.length]"),
+      njs_str("ααγααβγαγ,9") },
+
     { njs_str("'ABC'.replace('B', '$<g>')"),
       njs_str("A$<g>C") },
+
+    { njs_str("'ABCB'.replaceAll('B', '$<g>')"),
+      njs_str("A$<g>C$<g>") },
 
     { njs_str("'ABC'.replace('B', '$23')"),
       njs_str("A$23C") },
 
+    { njs_str("'ABBC'.replaceAll('B', '$23')"),
+      njs_str("A$23$23C") },
+
     { njs_str("'undefined'.replace(void 0, 'x')"),
       njs_str("x") },
+
+    { njs_str("'undefinedundefined'.replaceAll(void 0, 'x')"),
+      njs_str("xx") },
 
     { njs_str("'12345'.replace(3, () => 0)"),
       njs_str("12045") },
 
+    { njs_str("'123435'.replaceAll(3, () => 0)"),
+      njs_str("120405") },
+
     { njs_str("var r = new String('undefined').replace(x, Function('return arguments[1]+42;')); var x; r"),
       njs_str("42") },
 
+    { njs_str("var r = new String('undefined undefined').replaceAll(x, Function('return arguments[1]+42;')); var x; r"),
+      njs_str("42 52") },
+
     { njs_str("'123'.replace(3, function() { return {toString: ()=>({})}; })"),
+      njs_str("TypeError: Cannot convert object to primitive value") },
+
+    { njs_str("'123'.replaceAll(3, function() { return {toString: ()=>({})}; })"),
       njs_str("TypeError: Cannot convert object to primitive value") },
 
     { njs_str("'12345'.replace(3, () => ({toString: () => 'aaaa'}))"),
       njs_str("12aaaa45") },
 
+    { njs_str("'123435'.replaceAll(3, () => ({toString: () => 'aaaa'}))"),
+      njs_str("12aaaa4aaaa5") },
+
     { njs_str("'ABC'.replace('B', () => {throw 'OOps'})"),
+      njs_str("OOps") },
+
+    { njs_str("'ABCB'.replaceAll('B', () => {throw 'OOps'})"),
       njs_str("OOps") },
 
     { njs_str("'abc'.replace(/a/, 'X')"),
       njs_str("Xbc") },
 
+    { njs_str("'abc'.replaceAll(/a/, 'X')"),
+      njs_str("TypeError: String.prototype.replaceAll called with a non-global RegExp argument") },
+
+    { njs_str("'abac'.replaceAll(/a/g, 'X')"),
+      njs_str("XbXc") },
+
     { njs_str("'abccd'.replace(/c/, 'X')"),
       njs_str("abXcd") },
 
+    { njs_str("'abccd'.replaceAll(/c/g, 'X')"),
+      njs_str("abXXd") },
+
     { njs_str("'abc'.replace(/c/, 'X')"),
+      njs_str("abX") },
+
+    { njs_str("'abc'.replaceAll(/c/g, 'X')"),
       njs_str("abX") },
 
     { njs_str("'abccd'.replace(/c+/, 'X')"),
       njs_str("abXd") },
 
+    { njs_str("'acccbccd'.replaceAll(/c+/g, 'X')"),
+      njs_str("aXbXd") },
+
     { njs_str("'abc'.replace(/f/, 'X')"),
+      njs_str("abc") },
+
+    { njs_str("'abc'.replaceAll(/f/g, 'X')"),
       njs_str("abc") },
 
     { njs_str("'AB=C==='.replace(/=*$/, '')"),
       njs_str("AB=C") },
 
+    { njs_str("'AB=C==='.replaceAll(/=*$/g, '')"),
+      njs_str("AB=C") },
+
     { njs_str("('a'.repeat(33) + 'bb').replace(/bb/, 'CC').slice(31)"),
+      njs_str("aaCC") },
+
+    { njs_str("('a'.repeat(33) + 'bb').replaceAll(/b/g, 'C').slice(31)"),
       njs_str("aaCC") },
 
     { njs_str("'abccd'.replace(/c/g, 'X')"),
       njs_str("abXXd") },
 
+    { njs_str("'abccd'.replaceAll(/c/g, 'X')"),
+      njs_str("abXXd") },
+
     { njs_str("('a'.repeat(33) + 'bb').replace(/bb/g, 'CC').slice(31)"),
+      njs_str("aaCC") },
+
+    { njs_str("('a'.repeat(33) + 'bb').replaceAll(/bb/g, 'CC').slice(31)"),
       njs_str("aaCC") },
 
     { njs_str("'abccd'.replace(/[ac]/g, 'X')"),
       njs_str("XbXXd") },
 
+    { njs_str("'abccd'.replaceAll(/[ac]/g, 'X')"),
+      njs_str("XbXXd") },
+
     { njs_str("'ab'.replace(/q*/g, 'X')"),
+      njs_str("XaXbX") },
+
+    { njs_str("'ab'.replaceAll(/q*/g, 'X')"),
       njs_str("XaXbX") },
 
     { njs_str("'αβ'.replace(/q*/g, 'X')"),
       njs_str("XαXβX") },
 
+    { njs_str("'αβ'.replaceAll(/q*/g, 'X')"),
+      njs_str("XαXβX") },
+
     { njs_str("'αβ'.replace(/(q)*/g, 'X')"),
+      njs_str("XαXβX") },
+
+    { njs_str("'αβ'.replaceAll(/(q)*/g, 'X')"),
       njs_str("XαXβX") },
 
     { njs_str("'αβ'.replace(/q*/g, 'γ')"),
       njs_str("γαγβγ") },
 
+    { njs_str("'αβ'.replaceAll(/q*/g, 'γ')"),
+      njs_str("γαγβγ") },
+
     { njs_str("':α:β:γ:'.replace(/:/g, '')"),
+      njs_str("αβγ") },
+
+    { njs_str("':α:β:γ:'.replaceAll(/:/g, '')"),
       njs_str("αβγ") },
 
     { njs_str("':α:β:γ:'.replace(/[αβγ]/g, '')"),
       njs_str("::::") },
 
+    { njs_str("':α:β:γ:'.replaceAll(/[αβγ]/g, '')"),
+      njs_str("::::") },
+
     { njs_str("'aabbccaa'.replace(/a*/g, '')"),
+      njs_str("bbcc") },
+
+    { njs_str("'aabbccaa'.replaceAll(/a*/g, '')"),
       njs_str("bbcc") },
 
     { njs_str("'aabbccaab'.replace(/z*/g, '')"),
       njs_str("aabbccaab") },
 
+    { njs_str("'aabbccaab'.replaceAll(/z*/g, '')"),
+      njs_str("aabbccaab") },
+
     { njs_str("''.replace(/a*/g, '')"),
+      njs_str("") },
+
+    { njs_str("''.replaceAll(/a*/g, '')"),
       njs_str("") },
 
     { njs_str("'abcde'.replace(/d/, (m, o, s) => `|${s}|${o}|${m}|`)"),
       njs_str("abc|abcde|3|d|e") },
 
+    { njs_str("'abcdde'.replaceAll(/d/g, (m, o, s) => `|${s}|${o}|${m}|`)"),
+      njs_str("abc|abcdde|3|d||abcdde|4|d|e") },
+
     { njs_str("'abcde'.replace(/(d)/, (m, p, o, s) => `|${s}|${o}|${m}|${p}|`)"),
       njs_str("abc|abcde|3|d|d|e") },
+
+    { njs_str("'abcded'.replaceAll(/(d)/g, (m, p, o, s) => `|${s}|${o}|${m}|${p}|`)"),
+      njs_str("abc|abcded|3|d|d|e|abcded|5|d|d|") },
 
     { njs_str("'abc'.replace(/b/, () => 1)"),
       njs_str("a1c") },
 
+    { njs_str("'abcb'.replaceAll(/b/g, () => 1)"),
+      njs_str("a1c1") },
+
     { njs_str("var n = 0; 'abbbc'.replace(/b/g, () => ++n)"),
       njs_str("a123c") },
 
+    { njs_str("var n = 0; 'abbbc'.replaceAll(/b/g, () => ++n)"),
+      njs_str("a123c") },
+
     { njs_str("'abc'.replace(/x/, (m, o, s) => `|${s}|${o}|${m}|`)"),
+      njs_str("abc") },
+
+    { njs_str("'abc'.replaceAll(/x/g, (m, o, s) => `|${s}|${o}|${m}|`)"),
       njs_str("abc") },
 
     { njs_str("'abc12345#$*%'.replace(/([^\\d]*)(\\d*)([^\\w]*)/,"
               "                       (_, p1, p2, p3) => [p1, p2, p3].join('-'))"),
       njs_str("abc-12345-#$*%") },
 
+    { njs_str("'abc12345#$*%'.replaceAll(/([^\\d]*)(\\d*)([^\\w]*)/g,"
+              "                       (_, p1, p2, p3) => [p1, p2, p3].join('-'))"),
+      njs_str("abc-12345-#$*%--") },
+
     { njs_str("'abc'.replace(/(?<named>b)/, (m, p, o, s, gr) => `|${gr.named}|`)"),
       njs_str("a|b|c") },
 
+    { njs_str("'abcb'.replaceAll(/(?<named>b)/g, (m, p, o, s, gr) => `|${gr.named}|`)"),
+      njs_str("a|b|c|b|") },
+
     { njs_str("'ABC'.replace(/[A-Z]/g, m => '-' + m.toLowerCase())"),
+      njs_str("-a-b-c") },
+
+    { njs_str("'ABC'.replaceAll(/[A-Z]/g, m => '-' + m.toLowerCase())"),
       njs_str("-a-b-c") },
 
     { njs_str("'abc'.replace(/(b)c/g, '|$01|')"),
       njs_str("a|b|") },
 
+    { njs_str("'abc'.replaceAll(/(b)c/g, '|$01|')"),
+      njs_str("a|b|") },
+
     { njs_str("'abc'.replace(/(b)c/g, '@$0|$01|$00@')"),
+      njs_str("a@$0|b|$00@") },
+
+    { njs_str("'abc'.replaceAll(/(b)c/g, '@$0|$01|$00@')"),
       njs_str("a@$0|b|$00@") },
 
     { njs_str("'abcdeFGHIJ'.replace(/(a)(b)(c)(d)(e)(F)(G)(H)(I)(J)/, '$9|$10|$11|$01')"),
       njs_str("I|J|a1|a") },
 
+    { njs_str("'abcdeFGHIJ abcdeFGHIJ'.replaceAll(/(a)(b)(c)(d)(e)(F)(G)(H)(I)(J)/g, '$9|$10|$11|$01')"),
+      njs_str("I|J|a1|a I|J|a1|a") },
+
     { njs_str("'abcdbe'.replace(/(b)/g, '$2$23')"),
+      njs_str("a$2$23cd$2$23e") },
+
+    { njs_str("'abcdbe'.replaceAll(/(b)/g, '$2$23')"),
       njs_str("a$2$23cd$2$23e") },
 
     { njs_str("'abcdbe'.replace(/(b)/g, '$2$23X$$Y')"),
       njs_str("a$2$23X$Ycd$2$23X$Ye") },
 
+    { njs_str("'abcdbe'.replaceAll(/(b)/g, '$2$23X$$Y')"),
+      njs_str("a$2$23X$Ycd$2$23X$Ye") },
+
     { njs_str("'abcdbe'.replace(/b/, '|$`X$\\'|')"),
       njs_str("a|aXcdbe|cdbe") },
 
+    { njs_str("'abcdbe'.replaceAll(/b/g, '|$`X$\\'|')"),
+      njs_str("a|aXcdbe|cd|abcdXe|e") },
+
     { njs_str("'abcdbefbgh'.replace(/b/g, '|$`X$\\'|')"),
+      njs_str("a|aXcdbefbgh|cd|abcdXefbgh|ef|abcdbefXgh|gh") },
+
+    { njs_str("'abcdbefbgh'.replaceAll(/b/g, '|$`X$\\'|')"),
       njs_str("a|aXcdbefbgh|cd|abcdXefbgh|ef|abcdbefXgh|gh") },
 
     { njs_str("'abc12345#$*%'.replace(/([^\\d]*)(\\d*)([^\\w]*)/, '$1-$2-$3')"),
       njs_str("abc-12345-#$*%") },
 
+    { njs_str("'abc12345#$*%'.replaceAll(/([^\\d]*)(\\d*)([^\\w]*)/g, '$1-$2-$3')"),
+      njs_str("abc-12345-#$*%--") },
+
     { njs_str("'$1,$2'.replace(/(\\$(\\d))/g, '$$1-$1$2')"),
+      njs_str("$1-$11,$1-$22") },
+
+    { njs_str("'$1,$2'.replaceAll(/(\\$(\\d))/g, '$$1-$1$2')"),
       njs_str("$1-$11,$1-$22") },
 
     { njs_str("'ABC'.replace(/(h*)(z*)(g*)/g, '$1@$2α$3')"),
       njs_str("@αA@αB@αC@α") },
 
+    { njs_str("'ABC'.replaceAll(/(h*)(z*)(g*)/g, '$1@$2α$3')"),
+      njs_str("@αA@αB@αC@α") },
+
     { njs_str("'abc'.replace(/(h*)(z*)/g, '$1@$2#$3:')"),
+      njs_str("@#$3:a@#$3:b@#$3:c@#$3:") },
+
+    { njs_str("'abc'.replaceAll(/(h*)(z*)/g, '$1@$2#$3:')"),
       njs_str("@#$3:a@#$3:b@#$3:c@#$3:") },
 
     { njs_str("/b(c)(z)?(.)/[Symbol.replace]('abcde', '[$1$2$3]')"),
@@ -8963,61 +9201,115 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("'α'.replace(/(h*)/g, '$1βγ')"),
       njs_str("βγαβγ") },
 
+    { njs_str("'α'.replaceAll(/(h*)/g, '$1βγ')"),
+      njs_str("βγαβγ") },
+
     { njs_str("'αg'.replace(/(h*)/g, '$1βγ')"),
+      njs_str("βγαβγgβγ") },
+
+    { njs_str("'αg'.replaceAll(/(h*)/g, '$1βγ')"),
       njs_str("βγαβγgβγ") },
 
     { njs_str("'αg'.replace(/(α*)/g, '$1βγ')"),
       njs_str("αβγβγgβγ") },
 
+    { njs_str("'αg'.replaceAll(/(α*)/g, '$1βγ')"),
+      njs_str("αβγβγgβγ") },
+
     { njs_str("'αg'.replace(/(h*)/g, 'fg$1βγ')"),
+      njs_str("fgβγαfgβγgfgβγ") },
+
+    { njs_str("'αg'.replaceAll(/(h*)/g, 'fg$1βγ')"),
       njs_str("fgβγαfgβγgfgβγ") },
 
     { njs_str("'αgβfγ'.replace(/(gβ)/g, 'n$1i')"),
       njs_str("αngβifγ") },
 
+    { njs_str("'αgβfγ'.replaceAll(/(gβ)/g, 'n$1i')"),
+      njs_str("αngβifγ") },
+
     { njs_str("'abc'.replace(/b/g, '|$&|')"),
+      njs_str("a|b|c") },
+
+    { njs_str("'abc'.replaceAll(/b/g, '|$&|')"),
       njs_str("a|b|c") },
 
     { njs_str("'ABC'.replace(/((A)B)/g, '($1|$&|$2)')"),
       njs_str("(AB|AB|A)C") },
 
+    { njs_str("'ABC'.replaceAll(/((A)B)/g, '($1|$&|$2)')"),
+      njs_str("(AB|AB|A)C") },
+
     { njs_str("'abc'.replace(/b/g, '$0')"),
       njs_str("a$0c") },
 
-    { njs_str("typeof String.bytesFrom(Array(15).fill(0xE3)).replace(/^/g, 1)"),
-      njs_str("string") },
+    { njs_str("'abc'.replaceAll(/b/g, '$0')"),
+      njs_str("a$0c") },
 
     { njs_str("'abc'.replace(/^/g, '|$&|')"),
+      njs_str("||abc") },
+
+    { njs_str("'abc'.replaceAll(/^/g, '|$&|')"),
       njs_str("||abc") },
 
     { njs_str("var uri ='/u/v1/Aa/bB?type=m3u8&mt=42';"
               "uri.replace(/^\\/u\\/v1\\/[^/]*\\/([^\?]*)\\?.*(mt=[^&]*).*$/, '$1|$2')"),
       njs_str("bB|mt=42") },
 
+    { njs_str("var uri ='/u/v1/Aa/bB?type=m3u8&mt=42 /u/v1/Aa/bB?type=m3u8&mt=43';"
+              "uri.replaceAll(/^\\/u\\/v1\\/[^/]*\\/([^\?]*)\\?.*(mt=[^&]*).*$/g, '$1|$2')"),
+      njs_str("bB|mt=43") },
+
     { njs_str("'ABC'.replace(/B/, '$<g>')"),
       njs_str("A$<g>C") },
+
+    { njs_str("'ABBC'.replaceAll(/B/g, '$<g>')"),
+      njs_str("A$<g>$<g>C") },
 
     { njs_str("'ABC'.replace(/(?<b>B)/, '|$<b>|@$<a>@')"),
       njs_str("A|B|@@C") },
 
+    { njs_str("'ABBC'.replaceAll(/(?<b>B)/g, '|$<b>|@$<a>@')"),
+      njs_str("A|B|@@|B|@@C") },
+
     { njs_str("'ABC'.replace(/(?<b>B)/, '|$<BB|')"),
       njs_str("A|$<BB|C") },
+
+    { njs_str("'ABCB'.replaceAll(/(?<b>B)/g, '|$<BB|')"),
+      njs_str("A|$<BB|C|$<BB|") },
 
     { njs_str("'ABC'.replace(/(?<b>B)/, '|$<BB$$|>@')"),
       njs_str("A|@C") },
 
+    { njs_str("'ABCB'.replaceAll(/(?<b>B)/g, '|$<BB$$|>@')"),
+      njs_str("A|@C|@") },
+
     { njs_str("('β' + 'α'.repeat(33)+'β').replace(/(α+)(β+)/, (m, p1) => p1[32])"),
+      njs_str("βα") },
+
+    { njs_str("('β' + 'α'.repeat(33)+'β').replaceAll(/(α+)(β+)/g, (m, p1) => p1[32])"),
       njs_str("βα") },
 
     { njs_str("'abc'.replace(/(z*)/g, () => '@')"),
       njs_str("@a@b@c@") },
 
+    { njs_str("'abc'.replaceAll(/(z*)/g, () => '@')"),
+      njs_str("@a@b@c@") },
+
     { njs_str("'abc'.replace(/(a*)/g, () => '@')"),
+      njs_str("@@b@c@") },
+
+    { njs_str("'abc'.replaceAll(/(a*)/g, () => '@')"),
       njs_str("@@b@c@") },
 
     { njs_str("var O = RegExp.prototype[Symbol.replace];"
               "RegExp.prototype[Symbol.replace] = function (s, rep) { return O.call(this, s, `|${rep}|`); };"
               "'ABC'.replace(/B/, '+')"),
+      njs_str("A|+|C") },
+
+    { njs_str("var O = RegExp.prototype[Symbol.replace];"
+              "RegExp.prototype[Symbol.replace] = function (s, rep) { return O.call(this, s, `|${rep}|`); };"
+              "'ABC'.replaceAll(/B/g, '+')"),
       njs_str("A|+|C") },
 
     { njs_str("var O = RegExp.prototype.exec;"
@@ -9030,6 +9322,14 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("var O = RegExp.prototype.exec;"
               "function mangled(s) { var r = O.call(this, s);"
+              "                      Object.defineProperty(r, '0', {enumerable:false}); "
+              "                      return r; };"
+              "RegExp.prototype.exec = mangled;"
+              "'ABC'.replaceAll(/(B)/g, (m, p1, off, s) => `@${m}|${p1}|${off}|${s}@`)"),
+      njs_str("TypeError: Object.defineProperty is called on non-object") },
+
+    { njs_str("var O = RegExp.prototype.exec;"
+              "function mangled(s) { var r = O.call(this, s);"
               "                      Object.defineProperty(r, 'groups', {value: {g:1}}); "
               "                      return r; };"
               "RegExp.prototype.exec = mangled;"
@@ -9038,11 +9338,27 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("var O = RegExp.prototype.exec;"
               "function mangled(s) { var r = O.call(this, s);"
+              "                      Object.defineProperty(r, 'groups', {value: {g:1}}); "
+              "                      return r; };"
+              "RegExp.prototype.exec = mangled;"
+              "'ABC'.replaceAll(/(B)/g, '$<g>')"),
+      njs_str("TypeError: Object.defineProperty is called on non-object") },
+
+    { njs_str("var O = RegExp.prototype.exec;"
+              "function mangled(s) { var r = O.call(this, s);"
               "                      Object.defineProperty(r, 'groups', {value: {get g() {throw 'OOps'}}}); "
               "                      return r; };"
               "RegExp.prototype.exec = mangled;"
               "'ABC'.replace(/(B)/, '$<g>')"),
       njs_str("OOps") },
+
+    { njs_str("var O = RegExp.prototype.exec;"
+              "function mangled(s) { var r = O.call(this, s);"
+              "                      Object.defineProperty(r, 'groups', {value: {get g() {throw 'OOps'}}}); "
+              "                      return r; };"
+              "RegExp.prototype.exec = mangled;"
+              "'ABC'.replaceAll(/(B)/g, '$<g>')"),
+      njs_str("TypeError: Object.defineProperty is called on non-object") },
 
     { njs_str("var name = /a/g[Symbol.replace].name; [name, typeof name]"),
       njs_str("[Symbol.replace],string") },
@@ -9060,20 +9376,36 @@ static njs_unit_test_t  njs_test[] =
               "r[Symbol.replace]('foo', function() {m = arguments[0]}); [m, typeof m]"),
       njs_str("undefined,string") },
 
-    { njs_str("String.bytesFrom([253,242,141,10]).replace(/\\s/g, 'X')[3]"),
-      njs_str("X") },
-
-    { njs_str("String.bytesFrom([255,149,15,97,95]).replace(/_/g, 'X')[4]"),
-      njs_str("X") },
-
     { njs_str("var a = [];"
               "a[2] = '';"
               "var re = /any_regexp/;"
               "re.exec = function () {"
               "    return a;"
               "};"
-              "var r = 'any_string'.replace(re);"),
-      njs_str("undefined") },
+              "'any_string'.replace(re)"),
+      njs_str("undefinedg") },
+
+    { njs_str("var cnt = 0;"
+              "var a = [];"
+              "a[2] = '';"
+              "var re = /any_regexp/g;"
+              "re.exec = function () {"
+              "    if (cnt++ > 1) return null;"
+              "    return a;"
+              "};"
+              "'any_string'.replace(re)"),
+      njs_str("undefinedg") },
+
+    { njs_str("var cnt = 0;"
+              "var a = [];"
+              "a[2] = '';"
+              "var re = /any_regexp/g;"
+              "re.exec = function () {"
+              "    if (cnt++ > 1) return null;"
+              "    return a;"
+              "};"
+              "'any_string'.replaceAll(re)"),
+      njs_str("undefinedg") },
 
     { njs_str("var a = [];"
               "a[2] = {toString() {a[2**20] = 1; return 'X';}}; "
@@ -9086,14 +9418,65 @@ static njs_unit_test_t  njs_test[] =
               "'abc'.replace(re, '@$1|$2|$3|$4|$99|$100|@')"),
       njs_str("@|X||Y|Z|0|@") },
 
+    { njs_str("var cnt = 0;"
+              "var a = [];"
+              "a[2] = {toString() {a[2**20] = 1; return 'X';}}; "
+              "a[4] = 'Y';"
+              "a[99] = 'Z';"
+              "a[100] = '*';"
+              "a[200] = '!';"
+              "var re = /b/g;"
+              "re.exec = () => {if (cnt++ > 1) return null; return a};"
+              "'abc'.replace(re, '@$1|$2|$3|$4|$99|$100|@')"),
+      njs_str("@|X||Y|Z|0|@") },
+
+    { njs_str("var cnt = 0;"
+              "var a = [];"
+              "a[2] = {toString() {a[2**20] = 1; return 'X';}}; "
+              "a[4] = 'Y';"
+              "a[99] = 'Z';"
+              "a[100] = '*';"
+              "a[200] = '!';"
+              "var re = /b/g;"
+              "re.exec = () => {if (cnt++ > 1) return null; return a};"
+              "'abc'.replaceAll(re, '@$1|$2|$3|$4|$99|$100|@')"),
+      njs_str("@|X||Y|Z|0|@") },
+
     { njs_str("var a = [];"
               "Object.defineProperty(a, 32768, {});"
               "var re = /any_regexp/;"
               "re.exec = function () {"
               "    return a;"
               "};"
-              "var r = 'any_string'.replace(re);"),
-      njs_str("undefined") },
+              "'any_string'.replace(re)"),
+      njs_str("undefinedg") },
+
+    { njs_str("var cnt = 0;"
+              "var a = [];"
+              "Object.defineProperty(a, 32768, {});"
+              "var re = /any_regexp/g;"
+              "re.exec = function () {"
+              "    if (cnt++ > 1) return null;"
+              "    return a;"
+              "};"
+              "'any_string'.replace(re)"),
+      njs_str("undefinedg") },
+
+    { njs_str("var cnt = 0;"
+              "var a = [];"
+              "Object.defineProperty(a, 32768, {});"
+              "var re = /any_regexp/g;"
+              "re.exec = function () {"
+              "    if (cnt++ > 1) return null;"
+              "    return a;"
+              "};"
+              "'any_string'.replace(re)"),
+      njs_str("undefinedg") },
+
+    { njs_str("var r = /h/g;"
+              "Object.defineProperty(r,'flags',{value: ''});"
+              "''.replaceAll(r,'');"),
+      njs_str("TypeError: String.prototype.replaceAll called with a non-global RegExp argument") },
 
     { njs_str("/=/"),
       njs_str("/=/") },
@@ -9270,9 +9653,6 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("var a = '\\u00CE\\u00B1'.toBytes().match(/α/g)[0] + 'α';"
                  "a +' '+ a.length"),
       njs_str("αα 4") },
-
-    { njs_str("typeof String.bytesFrom(Array(15).fill(0xE3)).match(/^/g)"),
-      njs_str("object") },
 
     { njs_str("'abc'.split()"),
       njs_str("abc") },
@@ -12969,6 +13349,9 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("Number('123')"),
       njs_str("123") },
+
+    { njs_str("['1', ' 1 ', '1\\t', '1\\n', '1\\r\\n'].reduce((a, x) => a + Number(x), 0)"),
+      njs_str("5") },
 
     { njs_str("Number('0.'+'1'.repeat(128))"),
       njs_str("0.1111111111111111") },
@@ -18082,9 +18465,6 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("JSON.stringify('\\u00CE\\u00B1\\u00C2\\u00B6'.toBytes())"),
       njs_str("\"α¶\"") },
 
-    { njs_str("JSON.stringify('µ§±®'.toBytes())"),
-      njs_str("\"\xB5\xA7\xB1\xAE\"") },
-
     /* Optional arguments. */
 
     { njs_str("JSON.stringify(undefined, undefined, 1)"),
@@ -19486,6 +19866,9 @@ static njs_unit_test_t  njs_test[] =
               "(async function() {f('Number: ' + await 111)})"),
       njs_str("SyntaxError: await in arguments not supported in 1") },
 
+    { njs_str("async function f1() {try {f(await f1)} catch(e) {}}"),
+      njs_str("SyntaxError: await in arguments not supported in 1") },
+
     { njs_str("async function af() {await encrypt({},}"),
       njs_str("SyntaxError: Unexpected token \"}\" in 1") },
 
@@ -19976,6 +20359,26 @@ static njs_unit_test_t  njs_crypto_module_test[] =
       njs_str("38164fbd17603d73f696b8b4d72664d735bb6a7c88577687fd2ae33fd6964153,"
               "OBZPvRdgPXP2lri01yZk1zW7anyIV3aH/SrjP9aWQVM=,"
               "OBZPvRdgPXP2lri01yZk1zW7anyIV3aH_SrjP9aWQVM") },
+
+    { njs_str("const crypto = require('crypto');"
+              "let hash = crypto.createHash('sha256');"
+              "let digests = [];"
+              "hash.update('one');"
+              "digests.push(hash.copy().digest('hex'));"
+              "hash.update('two');"
+              "digests.push(hash.copy().digest('hex'));"
+              "hash.update('three');"
+              "digests.push(hash.copy().digest('hex'));"
+              "digests"),
+      njs_str("7692c3ad3540bb803c020b3aee66cd8887123234ea0c6e7143c0add73ff431ed,"
+              "25b6746d5172ed6352966a013d93ac846e1110d5a25e8f183b5931f4688842a1,"
+              "4592092e1061c7ea85af2aed194621cc17a2762bae33a79bf8ce33fd0168b801") },
+
+    { njs_str("const crypto = require('crypto');"
+              "let hash = crypto.createHash('sha256');"
+              "hash.update('one').digest();"
+              "hash.copy()"),
+      njs_str("Error: Digest already called") },
 
     { njs_str("var hash = require('crypto').createHash;"
               "njs.dump(['', 'abc'.repeat(100)].map(v => {"
@@ -21481,6 +21884,275 @@ static njs_unit_test_t  njs_webcrypto_test[] =
 };
 
 
+#define NJS_XML_DOC "const xml = require('xml');" \
+                    "let data = `<note><to b=\"bar\" a= \"foo\" >Tove</to><from>Jani</from></note>`;" \
+                    "let doc = xml.parse(data);"
+
+
+static njs_unit_test_t  njs_xml_test[] =
+{
+    { njs_str(NJS_XML_DOC
+              "[doc.note.$name,"
+              " doc.note.to.$text,"
+              " doc.note.$parent,"
+              " doc.note.to.$parent.$name,"
+              " doc.note.$tag$to.$text,"
+              " doc.note.to.$attr$b,"
+              " doc.note.$tags[1].$text,"
+              " doc.note.$tags$from[0].$text]"),
+      njs_str("note,Tove,,note,Tove,bar,Jani,Jani") },
+
+    { njs_str("const xml = require('xml');"
+              "let doc = xml.parse(`<root><foo>FOO</foo><foo>BAR</foo></root>`);"
+              "[doc.root.$tags$foo[0].$text,"
+              " doc.root.$tags$foo[1].$text,"
+              " doc.root.$tags$bar.length,"
+              " doc.root.$tags$.length]"),
+      njs_str("FOO,BAR,0,2") },
+
+    { njs_str("const xml = require('xml');"
+              "let doc = xml.parse(`<r><a></a>TEXT</r>`);"
+              "doc.r.$text"),
+      njs_str("TEXT") },
+
+    { njs_str("const xml = require('xml');"
+              "let doc = xml.parse(`<r>俄语<a></a>данные</r>`);"
+              "doc.r.$text[2]"),
+      njs_str("д") },
+
+    { njs_str("const xml = require('xml');"
+              "let doc = xml.parse(`<俄语 լեզու=\"ռուսերեն\">данные</俄语>`);"
+              "[doc['俄语'].$name[1],"
+              " doc['俄语']['$attr$լեզու'][7],"
+              " doc['俄语'].$text[5]]"),
+      njs_str("语,ն,е") },
+
+    { njs_str("const xml = require('xml');"
+              "var doc = xml.parse(`<n0:pdu xmlns:n0=\"http://a\"><n1:elem1 xmlns:n1=\"http://b\">"
+                                   "<!-- comment -->foo</n1:elem1></n0:pdu>`);"
+              "[xml.c14n(doc.pdu.elem1),"
+              " xml.exclusiveC14n(doc.pdu.elem1),"
+              " xml.exclusiveC14n(doc.pdu.elem1, null, 1),"
+              " xml.exclusiveC14n(doc.pdu.elem1, null, false, 'n0 n1')]"
+              ".map(v => (new TextDecoder().decode(v)))"),
+      njs_str("<n1:elem1 xmlns:n0=\"http://a\" xmlns:n1=\"http://b\">foo</n1:elem1>,"
+              "<n1:elem1 xmlns:n1=\"http://b\">foo</n1:elem1>,"
+              "<n1:elem1 xmlns:n1=\"http://b\"><!-- comment -->foo</n1:elem1>,"
+              "<n1:elem1 xmlns:n0=\"http://a\" xmlns:n1=\"http://b\">foo</n1:elem1>") },
+
+    { njs_str(NJS_XML_DOC
+              "let dec = new TextDecoder();"
+              "dec.decode(xml.exclusiveC14n(doc.note))"),
+      njs_str("<note><to a=\"foo\" b=\"bar\">Tove</to><from>Jani</from></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "let dec = new TextDecoder();"
+              "dec.decode(xml.serialize(doc.note))"),
+      njs_str("<note><to a=\"foo\" b=\"bar\">Tove</to><from>Jani</from></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "xml.serializeToString(doc.note)"),
+      njs_str("<note><to a=\"foo\" b=\"bar\">Tove</to><from>Jani</from></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "let dec = new TextDecoder();"
+              "dec.decode(xml.exclusiveC14n(doc.note, doc.note.to))"),
+      njs_str("<note><from>Jani</from></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "njs.dump(doc)"),
+      njs_str("XMLDoc {note:XMLNode {$name:'note',"
+              "$tags:[XMLNode {$name:'to',"
+              "$attrs:XMLAttr {b:'bar',a:'foo'},"
+              "$text:'Tove'},"
+              "XMLNode {$name:'from',$text:'Jani'}]}}") },
+
+    { njs_str(NJS_XML_DOC
+              "JSON.stringify(doc)"),
+      njs_str("{\"note\":{\"$name\":\"note\",\"$tags\":"
+              "[{\"$name\":\"to\",\"$attrs\":{\"b\":\"bar\",\"a\":\"foo\"},"
+              "\"$text\":\"Tove\"},{\"$name\":\"from\",\"$text\":\"Jani\"}]}}") },
+
+    { njs_str("var xml = require('xml');"
+              "var doc = xml.parse(`<r></r>`); xml.exclusiveC14n(doc, 1)"),
+      njs_str("Error: \"excluding\" argument is not a XMLNode object") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.$text"),
+      njs_str("ToveJani") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.$text = 'WAKA';"
+              "[doc.$root.$text, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str("WAKA,<note>WAKA</note>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.setText('WAKA');"
+              "[doc.$root.$text, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str("WAKA,<note>WAKA</note>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.$text = '<WA&KA>';"
+              "[doc.$root.$text, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str("<WA&KA>,<note>&lt;WA&amp;KA&gt;</note>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.setText('<WA&KA>');"
+              "[doc.$root.$text, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str("<WA&KA>,<note>&lt;WA&amp;KA&gt;</note>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.$text = '\"WAKA\"';"
+              "[doc.$root.$text, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str("\"WAKA\",<note>\"WAKA\"</note>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.$text = '';"
+              "[doc.$root.$text, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str(",<note></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.setText();"
+              "[doc.$root.$text, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str(",<note></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.setText(null);"
+              "[doc.$root.$text, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str(",<note></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.removeText();"
+              "[doc.$root.$text, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str(",<note></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "let to = doc.note.to;"
+              "doc.$root.$text = '';"
+              "[to.$name, to.$text, to.$attr$b, to.$parent.$name]"),
+      njs_str("to,Tove,bar,note") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.$text = 'WAKA';"
+              "doc.$root.$attr$aaa = 'foo';"
+              "doc.$root.$attr$bbb = 'bar';"
+              "[doc.$root.$attr$aaa, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str("foo,<note aaa=\"foo\" bbb=\"bar\">WAKA</note>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.$text = 'WAKA';"
+              "doc.$root.setAttribute('aaa', 'foo');"
+              "doc.$root.setAttribute('bbb', '<bar\"');"
+              "doc.$root.setAttribute('aaa', 'foo2');"
+              "[doc.$root.$attr$aaa, (new TextDecoder).decode(xml.c14n(doc))]"),
+      njs_str("foo2,<note aaa=\"foo2\" bbb=\"&lt;bar&quot;\">WAKA</note>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.note.to.setAttribute('a', null);"
+              "(new TextDecoder).decode(xml.c14n(doc.note.to))"),
+      njs_str("<to b=\"bar\">Tove</to>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.setAttribute('<', 'xxx')"),
+      njs_str("Error: attribute name \"<\" is not valid") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.$root.$text = 'WAKA';"
+              "doc.$root['$attr$' + 'x'.repeat(1024)] = 1;"),
+      njs_str("Error: njs_xml_str_to_c_string() very long string, length >= 511") },
+
+    { njs_str(NJS_XML_DOC
+              "delete doc.note.to.$attr$a;"
+              "(new TextDecoder).decode(xml.c14n(doc.note.to))"),
+      njs_str("<to b=\"bar\">Tove</to>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.note.to.removeAttribute('a');"
+              "(new TextDecoder).decode(xml.c14n(doc.note.to))"),
+      njs_str("<to b=\"bar\">Tove</to>") },
+
+    { njs_str(NJS_XML_DOC
+              "delete doc.note.to.removeAttribute('c');"
+              "(new TextDecoder).decode(xml.c14n(doc.note.to))"),
+      njs_str("<to a=\"foo\" b=\"bar\">Tove</to>") },
+
+    { njs_str(NJS_XML_DOC
+              "delete doc.note.to.removeAllAttributes();"
+              "(new TextDecoder).decode(xml.c14n(doc.note.to))"),
+      njs_str("<to>Tove</to>") },
+
+    { njs_str(NJS_XML_DOC
+              "delete doc.note.$tag$to;"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<note><from>Jani</from></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "delete doc.note.to;"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<note><from>Jani</from></note>") },
+
+    { njs_str("var xml = require('xml');"
+              "var doc = xml.parse(`<r><a/><b/><a/></r>`);"
+              "delete doc.$root.a;"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<r><b></b></r>") },
+
+    { njs_str("var xml = require('xml');"
+              "var doc = xml.parse(`<r><a/><b/><a/></r>`);"
+              "doc.$root.removeChildren('c');"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<r><a></a><b></b><a></a></r>") },
+
+    { njs_str("var xml = require('xml');"
+              "var doc = xml.parse(`<r><a/><b/><a/></r>`);"
+              "doc.$root.removeChildren('a');"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<r><b></b></r>") },
+
+    { njs_str("var xml = require('xml');"
+              "var doc = xml.parse(`<r><a/><b/><a/></r>`);"
+              "doc.$root.removeChildren();"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<r></r>") },
+
+    { njs_str(NJS_XML_DOC
+              "doc.note.$tags = [];"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<note></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "var doc2 = xml.parse(`<n0:pdu xmlns:n0=\"http://a\"></n0:pdu>`);"
+              "doc.note.addChild(doc2);"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<note xmlns:n0=\"http://a\"><to a=\"foo\" b=\"bar\">Tove</to><from>Jani</from><n0:pdu></n0:pdu></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "var doc2 = xml.parse(`<n0:pdu xmlns:n0=\"http://a\"></n0:pdu>`);"
+              "doc.note.addChild(doc2);"
+              "doc.note.addChild(doc2);"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<note xmlns:n0=\"http://a\"><to a=\"foo\" b=\"bar\">Tove</to><from>Jani</from>"
+              "<n0:pdu></n0:pdu><n0:pdu></n0:pdu></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "delete doc.note.$tags$;"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<note></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "var doc2 = xml.parse(`<n0:pdu xmlns:n0=\"http://a\"></n0:pdu>`);"
+              "doc.note.$tags = [doc.note.to, doc2];"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<note xmlns:n0=\"http://a\"><to a=\"foo\" b=\"bar\">Tove</to><n0:pdu></n0:pdu></note>") },
+
+    { njs_str(NJS_XML_DOC
+              "var doc2 = xml.parse(`<n0:pdu xmlns:n0=\"http://a\"></n0:pdu>`);"
+              "doc.note.$tags = [doc2, doc.note.to];"
+              "(new TextDecoder).decode(xml.c14n(doc))"),
+      njs_str("<note xmlns:n0=\"http://a\"><n0:pdu></n0:pdu><to a=\"foo\" b=\"bar\">Tove</to></note>") },
+};
+
+
 static njs_unit_test_t  njs_module_test[] =
 {
     { njs_str("function f(){return 2}; var f; f()"),
@@ -21711,6 +22383,15 @@ static njs_unit_test_t  njs_externals_test[] =
 
     { njs_str("njs.dump($r).startsWith('External')"),
       njs_str("true") },
+
+    { njs_str("Object.keys($r.header)"),
+      njs_str("01,02,03") },
+
+    { njs_str("Object.values($r.header)"),
+      njs_str("01|АБВ,02|АБВ,03|АБВ") },
+
+    { njs_str("njs.dump(Object.entries($r.header))"),
+      njs_str("[['01','01|АБВ'],['02','02|АБВ'],['03','03|АБВ']]") },
 
     { njs_str("njs.dump($r.header)"),
       njs_str("Header {01:'01|АБВ',02:'02|АБВ',03:'03|АБВ'}") },
@@ -22204,12 +22885,12 @@ static njs_unit_test_t  njs_shell_test[] =
 
     { njs_str("var a = \"aa\\naa\"" ENTER
               "a" ENTER),
-      njs_str("aa\naa") },
+      njs_str("'aa\\naa'") },
 
     { njs_str("var a = 3" ENTER
               "var a = 'str'" ENTER
               "a" ENTER),
-      njs_str("str") },
+      njs_str("'str'") },
 
     { njs_str("var a = 2" ENTER
               "a *= 2" ENTER
@@ -22230,6 +22911,27 @@ static njs_unit_test_t  njs_shell_test[] =
                "sq(function () { return 3 })" ENTER),
       njs_str("9") },
 
+    { njs_str("var e = Error(); e.name = {}; e" ENTER),
+      njs_str("[object Object]") },
+
+    { njs_str("var a = []; Object.defineProperty(a, 'b', {enumerable: true, get: Object}); a" ENTER),
+      njs_str("[\n b: '[Getter]'\n]") },
+
+    { njs_str("var e = Error()" ENTER
+              "Object.defineProperty(e, 'message', { configurable: true, set: Object })" ENTER
+              "delete e.message; e" ENTER),
+      njs_str("Error") },
+
+    { njs_str("var e = Error()" ENTER
+              "Object.defineProperty(e, 'message', { configurable: true, get(){ return 'foo'} })" ENTER
+              "e" ENTER),
+      njs_str("Error: foo") },
+
+    { njs_str("function f() {};" ENTER
+              "Object.defineProperty(f, 'name', { get() {void(0)} })" ENTER
+              "f" ENTER),
+      njs_str("[Function]") },
+
     /* Temporary indexes */
 
     { njs_str("var a = [1,2,3], i; for (i in a) {Object.seal({});}" ENTER),
@@ -22243,7 +22945,7 @@ static njs_unit_test_t  njs_shell_test[] =
               "case 0: a += '0';"
               "case 1: a += '1';"
               "}; a" ENTER),
-      njs_str("A") },
+      njs_str("'A'") },
 
     { njs_str("var a = 0; try { a = 5 }"
               "catch (e) { a = 9 } finally { a++ } a" ENTER),
@@ -22260,7 +22962,7 @@ static njs_unit_test_t  njs_shell_test[] =
 
     { njs_str("Number.prototype.test = 'test'" ENTER
               "Number.prototype.test" ENTER),
-      njs_str("test") },
+      njs_str("'test'") },
 
     { njs_str("function f(a) {return a}" ENTER
               "function f(a) {return a}; f(2)" ENTER),
@@ -22310,11 +23012,12 @@ static njs_unit_test_t  njs_shell_test[] =
               "function(){}()" ENTER),
       njs_str("SyntaxError: Unexpected token \"(\" in 1") },
 
-    /* Exception in njs_vm_retval_string() */
+    { njs_str("var o = { toString: function() { return [1] } }; o" ENTER),
+      njs_str("{\n toString: [Function: toString]\n}") },
 
     { njs_str("var o = { toString: function() { return [1] } }" ENTER
-              "o" ENTER),
-      njs_str("TypeError: Cannot convert object to primitive value") },
+              "o.toString()" ENTER),
+      njs_str("[\n 1\n]") },
 };
 
 
@@ -22480,6 +23183,12 @@ static njs_unit_test_t  njs_backtraces_test[] =
 
     { njs_str("function f(n) { if (n == 0) { throw 'a'; } return f(n-1); }; f(2)"),
       njs_str("a") },
+
+    { njs_str("Object.defineProperty(Function.__proto__, 'name', {get() { typeof 1;}});"
+              "(new Uint8Array()).every()"),
+      njs_str("TypeError: callback argument is not callable\n"
+              "    at TypedArray.prototype.every (native)\n"
+              "    at main (:1)\n") },
 
     /* line numbers */
 
@@ -23011,8 +23720,8 @@ njs_interactive_test(njs_unit_test_t tests[], size_t num, njs_str_t *name,
             }
         }
 
-        if (njs_vm_retval_string(vm, &s) != NJS_OK) {
-            njs_printf("njs_vm_retval_string() failed\n");
+        if (njs_vm_retval_dump(vm, &s, 0) != NJS_OK) {
+            njs_printf("njs_vm_retval_dump() failed\n");
             goto done;
         }
 
@@ -24274,6 +24983,17 @@ static njs_test_suite_t  njs_suites[] =
       njs_nitems(njs_webcrypto_test),
       njs_unit_test },
 
+    {
+#if (NJS_HAVE_LIBXML2 && !NJS_HAVE_MEMORY_SANITIZER)
+        njs_str("xml"),
+#else
+        njs_str(""),
+#endif
+      { .externals = 1, .repeat = 1, .unsafe = 1 },
+      njs_xml_test,
+      njs_nitems(njs_xml_test),
+      njs_unit_test },
+
     { njs_str("module"),
       { .repeat = 1, .module = 1, .unsafe = 1 },
       njs_module_test,
@@ -24326,7 +25046,6 @@ static njs_test_suite_t  njs_suites[] =
       { .externals = 1, .repeat = 1, .unsafe = 1 },
       njs_shell_test,
       njs_nitems(njs_shell_test),
-
       njs_interactive_test },
 
     { njs_str("backtraces"),

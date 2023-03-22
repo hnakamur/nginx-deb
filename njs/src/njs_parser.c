@@ -3438,7 +3438,7 @@ njs_parser_unary_expression(njs_parser_t *parser, njs_lexer_token_t *token,
         operation = NJS_VMCODE_UNARY_PLUS;
         break;
 
-    case NJS_TOKEN_SUBSTRACTION:
+    case NJS_TOKEN_SUBTRACTION:
         type = NJS_TOKEN_UNARY_NEGATION;
         operation = NJS_VMCODE_UNARY_NEGATION;
         break;
@@ -3565,17 +3565,14 @@ njs_parser_await(njs_parser_t *parser, njs_lexer_token_t *token,
     njs_queue_link_t *current)
 {
     njs_parser_node_t   *node;
-    njs_parser_scope_t  *scope;
 
-    scope = njs_function_scope(parser->scope);
-
-    if (!scope->async) {
+    if (!njs_function_scope(parser->scope)->async) {
         njs_parser_syntax_error(parser,
                                 "await is only valid in async functions");
         return NJS_ERROR;
     }
 
-    if (scope->in_args) {
+    if (parser->scope->in_args) {
         njs_parser_syntax_error(parser, "await in arguments not supported");
         return NJS_ERROR;
     }
@@ -3768,8 +3765,8 @@ njs_parser_additive_expression_match(njs_parser_t *parser,
         operation = NJS_VMCODE_ADDITION;
         break;
 
-    case NJS_TOKEN_SUBSTRACTION:
-        operation = NJS_VMCODE_SUBSTRACTION;
+    case NJS_TOKEN_SUBTRACTION:
+        operation = NJS_VMCODE_SUBTRACTION;
         break;
 
     default:
@@ -4438,9 +4435,9 @@ njs_parser_assignment_operator(njs_parser_t *parser, njs_lexer_token_t *token,
         operation = NJS_VMCODE_ADDITION;
         break;
 
-    case NJS_TOKEN_SUBSTRACTION_ASSIGNMENT:
+    case NJS_TOKEN_SUBTRACTION_ASSIGNMENT:
         njs_thread_log_debug("JS: -=");
-        operation = NJS_VMCODE_SUBSTRACTION;
+        operation = NJS_VMCODE_SUBTRACTION;
         break;
 
     case NJS_TOKEN_LEFT_SHIFT_ASSIGNMENT:
@@ -7976,6 +7973,9 @@ njs_parser_export(njs_parser_t *parser, njs_lexer_token_t *token,
     njs_queue_link_t *current)
 {
     njs_parser_node_t  *node;
+    njs_lexer_token_t  *peek;
+
+    static const njs_str_t  as_string = njs_str("as");
 
     if (!parser->module) {
         njs_parser_syntax_error(parser, "Illegal export statement");
@@ -7983,8 +7983,79 @@ njs_parser_export(njs_parser_t *parser, njs_lexer_token_t *token,
     }
 
     if (token->type != NJS_TOKEN_DEFAULT) {
-        njs_parser_syntax_error(parser, "Non-default export is not supported");
-        return NJS_DONE;
+
+        if (token->type != NJS_TOKEN_OPEN_BRACE) {
+            njs_parser_syntax_error(parser,
+                                    "Non-default export is not supported");
+            return NJS_DONE;
+        }
+
+        /*
+         * 'export {'
+         *    supported only: export {identifier as default};
+         */
+
+        njs_lexer_consume_token(parser->lexer, 1);
+
+        token = njs_lexer_token(parser->lexer, 0);
+        if (njs_slow_path(token == NULL)) {
+            return NJS_ERROR;
+        }
+
+        if (token->type != NJS_TOKEN_NAME) {
+            njs_parser_syntax_error(parser, "Identifier expected");
+            return NJS_DONE;
+        }
+
+        peek = njs_lexer_peek_token(parser->lexer, token, 0);
+        if (njs_slow_path(peek == NULL)) {
+            return NJS_ERROR;
+        }
+
+        if (peek->type != NJS_TOKEN_NAME ||
+            !njs_strstr_eq(&peek->text, &as_string))
+        {
+            njs_parser_syntax_error(parser, "'as' expected");
+            return NJS_DONE;
+        }
+
+        peek = njs_lexer_peek_token(parser->lexer, peek, 0);
+        if (njs_slow_path(peek == NULL)) {
+            return NJS_ERROR;
+        }
+
+        if (peek->type != NJS_TOKEN_DEFAULT) {
+            njs_parser_syntax_error(parser,
+                                    "Non-default export is not supported");
+            return NJS_DONE;
+        }
+
+        peek = njs_lexer_peek_token(parser->lexer, peek, 1);
+        if (njs_slow_path(token == NULL)) {
+            return NJS_ERROR;
+        }
+
+        if (peek->type != NJS_TOKEN_CLOSE_BRACE) {
+            njs_parser_syntax_error(parser, "Close brace is expected");
+            return NJS_DONE;
+        }
+
+        node = njs_parser_node_new(parser, NJS_TOKEN_EXPORT);
+        if (node == NULL) {
+            return NJS_ERROR;
+        }
+
+        node->token_line = parser->line;
+        node->right = njs_parser_reference(parser, token);
+        if (node->right == NULL) {
+            return NJS_ERROR;
+        }
+
+        parser->node = node;
+
+        njs_lexer_consume_token(parser->lexer, 4);
+
+        return njs_parser_stack_pop(parser);
     }
 
     njs_lexer_consume_token(parser->lexer, 1);
@@ -8592,7 +8663,8 @@ njs_parser_string_create(njs_vm_t *vm, njs_lexer_token_t *token,
     njs_decode_utf8(&dst, &token->text);
 
     if (length > NJS_STRING_MAP_STRIDE && dst.length != length) {
-        njs_string_offset_map_init(value->long_string.data->start, dst.length);
+        njs_string_utf8_offset_map_init(value->long_string.data->start,
+                                        dst.length);
     }
 
     return NJS_OK;
@@ -8836,7 +8908,7 @@ next_char:
     }
 
     if (length > NJS_STRING_MAP_STRIDE && length != size) {
-        njs_string_offset_map_init(start, size);
+        njs_string_utf8_offset_map_init(start, size);
     }
 
     return NJS_TOKEN_STRING;
@@ -9337,7 +9409,7 @@ njs_parser_serialize_node(njs_chb_t *chain, njs_parser_node_t *node)
     njs_token_serialize(NJS_TOKEN_CONDITIONAL);
     njs_token_serialize(NJS_TOKEN_ASSIGNMENT);
     njs_token_serialize(NJS_TOKEN_ADDITION_ASSIGNMENT);
-    njs_token_serialize(NJS_TOKEN_SUBSTRACTION_ASSIGNMENT);
+    njs_token_serialize(NJS_TOKEN_SUBTRACTION_ASSIGNMENT);
     njs_token_serialize(NJS_TOKEN_MULTIPLICATION_ASSIGNMENT);
     njs_token_serialize(NJS_TOKEN_EXPONENTIATION_ASSIGNMENT);
     njs_token_serialize(NJS_TOKEN_DIVISION_ASSIGNMENT);
@@ -9356,7 +9428,7 @@ njs_parser_serialize_node(njs_chb_t *chain, njs_parser_node_t *node)
     njs_token_serialize(NJS_TOKEN_UNARY_PLUS);
     njs_token_serialize(NJS_TOKEN_INCREMENT);
     njs_token_serialize(NJS_TOKEN_POST_INCREMENT);
-    njs_token_serialize(NJS_TOKEN_SUBSTRACTION);
+    njs_token_serialize(NJS_TOKEN_SUBTRACTION);
     njs_token_serialize(NJS_TOKEN_UNARY_NEGATION);
     njs_token_serialize(NJS_TOKEN_DECREMENT);
     njs_token_serialize(NJS_TOKEN_POST_DECREMENT);
