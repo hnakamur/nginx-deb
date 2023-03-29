@@ -1,6 +1,6 @@
 --- a/src/core/ngx_string.c
 +++ b/src/core/ngx_string.c
-@@ -1959,6 +1959,59 @@
+@@ -1964,6 +1964,59 @@
  }
  
  
