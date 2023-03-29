@@ -1,0 +1,10 @@
+.DS_Store
+*~
+*.tmproj
+tmtags
+*~
+\#*
+.\#*
+*.swp
+tmp/
+Gemfile.lock
