@@ -8,4 +8,3 @@ nginx-1.11.2-ssl_cert_cb_yield.patch
 ngx_upstream_jdomain-dynamic_module.patch
 nginx-1.17.3-cache_manager.patch
 nginx_ltsv_http_log.patch
-lua-resty-lmdb-dynamic-module.patch
