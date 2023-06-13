@@ -39,4 +39,3 @@ lua-ffi-zlib/lib/* 			usr/lib/nginx/lua
 SLAXML/*.lua 				usr/lib/nginx/lua
 lua-resty-woothee/lib/*			usr/lib/nginx/lua
 lua-resty-jump-consistent-hash/lib/*	usr/lib/nginx/lua
-lua-resty-lmdb/lib/*	usr/lib/nginx/lua
