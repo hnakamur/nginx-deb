@@ -19,7 +19,7 @@ download_github_repo() {
   -b)
     git clone --depth 1 -b ${branch_or_commit} --recurse-submodules https://github.com/${user}/${repo}.git > /dev/null 2>&1
     commit=$(cd ${repo} && git rev-parse HEAD)
-    rm -rf ${repo}/.git
+    (cd ${repo} && find . -name .git -exec rm -rf {} +)
     ;;
   -c)
     mkdir ${repo}
