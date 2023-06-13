@@ -55,7 +55,6 @@ config.env.%:
 	cp -Pa $(CURDIR)/nginx-sxg-module $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/lua-resty-jump-consistent-hash $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/njs $(BUILDDIR_$*)/
-	cp -Pa $(CURDIR)/lua-resty-lmdb $(BUILDDIR_$*)/
 	touch $@
 
 config.status.nginx: config.env.nginx
@@ -104,7 +103,6 @@ config.status.nginx: config.env.nginx
 		--with-stream_ssl_module \
 		--with-stream_ssl_preread_module \
 		--add-module=./ngx_devel_kit \
-		--add-dynamic-module=./lua-resty-lmdb \
 		--add-dynamic-module=./lua-nginx-module \
 		--add-dynamic-module=./echo-nginx-module \
 		--add-dynamic-module=./headers-more-nginx-module \
@@ -175,7 +173,6 @@ config.status.nginx_debug: config.env.nginx_debug
 		--with-stream_ssl_module \
 		--with-stream_ssl_preread_module \
 		--add-module=./ngx_devel_kit \
-		--add-dynamic-module=./lua-resty-lmdb \
 		--add-dynamic-module=./lua-nginx-module \
 		--add-dynamic-module=./echo-nginx-module \
 		--add-dynamic-module=./headers-more-nginx-module \
@@ -254,7 +251,6 @@ install:
 	install -m 644 debian/nginx.vh.default.conf $(INSTALLDIR)/etc/nginx/conf.d/default.conf
 	install -m 755 $(BUILDDIR_nginx_debug)/objs/*.so $(INSTALLDIR)/usr/lib/nginx/modules-debug/
 	install -m 755 $(BUILDDIR_nginx)/lua-resty-jump-consistent-hash/libjchash.so $(INSTALLDIR)/usr/lib/$(DEB_HOST_MULTIARCH)/lua/5.1/
-	install -m 755 $(BUILDDIR_nginx)/lua-resty-lmdb/lmdb/libraries/liblmdb/liblmdb-lua-resty.so $(INSTALLDIR)/usr/lib/$(DEB_HOST_MULTIARCH)/
 	ln -s /usr/lib/nginx/modules $(INSTALLDIR)/etc/nginx/modules
 	ln -s /usr/lib/nginx/modules-debug $(INSTALLDIR)/etc/nginx/modules-debug
 
