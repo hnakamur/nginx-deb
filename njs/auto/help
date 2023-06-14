@@ -39,6 +39,10 @@ default: "$NJS_LD_OPT"
                             enabled libxml2 dependant code is not built as a
                             part of libnjs.a.
 
+  --no-zlib                 disabled zlib discovery. When this option is
+                            enabled zlib dependant code is not built as a
+                            part of libnjs.a.
+
   --address-sanitizer=YES   enables build with address sanitizer, \
 default: "$NJS_ADDRESS_SANITIZER"
   --addr2line=YES           enables native function symbolization, \
@@ -51,6 +55,4 @@ default: "$NJS_DEBUG_MEMORY"
 default: "$NJS_DEBUG_OPCODE"
   --debug-generator=YES     enables generator debug, \
 default: "$NJS_DEBUG_GENERATOR"
-  --test262=YES             enables test262 extentions, \
-default: "$NJS_TEST262"
 END

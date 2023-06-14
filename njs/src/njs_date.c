@@ -375,7 +375,7 @@ njs_date_alloc(njs_vm_t *vm, double time)
 
 static njs_int_t
 njs_date_constructor(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t unused)
+    njs_index_t unused, njs_value_t *retval)
 {
     double      time;
     njs_int_t   ret;
@@ -383,7 +383,7 @@ njs_date_constructor(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     int64_t     tm[NJS_DATE_MAX_FIELDS];
 
     if (!vm->top_frame->ctor) {
-        return njs_date_string(vm, &vm->retval, NJS_DATE_FMT_TO_STRING,
+        return njs_date_string(vm, retval, NJS_DATE_FMT_TO_STRING,
                                njs_gettime());
     }
 
@@ -425,7 +425,7 @@ njs_date_constructor(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
         return NJS_ERROR;
     }
 
-    njs_set_date(&vm->retval, date);
+    njs_set_date(retval, date);
 
     return NJS_OK;
 }
@@ -433,7 +433,7 @@ njs_date_constructor(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
 static njs_int_t
 njs_date_utc(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t unused)
+    njs_index_t unused, njs_value_t *retval)
 {
     double      time;
     njs_int_t   ret;
@@ -450,7 +450,7 @@ njs_date_utc(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
         time = njs_make_date(tm, 0);
     }
 
-    njs_set_number(&vm->retval, time);
+    njs_set_number(retval, time);
 
     return NJS_OK;
 }
@@ -458,9 +458,9 @@ njs_date_utc(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
 static njs_int_t
 njs_date_now(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t unused)
+    njs_index_t unused, njs_value_t *retval)
 {
-    njs_set_number(&vm->retval, njs_gettime());
+    njs_set_number(retval, njs_gettime());
 
     return NJS_OK;
 }
@@ -468,7 +468,7 @@ njs_date_now(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
 static njs_int_t
 njs_date_parse(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t unused)
+    njs_index_t unused, njs_value_t *retval)
 {
     double     time;
     njs_int_t  ret;
@@ -487,17 +487,50 @@ njs_date_parse(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
         time = NAN;
     }
 
-    njs_set_number(&vm->retval, time);
+    njs_set_number(retval, time);
 
     return NJS_OK;
 }
 
 
+static int64_t
+njs_date_utc_offset_parse(const u_char *start, const u_char *end)
+{
+    int64_t       utc_off, hour, min;
+    const u_char  *p;
+
+    if (njs_fast_path(start + 2 < end && (*start == '+' || *start == '-'))) {
+        p = njs_date_number_parse(&hour, start + 1, end, 2);
+        if (njs_slow_path(p == NULL || hour > 23)) {
+            return -1;
+        }
+
+        if (p < end && *p == ':') {
+            p++;
+        }
+
+        p = njs_date_number_parse(&min, p, end, 2);
+        if (njs_slow_path(p == NULL || min > 59)) {
+            return -1;
+        }
+
+        utc_off = hour * 60 + min;
+
+        if (*start == '-') {
+            utc_off = -utc_off;
+        }
+
+        return utc_off;
+    }
+
+    return -1;
+}
+
 static double
 njs_date_string_parse(njs_value_t *date)
 {
     size_t         ms_length;
-    int64_t        ext, skipped;
+    int64_t        ext, utc_off;
     njs_str_t      string;
     njs_bool_t     sign, week, utc;
     const u_char   *p, *next, *end;
@@ -530,6 +563,8 @@ njs_date_string_parse(njs_value_t *date)
     next = njs_date_number_parse(&tm[NJS_DATE_YR], p, end, 4);
 
     if (next != NULL) {
+        utc = 1;
+
         /* ISO-8601 format: "1970-09-28T06:00:00.000Z" */
 
         if (next == end) {
@@ -592,7 +627,6 @@ njs_date_string_parse(njs_value_t *date)
             return NAN;
         }
 
-        utc = 1;
         end--;
 
         if (*end != 'Z') {
@@ -615,18 +649,15 @@ njs_date_string_parse(njs_value_t *date)
 
         p++;
 
-        ms_length = (end - p < 3) ? end - p : 3;
+        for (ms_length = 0; p + ms_length < end; ms_length++) {
+            if (p[ms_length] < '0' || p[ms_length] > '9') {
+                break;
+            }
+        }
 
         p = njs_date_number_parse(&tm[NJS_DATE_MSEC], p, end, ms_length);
         if (njs_slow_path(p == NULL)) {
             return NAN;
-        }
-
-        if (end > p) {
-            p = njs_date_number_parse(&skipped, p, end, end - p);
-            if (njs_slow_path(p == NULL)) {
-                return NAN;
-            }
         }
 
         if (ms_length == 1) {
@@ -634,7 +665,24 @@ njs_date_string_parse(njs_value_t *date)
 
         } else if (ms_length == 2) {
             tm[NJS_DATE_MSEC] *= 10;
+
+        } else if (ms_length >= 4) {
+            for (ms_length -= 3; ms_length > 0; ms_length--) {
+                tm[NJS_DATE_MSEC] /= 10;
+            }
         }
+
+        if (p < end) {
+            utc_off = njs_date_utc_offset_parse(p, end);
+            if (njs_slow_path(utc_off == -1)) {
+                return NAN;
+            }
+
+            utc = 1;
+            tm[NJS_DATE_MSEC] += -utc_off * 60000;
+        }
+
+done:
 
         return njs_make_date(tm, !utc);
     }
@@ -682,10 +730,6 @@ njs_date_string_parse(njs_value_t *date)
 
         week = 0;
     }
-
-done:
-
-    return njs_make_date(tm, 0);
 }
 
 
@@ -1087,7 +1131,7 @@ const njs_object_init_t  njs_date_constructor_init = {
 
 static njs_int_t
 njs_date_prototype_value_of(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t unused)
+    njs_index_t unused, njs_value_t *retval)
 {
     if (njs_slow_path(!njs_is_date(&args[0]))) {
         njs_type_error(vm, "cannot convert %s to date",
@@ -1096,7 +1140,7 @@ njs_date_prototype_value_of(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
         return NJS_ERROR;
     }
 
-    njs_set_number(&vm->retval, njs_date(&args[0])->time);
+    njs_set_number(retval, njs_date(&args[0])->time);
 
     return NJS_OK;
 }
@@ -1104,7 +1148,7 @@ njs_date_prototype_value_of(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
 static njs_int_t
 njs_date_prototype_to_string(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t fmt)
+    njs_index_t fmt, njs_value_t *retval)
 {
     double  time;
 
@@ -1122,7 +1166,7 @@ njs_date_prototype_to_string(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
         return NJS_ERROR;
     }
 
-    return njs_date_string(vm, &vm->retval, fmt, time);
+    return njs_date_string(vm, retval, fmt, time);
 }
 
 
@@ -1235,7 +1279,7 @@ njs_date_to_string(njs_vm_t *vm, njs_value_t *retval, const njs_value_t *date)
 
 static njs_int_t
 njs_date_prototype_get_field(njs_vm_t *vm, njs_value_t *args,
-    njs_uint_t nargs, njs_index_t magic)
+    njs_uint_t nargs, njs_index_t magic, njs_value_t *retval)
 {
     double   value;
     int64_t  tm[NJS_DATE_MAX_FIELDS];
@@ -1253,7 +1297,7 @@ njs_date_prototype_get_field(njs_vm_t *vm, njs_value_t *args,
         value = njs_destruct_date(value, tm, magic & 0xf, magic & 0x40);
     }
 
-    njs_set_number(&vm->retval, value);
+    njs_set_number(retval, value);
 
     return NJS_OK;
 }
@@ -1261,7 +1305,7 @@ njs_date_prototype_get_field(njs_vm_t *vm, njs_value_t *args,
 
 static njs_int_t
 njs_date_prototype_get_timezone_offset(njs_vm_t *vm, njs_value_t *args,
-    njs_uint_t nargs, njs_index_t unused)
+    njs_uint_t nargs, njs_index_t unused, njs_value_t *retval)
 {
     double  value;
 
@@ -1278,7 +1322,7 @@ njs_date_prototype_get_timezone_offset(njs_vm_t *vm, njs_value_t *args,
         value = njs_tz_offset(value);
     }
 
-    njs_set_number(&vm->retval, value);
+    njs_set_number(retval, value);
 
     return NJS_OK;
 }
@@ -1286,7 +1330,7 @@ njs_date_prototype_get_timezone_offset(njs_vm_t *vm, njs_value_t *args,
 
 static njs_int_t
 njs_date_prototype_set_time(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t unused)
+    njs_index_t unused, njs_value_t *retval)
 {
     double     time;
     njs_int_t  ret;
@@ -1313,7 +1357,7 @@ njs_date_prototype_set_time(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
     }
 
     njs_date(&args[0])->time = time;
-    njs_set_number(&vm->retval, time);
+    njs_set_number(retval, time);
 
     return NJS_OK;
 }
@@ -1321,7 +1365,7 @@ njs_date_prototype_set_time(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
 static njs_int_t
 njs_date_prototype_set_fields(njs_vm_t *vm, njs_value_t *args,
-    njs_uint_t nargs, njs_index_t magic)
+    njs_uint_t nargs, njs_index_t magic, njs_value_t *retval)
 {
     double      time, num;
     njs_int_t   ret;
@@ -1369,7 +1413,7 @@ njs_date_prototype_set_fields(njs_vm_t *vm, njs_value_t *args,
 done:
 
     njs_date(&args[0])->time = time;
-    njs_set_number(&vm->retval, time);
+    njs_set_number(retval, time);
 
     return NJS_OK;
 }
@@ -1377,7 +1421,7 @@ done:
 
 static njs_int_t
 njs_date_prototype_to_json(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t retval)
+    njs_index_t unused, njs_value_t *retval)
 {
     njs_int_t           ret;
     njs_value_t         value;
@@ -1397,7 +1441,7 @@ njs_date_prototype_to_json(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
         if (njs_is_function(&value)) {
             return njs_function_apply(vm, njs_function(&value), args, nargs,
-                                      &vm->retval);
+                                      retval);
         }
     }
 

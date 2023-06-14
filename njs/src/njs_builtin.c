@@ -27,7 +27,10 @@ static njs_int_t njs_global_this_prop_handler(njs_vm_t *vm,
     njs_value_t *retval);
 static njs_arr_t *njs_vm_expression_completions(njs_vm_t *vm,
     njs_str_t *expression);
-static njs_arr_t *njs_object_completions(njs_vm_t *vm, njs_value_t *object);
+static njs_arr_t *njs_vm_global_var_completions(njs_vm_t *vm,
+	njs_str_t *expression);
+static njs_arr_t *njs_object_completions(njs_vm_t *vm, njs_value_t *object,
+    njs_str_t *expression);
 static njs_int_t njs_env_hash_init(njs_vm_t *vm, njs_lvlhsh_t *hash,
     char **environment);
 
@@ -35,9 +38,6 @@ static njs_int_t njs_env_hash_init(njs_vm_t *vm, njs_lvlhsh_t *hash,
 static const njs_object_init_t  njs_global_this_init;
 static const njs_object_init_t  njs_njs_object_init;
 static const njs_object_init_t  njs_process_object_init;
-#ifdef NJS_TEST262
-static const njs_object_init_t  njs_262_object_init;
-#endif
 
 
 static const njs_object_init_t  *njs_object_init[] = {
@@ -46,9 +46,6 @@ static const njs_object_init_t  *njs_object_init[] = {
     &njs_process_object_init,
     &njs_math_object_init,
     &njs_json_object_init,
-#ifdef NJS_TEST262
-    &njs_262_object_init,
-#endif
     NULL
 };
 
@@ -547,14 +544,75 @@ njs_builtin_completions(njs_vm_t *vm)
 }
 
 
-njs_arr_t *
+void *
 njs_vm_completions(njs_vm_t *vm, njs_str_t *expression)
 {
+    u_char  *p, *end;
+
     if (expression == NULL) {
         return njs_builtin_completions(vm);
     }
 
+    p = expression->start;
+    end = p + expression->length;
+
+    while (p < end && *p != '.') { p++; }
+
+    if (p == end) {
+        return njs_vm_global_var_completions(vm, expression);
+    }
+
     return njs_vm_expression_completions(vm, expression);
+}
+
+
+static njs_arr_t *
+njs_vm_global_var_completions(njs_vm_t *vm, njs_str_t *expression)
+{
+    njs_str_t                *completion;
+    njs_arr_t                *array;
+    njs_rbtree_t             *variables;
+    njs_rbtree_node_t        *node;
+    njs_variable_node_t      *vnode;
+    const njs_lexer_entry_t  *lex_entry;
+
+    variables = (vm->global_scope != NULL) ? &vm->global_scope->variables
+                                           : NULL;
+    if (njs_slow_path(variables == NULL)) {
+        return NULL;
+    }
+
+    array = njs_arr_create(vm->mem_pool, 8, sizeof(njs_str_t));
+    if (njs_slow_path(array == NULL)) {
+        return NULL;
+    }
+
+    node = njs_rbtree_min(variables);
+
+    while (njs_rbtree_is_there_successor(variables, node)) {
+        vnode = (njs_variable_node_t *) node;
+
+        node = njs_rbtree_node_successor(variables, node);
+
+        lex_entry = njs_lexer_entry(vnode->key);
+        if (lex_entry == NULL) {
+            continue;
+        }
+
+        if (lex_entry->name.length >= expression->length
+            && njs_strncmp(expression->start, lex_entry->name.start,
+                           expression->length) == 0)
+        {
+            completion = njs_arr_add(array);
+            if (njs_slow_path(completion == NULL)) {
+                return NULL;
+            }
+
+            *completion = lex_entry->name;
+        }
+    }
+
+    return array;
 }
 
 
@@ -588,7 +646,7 @@ njs_vm_expression_completions(njs_vm_t *vm, njs_str_t *expression)
 
     var_node.key = (uintptr_t) lhq.value;
 
-    node = njs_rbtree_find(vm->variables_hash, &var_node.node);
+    node = njs_rbtree_find(&vm->global_scope->variables, &var_node.node);
     if (njs_slow_path(node == NULL)) {
         return NULL;
     }
@@ -617,6 +675,10 @@ njs_vm_expression_completions(njs_vm_t *vm, njs_str_t *expression)
 
         ret = njs_lvlhsh_find(njs_object_hash(value), &lhq);
         if (njs_slow_path(ret != NJS_OK)) {
+            if (ret == NJS_DECLINED) {
+                break;
+            }
+
             return NULL;
         }
 
@@ -631,19 +693,30 @@ njs_vm_expression_completions(njs_vm_t *vm, njs_str_t *expression)
         value = njs_prop_value(prop);
     }
 
-    return njs_object_completions(vm, value);
+    return njs_object_completions(vm, value, expression);
 }
 
 
 static njs_arr_t *
-njs_object_completions(njs_vm_t *vm, njs_value_t *object)
+njs_object_completions(njs_vm_t *vm, njs_value_t *object, njs_str_t *expression)
 {
+    u_char            *prefix;
     double            num;
+    size_t            len;
     njs_arr_t         *array;
-    njs_str_t         *completion;
+    njs_str_t         *completion, key;
     njs_uint_t        n;
     njs_array_t       *keys;
     njs_value_type_t  type;
+
+    prefix = expression->start + expression->length;
+
+    while (prefix > expression->start && *prefix != '.') {
+        prefix--;
+    }
+
+    prefix++;
+    len = expression->length - (prefix - expression->start);
 
     array = NULL;
     type = object->type;
@@ -663,6 +736,14 @@ njs_object_completions(njs_vm_t *vm, njs_value_t *object)
     }
 
     for (n = 0; n < keys->length; n++) {
+        njs_string_get(&keys->start[n], &key);
+
+        if (len != 0
+            && njs_strncmp(key.start, prefix, njs_min(len, key.length)) != 0)
+        {
+            continue;
+        }
+
         num = njs_key_to_index(&keys->start[n]);
 
         if (!njs_key_is_integer_index(num, &keys->start[n])) {
@@ -673,7 +754,18 @@ njs_object_completions(njs_vm_t *vm, njs_value_t *object)
                 goto done;
             }
 
-            njs_string_get(&keys->start[n], completion);
+            completion->length = (prefix - expression->start) + key.length + 1;
+            completion->start = njs_mp_alloc(vm->mem_pool, completion->length);
+            if (njs_slow_path(completion->start == NULL)) {
+                njs_arr_destroy(array);
+                array = NULL;
+                goto done;
+            }
+
+            njs_sprintf(completion->start,
+                        completion->start + completion->length,
+                        "%*s%V%Z", prefix - expression->start,
+                        expression->start, &key);
         }
     }
 
@@ -846,7 +938,7 @@ found:
 
 static njs_int_t
 njs_ext_dump(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t unused)
+    njs_index_t unused, njs_value_t *retval)
 {
     uint32_t     n;
     njs_int_t    ret;
@@ -867,13 +959,13 @@ njs_ext_dump(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
         return NJS_ERROR;
     }
 
-    return njs_string_new(vm, &vm->retval, str.start, str.length, 0);
+    return njs_string_new(vm, retval, str.start, str.length, 0);
 }
 
 
 static njs_int_t
 njs_ext_on(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t unused)
+    njs_index_t unused, njs_value_t *retval)
 {
     njs_str_t    type;
     njs_uint_t   i, n;
@@ -1018,7 +1110,7 @@ njs_global_this_prop_handler(njs_vm_t *vm, njs_object_prop_t *prop,
 
     var_node.key = (uintptr_t) lhq.value;
 
-    rb_node = njs_rbtree_find(vm->variables_hash, &var_node.node);
+    rb_node = njs_rbtree_find(&vm->global_scope->variables, &var_node.node);
     if (rb_node == NULL) {
         return NJS_DECLINED;
     }
@@ -1690,49 +1782,3 @@ static const njs_object_init_t  njs_process_object_init = {
     njs_process_object_properties,
     njs_nitems(njs_process_object_properties),
 };
-
-
-#if (NJS_TEST262)
-
-static njs_int_t
-njs_262_detach_array_buffer(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
-    njs_index_t unused)
-{
-    njs_value_t         *value;
-    njs_array_buffer_t  *buffer;
-
-    value = njs_arg(args, nargs, 1);
-    if (njs_slow_path(!njs_is_array_buffer(value))) {
-        njs_type_error(vm, "\"this\" is not an ArrayBuffer");
-        return NJS_ERROR;
-    }
-
-    buffer = njs_array_buffer(value);
-    buffer->u.data = NULL;
-    buffer->size = 0;
-
-    njs_set_null(&vm->retval);
-
-    return NJS_OK;
-}
-
-static const njs_object_prop_t  njs_262_object_properties[] =
-{
-    {
-        .type = NJS_PROPERTY,
-        .name = njs_wellknown_symbol(NJS_SYMBOL_TO_STRING_TAG),
-        .u.value = njs_string("$262"),
-        .configurable = 1,
-    },
-
-    NJS_DECLARE_PROP_LNATIVE("detachArrayBuffer", njs_262_detach_array_buffer,
-                             2, 0),
-};
-
-
-static const njs_object_init_t  njs_262_object_init = {
-    njs_262_object_properties,
-    njs_nitems(njs_262_object_properties),
-};
-
-#endif

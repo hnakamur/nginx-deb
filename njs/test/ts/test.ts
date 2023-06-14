@@ -2,21 +2,11 @@ import fs from 'fs';
 import qs from 'querystring';
 import cr from 'crypto';
 import xml from 'xml';
+import zlib from 'zlib';
 
 async function http_module(r: NginxHTTPRequest) {
-    var bs: NjsByteString;
     var s: string;
     var vod: void;
-
-    // builtin string vs NjsByteString
-
-    s = 'ordinary string';
-    bs = String.bytesFrom('000000', 'hex');
-    var bs2: NjsByteString | null = s.toBytes();
-    bs = s.toUTF8();
-    bs.fromBytes(undefined, undefined);
-
-    s = bs + '';
 
     // r.uri
 
@@ -25,14 +15,13 @@ async function http_module(r: NginxHTTPRequest) {
 
     // r.args
 
-    bs = r.args.x;
-    bs = r.args[1];
-    var s2: string | null = r.args.x.fromUTF8();
+    s = r.args.x;
+    s = r.args[1];
     s = r.args.x + '';
 
     // r.headersIn
 
-    r.headersIn['Accept']?.fromBytes() == 'dddd';
+    r.headersIn['Accept'] == 'dddd';
 
     // r.headersOut
 
@@ -49,7 +38,7 @@ async function http_module(r: NginxHTTPRequest) {
 
     // r.log
 
-    r.log(bs);
+    r.log(s);
     r.log(Buffer.from("abc"));
     r.log(r.headersOut['Connection'] ?? '');
 
@@ -154,7 +143,7 @@ async function fs_module() {
     await fs.promises.rmdir('d/e/f', {recursive: false});
 }
 
-function qs_module(str: NjsByteString) {
+function qs_module(str: string) {
     var o;
     var s:string;
 
@@ -162,7 +151,7 @@ function qs_module(str: NjsByteString) {
     s = qs.stringify(o);
 }
 
-function xml_module(str: NjsByteString) {
+function xml_module(str: string) {
     let doc;
     let node;
     let children, selectedChildren;
@@ -174,20 +163,42 @@ function xml_module(str: NjsByteString) {
     children = node.$tags;
     selectedChildren = node.$tags$xxx;
 
-    node?.xxx?.yyy?.$attr$zzz;
+    node?.$tag$xxx?.$tag$yyy?.$attr$zzz;
 
     let buf:Buffer = xml.exclusiveC14n(node);
-    buf = xml.exclusiveC14n(doc, node.xxx, false);
+    buf = xml.exclusiveC14n(doc, node.$tag$xxx, false);
     buf = xml.exclusiveC14n(node, null, true, "aa bb");
+
+    node.setText("xxx");
+    node.removeText();
+    node.setText(null);
+
+    node.addChild(node);
+    node.removeChildren('xx');
+
+    node.removeAttribute('xx');
+    node.removeAllAttributes();
+    node.setAttribute('xx', 'yy');
+    node.setAttribute('xx', null);
+    node.$tags = [node, node];
 }
 
-function crypto_module(str: NjsByteString) {
+function zlib_module(str: string) {
+    zlib.deflateRawSync(str, {level: zlib.constants.Z_BEST_COMPRESSION, memLevel: 9});
+    zlib.deflateSync(str, {strategy: zlib.constants.Z_RLE});
+
+    zlib.inflateRawSync(str, {windowBits: 14});
+    zlib.inflateSync(str, {chunkSize: 2048});
+}
+
+function crypto_module(str: string) {
     var h;
     var b:Buffer;
     var s:string;
 
     h = cr.createHash("sha1");
     h = h.update(str).update(Buffer.from([0]));
+    h = h.copy();
     b = h.digest();
 
     s = cr.createHash("sha256").digest("hex");
@@ -223,13 +234,19 @@ async function crypto_object(keyData: ArrayBuffer, data: ArrayBuffer) {
                                                 publicExponent: new Uint8Array([1, 0, 1])},
                                                 true, ['sign', 'verify']);
 
+    pair.privateKey.extractable;
+    pair.publicKey.algorithm.name;
+
     let hkey = await crypto.subtle.generateKey({name: "HMAC",
                                                 hash: "SHA-384"},
                                                 true, ['sign', 'verify']);
+    hkey.algorithm.name;
 
     let akey = await crypto.subtle.generateKey({name: "AES-GCM",
                                                 length: 256},
                                                 true, ['encrypt', 'decrypt']);
+
+    akey.type;
 }
 
 function buffer(b: Buffer) {
@@ -268,7 +285,7 @@ function njs_object() {
 }
 
 function ngx_object() {
-    ngx.log(ngx.INFO, 'asdf');
-    ngx.log(ngx.WARN, Buffer.from('asdf'));
-    ngx.log(ngx.ERR, 'asdf');
+    ngx.log(ngx.INFO, ngx.conf_prefix);
+    ngx.log(ngx.WARN, Buffer.from(ngx.error_log_path));
+    ngx.log(ngx.ERR, ngx.version);
 }

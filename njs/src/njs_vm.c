@@ -8,7 +8,6 @@
 #include <njs_main.h>
 
 
-static njs_int_t njs_vm_init(njs_vm_t *vm);
 static njs_int_t njs_vm_handle_events(njs_vm_t *vm);
 
 
@@ -78,8 +77,6 @@ njs_vm_create(njs_vm_opt_t *options)
     vm->trace.size = 2048;
     vm->trace.data = vm;
 
-    njs_set_undefined(&vm->retval);
-
     if (options->init) {
         ret = njs_vm_init(vm);
         if (njs_slow_path(ret != NJS_OK)) {
@@ -145,6 +142,7 @@ njs_vm_destroy(njs_vm_t *vm)
 njs_int_t
 njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end)
 {
+    size_t              global_items;
     njs_int_t           ret;
     njs_str_t           ast;
     njs_chb_t           chain;
@@ -155,6 +153,8 @@ njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end)
     njs_parser_scope_t  *scope;
 
     vm->codes = NULL;
+
+    global_items = (vm->global_scope != NULL) ? vm->global_scope->items : 0;
 
     ret = njs_parser_init(vm, &parser, vm->global_scope, &vm->options.file,
                           *start, end, 0);
@@ -195,16 +195,14 @@ njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end)
 
     code = njs_generate_scope(vm, &generator, scope, &njs_entry_main);
     if (njs_slow_path(code == NULL)) {
-        if (!njs_is_error(&vm->retval)) {
+        if (!njs_is_error(&vm->exception)) {
             njs_internal_error(vm, "njs_generate_scope() failed");
         }
 
         return NJS_ERROR;
     }
 
-    vm->global_scope = scope;
-
-    if (scope->items > vm->global_items) {
+    if (scope->items > global_items) {
         global = vm->levels[NJS_LEVEL_GLOBAL];
 
         new = njs_scope_make(vm, scope->items);
@@ -215,8 +213,8 @@ njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end)
         vm->levels[NJS_LEVEL_GLOBAL] = new;
 
         if (global != NULL) {
-            while (vm->global_items != 0) {
-                vm->global_items--;
+            while (global_items != 0) {
+                global_items--;
 
                 *new++ = *global++;
             }
@@ -227,8 +225,7 @@ njs_vm_compile(njs_vm_t *vm, u_char **start, u_char *end)
     njs_scope_value_set(vm, njs_scope_global_this_index(), &vm->global_value);
 
     vm->start = generator.code_start;
-    vm->variables_hash = &scope->variables;
-    vm->global_items = scope->items;
+    vm->global_scope = scope;
 
     if (vm->options.disassemble) {
         njs_disassembler(vm);
@@ -351,7 +348,7 @@ njs_vm_clone(njs_vm_t *vm, njs_external_ptr_t external)
         goto fail;
     }
 
-    global = njs_scope_make(nvm, nvm->global_items);
+    global = njs_scope_make(nvm, nvm->global_scope->items);
     if (njs_slow_path(global == NULL)) {
         goto fail;
     }
@@ -375,7 +372,7 @@ fail:
 }
 
 
-static njs_int_t
+njs_int_t
 njs_vm_init(njs_vm_t *vm)
 {
     njs_int_t    ret;
@@ -421,7 +418,9 @@ njs_int_t
 njs_vm_call(njs_vm_t *vm, njs_function_t *function, const njs_value_t *args,
     njs_uint_t nargs)
 {
-    return njs_vm_invoke(vm, function, args, nargs, &vm->retval);
+    njs_value_t  unused;
+
+    return njs_vm_invoke(vm, function, args, nargs, &unused);
 }
 
 
@@ -442,12 +441,11 @@ njs_vm_invoke(njs_vm_t *vm, njs_function_t *function, const njs_value_t *args,
 
 
 void
-njs_vm_scopes_restore(njs_vm_t *vm, njs_native_frame_t *native,
-    njs_native_frame_t *previous)
+njs_vm_scopes_restore(njs_vm_t *vm, njs_native_frame_t *native)
 {
     njs_frame_t  *frame;
 
-    vm->top_frame = previous;
+    vm->top_frame = native->previous;
 
     if (native->function->native) {
         return;
@@ -512,6 +510,16 @@ njs_vm_posted(njs_vm_t *vm)
 
 
 njs_int_t
+njs_vm_unhandled_rejection(njs_vm_t *vm)
+{
+    return vm->options.unhandled_rejection
+             == NJS_VM_OPT_UNHANDLED_REJECTION_THROW
+           && vm->promise_reason != NULL
+           && vm->promise_reason->length != 0;
+}
+
+
+njs_int_t
 njs_vm_post_event(njs_vm_t *vm, njs_vm_event_t vm_event,
     const njs_value_t *args, njs_uint_t nargs)
 {
@@ -546,11 +554,11 @@ njs_vm_run(njs_vm_t *vm)
 
 
 njs_int_t
-njs_vm_start(njs_vm_t *vm)
+njs_vm_start(njs_vm_t *vm, njs_value_t *retval)
 {
     njs_int_t  ret;
 
-    ret = njs_vmcode_interpreter(vm, vm->start, NULL, NULL);
+    ret = njs_vmcode_interpreter(vm, vm->start, retval, NULL, NULL);
 
     return (ret == NJS_ERROR) ? NJS_ERROR : NJS_OK;
 }
@@ -656,10 +664,22 @@ njs_vm_add_path(njs_vm_t *vm, const njs_str_t *path)
 }
 
 
-njs_value_t *
-njs_vm_retval(njs_vm_t *vm)
+njs_value_t
+njs_vm_exception(njs_vm_t *vm)
 {
-    return &vm->retval;
+    njs_value_t  value;
+
+    value = vm->exception;
+    njs_set_invalid(&vm->exception);
+
+    return value;
+}
+
+
+void
+njs_vm_exception_get(njs_vm_t *vm, njs_value_t *retval)
+{
+    *retval = njs_vm_exception(vm);
 }
 
 
@@ -677,6 +697,13 @@ njs_vm_external_ptr(njs_vm_t *vm)
 }
 
 
+njs_bool_t
+njs_vm_constructor(njs_vm_t *vm)
+{
+    return vm->top_frame->ctor;
+}
+
+
 uintptr_t
 njs_vm_meta(njs_vm_t *vm, njs_uint_t index)
 {
@@ -691,10 +718,28 @@ njs_vm_meta(njs_vm_t *vm, njs_uint_t index)
 }
 
 
-void
-njs_vm_retval_set(njs_vm_t *vm, const njs_value_t *value)
+njs_vm_opt_t *
+njs_vm_options(njs_vm_t *vm)
 {
-    vm->retval = *value;
+    return &vm->options;
+}
+
+
+void
+njs_vm_throw(njs_vm_t *vm, const njs_value_t *value)
+{
+    vm->exception = *value;
+}
+
+
+void
+njs_vm_error(njs_vm_t *vm, const char *fmt, ...)
+{
+    va_list  args;
+
+    va_start(args, fmt);
+    njs_throw_error_va(vm, NJS_OBJ_TYPE_ERROR, fmt, args);
+    va_end(args);
 }
 
 
@@ -726,7 +771,7 @@ njs_vm_value(njs_vm_t *vm, const njs_str_t *path, njs_value_t *retval)
         }
 
         ret = njs_value_property(vm, &value, &key, njs_value_arg(retval));
-        if (njs_slow_path(ret != NJS_OK)) {
+        if (njs_slow_path(ret == NJS_ERROR)) {
             return ret;
         }
 
@@ -881,7 +926,6 @@ njs_int_t
 njs_vm_prop_name(njs_vm_t *vm, njs_object_prop_t *prop, njs_str_t *dst)
 {
     if (njs_slow_path(!njs_is_string(&prop->name))) {
-        njs_type_error(vm, "property name is not a string");
         return NJS_ERROR;
     }
 
@@ -892,27 +936,9 @@ njs_vm_prop_name(njs_vm_t *vm, njs_object_prop_t *prop, njs_str_t *dst)
 
 
 njs_noinline void
-njs_vm_value_error_set(njs_vm_t *vm, njs_value_t *value, const char *fmt, ...)
-{
-    va_list  args;
-    u_char   buf[NJS_MAX_ERROR_STR], *p;
-
-    p = buf;
-
-    if (fmt != NULL) {
-        va_start(args, fmt);
-        p = njs_vsprintf(buf, buf + sizeof(buf), fmt, args);
-        va_end(args);
-    }
-
-    njs_error_new(vm, value, NJS_OBJ_TYPE_ERROR, buf, p - buf);
-}
-
-
-njs_noinline void
 njs_vm_memory_error(njs_vm_t *vm)
 {
-    njs_memory_error_set(vm, &vm->retval);
+    njs_memory_error_set(vm, &vm->exception);
 }
 
 
@@ -945,6 +971,17 @@ njs_vm_value_string(njs_vm_t *vm, njs_str_t *dst, njs_value_t *src)
 {
     njs_int_t    ret;
     njs_uint_t   exception;
+    njs_value_t  value;
+
+    if (njs_slow_path(vm->top_frame == NULL)) {
+        /* An exception was thrown during compilation. */
+        njs_vm_init(vm);
+    }
+
+    if (njs_is_valid(&vm->exception)) {
+        value = njs_vm_exception(vm);
+        src = &value;
+    }
 
     if (njs_slow_path(src->type == NJS_NUMBER
                       && njs_number(src) == 0
@@ -968,7 +1005,7 @@ again:
 
         /* value evaluation threw an exception. */
 
-        src = &vm->retval;
+        *src = njs_vm_exception(vm);
         goto again;
     }
 
@@ -980,28 +1017,13 @@ again:
 
 
 njs_int_t
-njs_vm_retval_string(njs_vm_t *vm, njs_str_t *dst)
+njs_vm_exception_string(njs_vm_t *vm, njs_str_t *dst)
 {
-    if (vm->top_frame == NULL) {
-        /* An exception was thrown during compilation. */
+    njs_value_t  exception;
 
-        njs_vm_init(vm);
-    }
+    exception = njs_vm_exception(vm);
 
-    return njs_vm_value_string(vm, dst, &vm->retval);
-}
-
-
-njs_int_t
-njs_vm_retval_dump(njs_vm_t *vm, njs_str_t *dst, njs_uint_t indent)
-{
-    if (vm->top_frame == NULL) {
-        /* An exception was thrown during compilation. */
-
-        njs_vm_init(vm);
-    }
-
-    return njs_vm_value_dump(vm, dst, &vm->retval, 0, 1);
+    return njs_vm_value_string(vm, dst, &exception);
 }
 
 
@@ -1146,6 +1168,32 @@ njs_vm_object_prop(njs_vm_t *vm, njs_value_t *value, const njs_str_t *prop,
 }
 
 
+njs_int_t
+njs_vm_object_prop_set(njs_vm_t *vm, njs_value_t *value, const njs_str_t *prop,
+    njs_opaque_value_t *setval)
+{
+    njs_int_t    ret;
+    njs_value_t  key;
+
+    if (njs_slow_path(!njs_is_object(value))) {
+        njs_type_error(vm, "njs_vm_object_prop_set() argument is not object");
+        return NJS_ERROR;
+    }
+
+    ret = njs_vm_value_string_set(vm, &key, prop->start, prop->length);
+    if (njs_slow_path(ret != NJS_OK)) {
+        return NJS_ERROR;
+    }
+
+    ret = njs_value_property_set(vm, value, &key, njs_value_arg(setval));
+    if (njs_slow_path(ret != NJS_OK)) {
+        return NJS_ERROR;
+    }
+
+    return NJS_OK;
+}
+
+
 njs_value_t *
 njs_vm_array_prop(njs_vm_t *vm, njs_value_t *value, int64_t index,
     njs_opaque_value_t *retval)
@@ -1177,6 +1225,14 @@ njs_vm_array_prop(njs_vm_t *vm, njs_value_t *value, int64_t index,
 }
 
 
+njs_int_t
+njs_vm_object_iterate(njs_vm_t *vm, njs_iterator_args_t *args,
+    njs_iterator_handler_t handler, njs_value_t *retval)
+{
+    return njs_object_iterate(vm, args, handler, retval);
+}
+
+
 njs_value_t *
 njs_vm_array_start(njs_vm_t *vm, njs_value_t *value)
 {
@@ -1197,6 +1253,22 @@ njs_vm_array_length(njs_vm_t *vm, njs_value_t *value, int64_t *length)
     }
 
     return njs_object_length(vm, value, length);
+}
+
+
+njs_int_t
+njs_vm_date_alloc(njs_vm_t *vm, njs_value_t *retval, double time)
+{
+    njs_date_t  *date;
+
+    date = njs_date_alloc(vm, time);
+    if (njs_slow_path(date == NULL)) {
+        return NJS_ERROR;
+    }
+
+    njs_set_date(retval, date);
+
+    return NJS_OK;
 }
 
 
@@ -1294,6 +1366,31 @@ njs_vm_value_to_c_string(njs_vm_t *vm, njs_value_t *value)
     *p++ = '\0';
 
     return (const char *) data;
+}
+
+
+njs_int_t
+njs_value_to_string(njs_vm_t *vm, njs_value_t *dst, njs_value_t *value)
+{
+    njs_int_t    ret;
+    njs_value_t  primitive;
+
+    if (njs_slow_path(!njs_is_primitive(value))) {
+        if (njs_slow_path(njs_is_object_symbol(value))) {
+            /* should fail */
+            value = njs_object_value(value);
+
+        } else {
+            ret = njs_value_to_primitive(vm, &primitive, value, 1);
+            if (njs_slow_path(ret != NJS_OK)) {
+                return ret;
+            }
+
+            value = &primitive;
+        }
+    }
+
+    return njs_primitive_value_to_string(vm, dst, value);
 }
 
 

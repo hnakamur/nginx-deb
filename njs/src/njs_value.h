@@ -88,7 +88,6 @@ typedef struct njs_regexp_s           njs_regexp_t;
 typedef struct njs_date_s             njs_date_t;
 typedef struct njs_object_value_s     njs_promise_t;
 typedef struct njs_property_next_s    njs_property_next_t;
-typedef struct njs_object_init_s      njs_object_init_t;
 
 
 union njs_value_s {
@@ -305,12 +304,12 @@ typedef union {
 } njs_object_prototype_t;
 
 
-typedef struct {
+struct njs_object_type_init_s {
     njs_function_t            constructor;
     const njs_object_init_t   *constructor_props;
     const njs_object_init_t   *prototype_props;
     njs_object_prototype_t    prototype_value;
-} njs_object_type_init_t;
+};
 
 
 typedef enum {
@@ -1073,7 +1072,7 @@ njs_int_t njs_primitive_value_to_string(njs_vm_t *vm, njs_value_t *dst,
     const njs_value_t *src);
 njs_int_t njs_primitive_value_to_chain(njs_vm_t *vm, njs_chb_t *chain,
     const njs_value_t *src);
-double njs_string_to_number(const njs_value_t *value, njs_bool_t parse_float);
+double njs_string_to_number(const njs_value_t *value);
 njs_int_t njs_int64_to_string(njs_vm_t *vm, njs_value_t *value, int64_t i64);
 
 njs_bool_t njs_string_eq(const njs_value_t *v1, const njs_value_t *v2);
@@ -1091,6 +1090,8 @@ njs_int_t njs_value_to_object(njs_vm_t *vm, njs_value_t *value);
 
 void njs_symbol_conversion_failed(njs_vm_t *vm, njs_bool_t to_string);
 
+njs_int_t njs_value_construct(njs_vm_t *vm, njs_value_t *constructor,
+    njs_value_t *args, njs_uint_t nargs, njs_value_t *retval);
 njs_int_t njs_value_species_constructor(njs_vm_t *vm, njs_value_t *object,
     njs_value_t *default_constructor, njs_value_t *dst);
 

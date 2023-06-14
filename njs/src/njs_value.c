@@ -487,6 +487,23 @@ njs_value_function(const njs_value_t *value)
 }
 
 
+njs_function_native_t
+njs_value_native_function(const njs_value_t *value)
+{
+    njs_function_t  *function;
+
+    if (njs_is_function(value)) {
+        function = njs_function(value);
+
+        if (function->native) {
+            return function->u.native;
+        }
+    }
+
+    return NULL;
+}
+
+
 njs_int_t
 njs_value_is_null(const njs_value_t *value)
 {
@@ -553,6 +570,13 @@ njs_value_is_object(const njs_value_t *value)
 
 
 njs_int_t
+njs_value_is_error(const njs_value_t *value)
+{
+    return njs_is_error(value);
+}
+
+
+njs_int_t
 njs_value_is_array(const njs_value_t *value)
 {
     return njs_is_array(value);
@@ -570,6 +594,13 @@ njs_int_t
 njs_value_is_buffer(const njs_value_t *value)
 {
     return njs_is_typed_array(value);
+}
+
+
+njs_int_t
+njs_value_is_data_view(const njs_value_t *value)
+{
+    return njs_is_data_view(value);
 }
 
 
@@ -1189,6 +1220,7 @@ njs_value_property_set(njs_vm_t *vm, njs_value_t *value, njs_value_t *key,
     uint32_t              index;
     njs_int_t             ret;
     njs_array_t           *array;
+    njs_value_t           retval;
     njs_object_prop_t     *prop;
     njs_typed_array_t     *tarray;
     njs_property_query_t  pq;
@@ -1264,7 +1296,7 @@ slow_path:
         } else {
             if (njs_prop_setter(prop) != NULL) {
                 return njs_function_call(vm, njs_prop_setter(prop),
-                                         value, setval, 1, &vm->retval);
+                                         value, setval, 1, &retval);
             }
 
             njs_key_string_get(vm, &pq.key,  &pq.lhq.key);
@@ -1275,7 +1307,7 @@ slow_path:
         }
 
         if (prop->type == NJS_PROPERTY_HANDLER) {
-            ret = njs_prop_handler(prop)(vm, prop, value, setval, &vm->retval);
+            ret = njs_prop_handler(prop)(vm, prop, value, setval, &retval);
             if (njs_slow_path(ret != NJS_DECLINED)) {
                 return ret;
             }
@@ -1589,6 +1621,23 @@ njs_primitive_value_to_chain(njs_vm_t *vm, njs_chb_t *chain,
 
 
 njs_int_t
+njs_value_to_integer(njs_vm_t *vm, njs_value_t *value, int64_t *dst)
+{
+    double     num;
+    njs_int_t  ret;
+
+    ret = njs_value_to_number(vm, value, &num);
+    if (njs_slow_path(ret != NJS_OK)) {
+        return ret;
+    }
+
+    *dst = njs_number_to_integer(num);
+
+    return NJS_OK;
+}
+
+
+njs_int_t
 njs_value_to_object(njs_vm_t *vm, njs_value_t *value)
 {
     njs_uint_t          index;
@@ -1628,6 +1677,25 @@ njs_symbol_conversion_failed(njs_vm_t *vm, njs_bool_t to_string)
     njs_type_error(vm, to_string
         ? "Cannot convert a Symbol value to a string"
         : "Cannot convert a Symbol value to a number");
+}
+
+
+njs_int_t
+njs_value_construct(njs_vm_t *vm, njs_value_t *constructor, njs_value_t *args,
+    njs_uint_t nargs, njs_value_t *retval)
+{
+    njs_value_t   this;
+    njs_object_t  *object;
+
+    object = njs_function_new_object(vm, constructor);
+    if (njs_slow_path(object == NULL)) {
+        return NJS_ERROR;
+    }
+
+    njs_set_object(&this, object);
+
+    return njs_function_call2(vm, njs_function(constructor), &this, args,
+                              nargs, retval, 1);
 }
 
 
