@@ -16,8 +16,10 @@
 double njs_key_to_index(const njs_value_t *value);
 double njs_number_dec_parse(const u_char **start, const u_char *end,
     njs_bool_t literal);
-double njs_number_oct_parse(const u_char **start, const u_char *end);
-double njs_number_bin_parse(const u_char **start, const u_char *end);
+double njs_number_oct_parse(const u_char **start, const u_char *end,
+    njs_bool_t literal);
+double njs_number_bin_parse(const u_char **start, const u_char *end,
+    njs_bool_t literal);
 double njs_number_hex_parse(const u_char **start, const u_char *end,
     njs_bool_t literal);
 njs_int_t njs_number_to_string(njs_vm_t *vm, njs_value_t *string,
@@ -25,13 +27,13 @@ njs_int_t njs_number_to_string(njs_vm_t *vm, njs_value_t *string,
 njs_int_t njs_number_to_chain(njs_vm_t *vm, njs_chb_t *chain,
     double number);
 njs_int_t njs_number_global_is_nan(njs_vm_t *vm, njs_value_t *args,
-    njs_uint_t nargs, njs_index_t unused);
+    njs_uint_t nargs, njs_index_t unused, njs_value_t *retval);
 njs_int_t njs_number_global_is_finite(njs_vm_t *vm, njs_value_t *args,
-    njs_uint_t nargs, njs_index_t unused);
+    njs_uint_t nargs, njs_index_t unused, njs_value_t *retval);
 njs_int_t njs_number_parse_int(njs_vm_t *vm, njs_value_t *args,
-    njs_uint_t nargs, njs_index_t unused);
+    njs_uint_t nargs, njs_index_t unused, njs_value_t *retval);
 njs_int_t njs_number_parse_float(njs_vm_t *vm, njs_value_t *args,
-    njs_uint_t nargs, njs_index_t unused);
+    njs_uint_t nargs, njs_index_t unused, njs_value_t *retval);
 
 
 njs_inline njs_bool_t

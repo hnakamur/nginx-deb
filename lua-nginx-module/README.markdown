@@ -2721,6 +2721,8 @@ lua_need_request_body
 
 **phase:** *depends on usage*
 
+Due to the stream processing feature of HTTP2, it does not support HTTP2 connection.
+
 Determines whether to force the request body data to be read before running rewrite/access/content_by_lua* or not. The Nginx core does not read the client request body by default and if request body data is required, then this directive should be turned `on` or the [ngx.req.read_body](#ngxreqread_body) function should be called within the Lua code.
 
 To read the request body data within the [$request_body](http://nginx.org/en/docs/http/ngx_http_core_module.html#var_request_body) variable,
@@ -3321,13 +3323,14 @@ lua_ssl_protocols
 
 **syntax:** *lua_ssl_protocols \[SSLv2\] \[SSLv3\] \[TLSv1\] [TLSv1.1] [TLSv1.2] [TLSv1.3]*
 
-**default:** *lua_ssl_protocols SSLv3 TLSv1 TLSv1.1 TLSv1.2*
+**default:** *lua_ssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3*
 
 **context:** *http, server, location*
 
 Enables the specified protocols for requests to a SSL/TLS server in the [tcpsock:sslhandshake](#tcpsocksslhandshake) method.
 
 The support for the `TLSv1.3` parameter requires version `v0.10.12` *and* OpenSSL 1.1.1.
+From version v0.10.25, the default value change from `SSLV3 TLSv1 TLSv1.1 TLSv1.2` to `TLSv1 TLSv1.1 TLSv1.2 TLSv1.3`.
 
 This directive was first introduced in the `v0.9.11` release.
 
@@ -5383,6 +5386,8 @@ Reads the client request body synchronously without blocking the Nginx event loo
  ngx.req.read_body()
  local args = ngx.req.get_post_args()
 ```
+
+Due to the stream processing feature of HTTP2, it does not support HTTP2 connection.
 
 If the request body is already read previously by turning on [lua_need_request_body](#lua_need_request_body) or by using other modules, then this function does not run and returns immediately.
 
@@ -9353,7 +9358,7 @@ The second argument `module_name` specifies the lua module name to execute in th
 
 The third argument `func_name` specifies the function field in the module table as the second argument.
 
-The type of `arg`s must be one of type below:
+The type of `args` must be one of type below:
 
 * boolean
 * number

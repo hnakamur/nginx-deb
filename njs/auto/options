@@ -13,10 +13,10 @@ NJS_DEBUG_GENERATOR=NO
 
 NJS_ADDRESS_SANITIZER=NO
 NJS_ADDR2LINE=NO
-NJS_TEST262=YES
 
 NJS_OPENSSL=YES
 NJS_LIBXML2=YES
+NJS_ZLIB=YES
 
 NJS_PCRE=YES
 NJS_TRY_PCRE2=YES
@@ -28,7 +28,7 @@ NJS_CONFIGURE_OPTIONS=
 for njs_option
 do
     case "$njs_option" in
-        -*=*) value=`echo "$njs_option" | sed -e 's/[-_a-zA-Z0-9]*=//'`      ;;
+        -*=*) value=`echo "$njs_option" | sed -e 's#[-_a-zA-Z0-9]*=##'`      ;;
            *) value="" ;;
     esac
 
@@ -46,10 +46,10 @@ do
         --debug-memory=*)                NJS_DEBUG_MEMORY="$value"           ;;
         --debug-opcode=*)                NJS_DEBUG_OPCODE="$value"           ;;
         --debug-generator=*)             NJS_DEBUG_GENERATOR="$value"        ;;
-        --test262=*)                     NJS_TEST262="$value"                ;;
 
         --no-openssl)                    NJS_OPENSSL=NO                      ;;
         --no-libxml2)                    NJS_LIBXML2=NO                      ;;
+        --no-zlib)                       NJS_ZLIB=NO                         ;;
 
         --no-pcre)                       NJS_PCRE=NO                         ;;
         --no-pcre2)                      NJS_TRY_PCRE2=NO                    ;;
@@ -70,7 +70,7 @@ do
         ;;
     esac
 
-    njs_opt=`echo $njs_option | sed -e "s/\(--[^=]*=\)\(.* .*\)/\1'\2'/"`
+    njs_opt=`echo $njs_option | sed -e "s#\(--[^=]*=\)\(.* .*\)#\1'\2'#"`
 
     NJS_CONFIGURE_OPTIONS="$NJS_CONFIGURE_OPTIONS $njs_opt"
 
