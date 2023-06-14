@@ -92,7 +92,6 @@ enum {
     NJS_VMCODE_LEFT_SHIFT,
     NJS_VMCODE_RIGHT_SHIFT,
     NJS_VMCODE_UNSIGNED_RIGHT_SHIFT,
-    NJS_VMCODE_OBJECT_COPY,
     NJS_VMCODE_TEMPLATE_LITERAL,
     NJS_VMCODE_PROPERTY_IN,
     NJS_VMCODE_PROPERTY_DELETE,
@@ -422,7 +421,7 @@ typedef struct {
 } njs_vmcode_await_t;
 
 
-njs_int_t njs_vmcode_interpreter(njs_vm_t *vm, u_char *pc,
+njs_int_t njs_vmcode_interpreter(njs_vm_t *vm, u_char *pc, njs_value_t *retval,
     void *promise_cap, void *async_ctx);
 
 njs_object_t *njs_function_new_object(njs_vm_t *vm, njs_value_t *constructor);

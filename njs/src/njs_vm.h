@@ -95,9 +95,6 @@ enum njs_object_e {
     NJS_OBJECT_PROCESS,
     NJS_OBJECT_MATH,
     NJS_OBJECT_JSON,
-#ifdef NJS_TEST262
-    NJS_OBJECT_262,
-#endif
     NJS_OBJECT_MAX
 };
 
@@ -118,22 +115,19 @@ typedef enum {
 
 
 struct njs_vm_s {
-    /* njs_vm_t must be aligned to njs_value_t due to scratch value. */
-    njs_value_t              retval;
+    njs_value_t              exception;
 
     njs_arr_t                *paths;
     njs_arr_t                *protos;
 
     njs_arr_t                *scope_absolute;
     njs_value_t              **levels[NJS_LEVEL_MAX];
-    size_t                   global_items;
 
     njs_external_ptr_t       external;
 
     njs_native_frame_t       *top_frame;
     njs_frame_t              *active_frame;
 
-    njs_rbtree_t             *variables_hash;
     njs_lvlhsh_t             keywords_hash;
     njs_lvlhsh_t             values_hash;
 
@@ -241,8 +235,9 @@ struct njs_vm_shared_s {
 };
 
 
-void njs_vm_scopes_restore(njs_vm_t *vm, njs_native_frame_t *frame,
-    njs_native_frame_t *previous);
+njs_int_t njs_vm_init(njs_vm_t *vm);
+njs_value_t njs_vm_exception(njs_vm_t *vm);
+void njs_vm_scopes_restore(njs_vm_t *vm, njs_native_frame_t *frame);
 
 njs_int_t njs_builtin_objects_create(njs_vm_t *vm);
 njs_int_t njs_builtin_objects_clone(njs_vm_t *vm, njs_value_t *global);
@@ -251,8 +246,6 @@ njs_int_t njs_builtin_match_native_function(njs_vm_t *vm,
 
 void njs_disassemble(u_char *start, u_char *end, njs_int_t count,
     njs_arr_t *lines);
-
-njs_arr_t *njs_vm_completions(njs_vm_t *vm, njs_str_t *expression);
 
 void *njs_lvlhsh_alloc(void *data, size_t size);
 void njs_lvlhsh_free(void *data, void *p, size_t size);

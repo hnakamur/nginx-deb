@@ -4,7 +4,14 @@
  */
 
 
-#include <njs_main.h>
+#include <njs.h>
+#include <njs_unix.h>
+#include <njs_file.h>
+#include <njs_utils.h>
+#include <njs_queue.h>
+#include <njs_string.h>
+
+#include <time.h>
 
 #ifndef NJS_HAVE_PCRE2
 #include <pcre.h>
@@ -994,7 +1001,7 @@ static njs_unit_test_t  njs_test[] =
       njs_str("3") },
 
     { njs_str("5 - '-0x2'"),
-      njs_str("7") },
+      njs_str("NaN") },
 
     { njs_str("5 - '\t 0x2 \t'"),
       njs_str("3") },
@@ -1047,55 +1054,8 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("undefined - undefined"),
       njs_str("NaN") },
 
-    /* String.toString() method. */
-
     { njs_str("'A'.toString()"),
       njs_str("A") },
-
-    { njs_str("'A'.toBytes().toString('latin1')"),
-      njs_str("TypeError: Unknown encoding: \"latin1\"") },
-
-    { njs_str("'ABCD'.toBytes().toString('hex')"),
-      njs_str("41424344") },
-
-    { njs_str("'\\x00\\xAA\\xBB\\xFF'.toBytes().toString('hex')"),
-      njs_str("00aabbff") },
-
-    { njs_str("'\\x00\\xAA\\xBB\\xFF'.toBytes().toString('base64')"),
-      njs_str("AKq7/w==") },
-
-    { njs_str("'ABCD'.toBytes().toString('base64')"),
-      njs_str("QUJDRA==") },
-
-    { njs_str("'ABC'.toBytes().toString('base64')"),
-      njs_str("QUJD") },
-
-    { njs_str("'AB'.toBytes().toString('base64')"),
-      njs_str("QUI=") },
-
-    { njs_str("'A'.toBytes().toString('base64')"),
-      njs_str("QQ==") },
-
-    { njs_str("''.toBytes().toString('base64')"),
-      njs_str("") },
-
-    { njs_str("'\\x00\\xAA\\xBB\\xFF'.toBytes().toString('base64url')"),
-      njs_str("AKq7_w") },
-
-    { njs_str("'ABCD'.toBytes().toString('base64url')"),
-      njs_str("QUJDRA") },
-
-    { njs_str("'ABC'.toBytes().toString('base64url')"),
-      njs_str("QUJD") },
-
-    { njs_str("'AB'.toBytes().toString('base64url')"),
-      njs_str("QUI") },
-
-    { njs_str("'A'.toBytes().toString('base64url')"),
-      njs_str("QQ") },
-
-    { njs_str("''.toBytes().toString('base64url')"),
-      njs_str("") },
 
     /* Assignment. */
 
@@ -1121,6 +1081,38 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("var x; x in (x = 1, [1, 2, 3])"),
       njs_str("false") },
+
+    /* ToInt32(). */
+
+    { njs_str("-1.0 | 0"),
+      njs_str("-1") },
+
+    { njs_str("0.0 | 0"),
+      njs_str("0") },
+
+    { njs_str("0.001 | 0"),
+      njs_str("0") },
+
+    { njs_str("1.0 | 0"),
+      njs_str("1") },
+
+    { njs_str("2147483647.0 | 0"),
+      njs_str("2147483647") },
+
+    { njs_str("2147483648.0 | 0"),
+      njs_str("-2147483648") },
+
+    { njs_str("2147483649.0 | 0"),
+      njs_str("-2147483647") },
+
+    { njs_str("-1844674406941458432.0 | 0"),
+      njs_str("-2147483648") },
+
+    { njs_str("4.835703278458518e+24 /* 2**(53+29) + 2**30 */ | 0"),
+      njs_str("1073741824") },
+
+    { njs_str("9.671406556917036e+24 /* 2**(53+30) + 2**31 */ | 0"),
+      njs_str("-2147483648") },
 
     /* Exponentiation. */
 
@@ -2971,6 +2963,18 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("for(A?{,"),
       njs_str("SyntaxError: Unexpected token \",\" in 1") },
 
+    { njs_str("for(Symbol(A=>A+       in 'A') P/$"),
+      njs_str("SyntaxError: Unexpected token \"in\" in 1") },
+
+    { njs_str("for (a(b * in d) ;"),
+      njs_str("SyntaxError: Unexpected token \"in\" in 1") },
+
+    { njs_str("for(c=let c"),
+      njs_str("SyntaxError: Unexpected token \"let\" in 1") },
+
+    { njs_str("for(var``>0; 0 ;) ;"),
+      njs_str("SyntaxError: Unexpected token \"`\" in 1") },
+
     /* switch. */
 
     { njs_str("switch"),
@@ -3930,6 +3934,12 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("var named = Symbol('xxx'); ({[named]: () => {}})[named].name"),
       njs_str("[xxx]") },
 
+    { njs_str("var obj = {}; ({[obj](){}}); typeof obj"),
+      njs_str("object") },
+
+    { njs_str("[function(){}][0].name"),
+      njs_str("") },
+
     { njs_str("var called = false;"
              "({"
              "   [{toString(){ if (called) throw 'OOps'; called = true; return 'a'}}](){}"
@@ -4348,7 +4358,7 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("["
               "  'α'.repeat(33),"
-              "  String.bytesFrom(Array(16).fill(0x9d)),"
+              "  $262.byteString(Array(16).fill(0x9d)),"
               "]"
               ".map(v=>{var out = ['β', 'γ'].join(v); return out.length})"),
       njs_str("35,20") },
@@ -4369,7 +4379,7 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("var a = ['β','γ']; a.join('').length"),
       njs_str("2") },
 
-    { njs_str("var a = ['β', String.bytesFrom([0x9d]),'γ']; a.join('').length"),
+    { njs_str("var a = ['β', $262.byteString([0x9d]),'γ']; a.join('').length"),
       njs_str("5") },
 
     { njs_str("var a = []; a[5] = 5; a.join()"),
@@ -4563,6 +4573,38 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("Array.isArray([]) ? 'true' : 'false'"),
       njs_str("true") },
 
+    { njs_str("["
+              "  [undefined],"
+              "  [null],"
+              "  ['foo'],"
+              "  ['foo', c => c.toUpperCase()],"
+              "  [{length: 3, 1:'a', 2:'b'}],"
+              "  [[7,,9], v => v*2],"
+              "].map(args => { try { return Array.from.apply(Array,args) }"
+              "                catch (e) {return e.toString()}})"),
+      njs_str("TypeError: cannot convert null or undefined to object,"
+              "TypeError: cannot convert null or undefined to object,"
+              "f,o,o,"
+              "F,O,O,"
+              ",a,b,"
+              "14,NaN,18"
+              ) },
+
+    { njs_str("function f() {return Array.from(arguments);}; f(1,2,3)"),
+      njs_str("1,2,3") },
+
+    { njs_str("Array.from({ length: 5 }, (v, i) => i)"),
+      njs_str("0,1,2,3,4") },
+
+    { njs_str("const range = (start, stop, step) =>"
+              "Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step);"
+              "range(1, 10, 2)"),
+      njs_str("1,3,5,7,9") },
+
+    { njs_str("var a = Array.from.call(Object, { length: 2, 0:7, 1:9 });"
+              "[a[0], a[1], Array.isArray(a)]"),
+      njs_str("7,9,false") },
+
     { njs_str("Array.of()"),
       njs_str("") },
 
@@ -4708,7 +4750,7 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("Array.prototype.slice.call('αβZγ')"),
       njs_str("α,β,Z,γ") },
 
-    { njs_str("Array.prototype.slice.call(String.bytesFrom(Array(16).fill(0x9d)))[0].charCodeAt(0)"),
+    { njs_str("Array.prototype.slice.call($262.byteString(Array(16).fill(0x9d)))[0].charCodeAt(0)"),
       njs_str("157") },
 
     { njs_str("Array.prototype.slice.call('αβZγ', 1)"),
@@ -5129,6 +5171,9 @@ static njs_unit_test_t  njs_test[] =
               "a.splice(0)"),
       njs_str(",,") },
 
+    { njs_str("'/A/B/C/D/'.split('/').toSpliced(1,1).join('/')"),
+      njs_str("/B/C/D/") },
+
     { njs_str("var a = []; a.reverse()"),
       njs_str("") },
 
@@ -5184,6 +5229,9 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("Array.prototype[0] = 0; var x = [,1]; x.reverse(); x"),
       njs_str("1,0") },
+
+    { njs_str("var a = [,3,2,1]; njs.dump([a.toReversed(),a])"),
+      njs_str("[[1,2,3,undefined],[<empty>,3,2,1]]") },
 
     { njs_str("var a = [1,2,3,4]; a.indexOf()"),
       njs_str("-1") },
@@ -6559,12 +6607,10 @@ static njs_unit_test_t  njs_test[] =
               "           return a.map(q=>q/2).join('|') === '3|2|1'})"),
       njs_str("true") },
 
-#ifdef NJS_TEST262
     { njs_str("const arr = new Uint8Array([1,2,3]);"
               "const sep = {toString(){$262.detachArrayBuffer(arr.buffer); return ','}};"
               "arr.join(sep)"),
       njs_str("TypeError: detached buffer") },
-#endif
 
     { njs_str("Uint8Array.prototype.reduce.call(1)"),
       njs_str("TypeError: this is not a typed array") },
@@ -6668,6 +6714,11 @@ static njs_unit_test_t  njs_test[] =
               ".every(v=>{ return (new v([1,2,3,4])).reverse().join('|') == '4|3|2|1'})"),
       njs_str("true") },
 
+    { njs_str(NJS_TYPED_ARRAY_LIST
+              ".every(v=>{var a = new v([3,2,1]);"
+              "           return [a.toReversed(), a].toString() === '1,2,3,3,2,1'})"),
+      njs_str("true") },
+
     { njs_str("Uint8Array.prototype.sort.call(1)"),
       njs_str("TypeError: this is not a typed array") },
 
@@ -6710,6 +6761,17 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("(new Float64Array([255,255,NaN,3,NaN,Infinity,3,-Infinity,0,-0,2,1,-5])).slice(2).sort()"),
       njs_str("-Infinity,-5,0,0,1,2,3,3,Infinity,NaN,NaN") },
+
+    { njs_str(NJS_TYPED_ARRAY_LIST
+              ".every(v=>{var a = new v([3,2,1]);"
+              "           return [a.toSorted(),a].toString() === '1,2,3,3,2,1'})"),
+      njs_str("true") },
+
+    { njs_str(NJS_TYPED_ARRAY_LIST
+              ".every(v=>{var a = (new v([3,2,1]));"
+              "           a.constructor = (v == Uint8Array) ? Uint32Array : Uint8Array;"
+              "           return Object.getPrototypeOf(a.toSorted()) === v.prototype})"),
+      njs_str("true") },
 
     { njs_str("(new DataView(new ArrayBuffer(3)))"),
       njs_str("[object DataView]") },
@@ -7304,6 +7366,36 @@ static njs_unit_test_t  njs_test[] =
               "[a.length, a[0].toString(), a[63].toString()]"),
       njs_str("64,00,63") },
 
+    { njs_str("Object.prototype[2] = 4;"
+              "njs.dump([undefined, 3, /*hole*/, 2, undefined, /*hole*/, 1].sort())"),
+      njs_str("[1,2,3,4,undefined,undefined,<empty>]") },
+
+    { njs_str("var a = [3,2,1]; [a.toSorted(), a]"),
+      njs_str("1,2,3,3,2,1") },
+
+    { njs_str("var a = [3,,1]; njs.dump([a.toSorted(), a.sort()])"),
+      njs_str("[[1,3,undefined],[1,3,<empty>]]") },
+
+    { njs_str("var a = {length:3, 0:'Z', 2:'A'};"
+              "njs.dump([Array.prototype.toSorted.call(a), Array.prototype.sort.call(a)])"),
+      njs_str("[['A','Z',undefined],{length:3,0:'A',1:'Z'}]") },
+
+    { njs_str("var a = {length: 1}; a.__proto__ = {0:'A'};"
+              "njs.dump([Array.prototype.toSorted.call(a), Array.prototype.sort.call(a)])"),
+      njs_str("[['A'],{length:1}]") },
+
+    { njs_str("Array.prototype.toSorted.call(true)"),
+      njs_str("") },
+
+    { njs_str("Array.prototype.toSorted.call({length: -2})"),
+      njs_str("") },
+
+    { njs_str("Array.prototype.toSorted.call({length: NaN})"),
+      njs_str("") },
+
+    { njs_str("Array.prototype.toSorted.call({length: 2**32})"),
+      njs_str("RangeError: Invalid array length") },
+
     /*
       Array.prototype.keys()
       Array.prototype.values()
@@ -7811,37 +7903,34 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("(new String('abc')).hasOwnProperty('length')"),
       njs_str("true") },
 
-    { njs_str("'abc'.toUTF8().length"),
-      njs_str("3") },
-
     { njs_str("'абв'.length"),
       njs_str("3") },
 
-    { njs_str("'абв'.toUTF8().length"),
+    { njs_str("(new TextEncoder()).encode('абв').length"),
       njs_str("6") },
 
     { njs_str("'αβγ'.length"),
       njs_str("3") },
 
-    { njs_str("'αβγ'.toUTF8().length"),
+    { njs_str("(new TextEncoder()).encode('αβγ').length"),
       njs_str("6") },
 
     { njs_str("'絵文字'.length"),
       njs_str("3") },
 
-    { njs_str("'絵文字'.toUTF8().length"),
+    { njs_str("(new TextEncoder()).encode('絵文字').length"),
       njs_str("9") },
 
     { njs_str("'えもじ'.length"),
       njs_str("3") },
 
-    { njs_str("'えもじ'.toUTF8().length"),
+    { njs_str("(new TextEncoder()).encode('えもじ').length"),
       njs_str("9") },
 
     { njs_str("'囲碁織'.length"),
       njs_str("3") },
 
-    { njs_str("'囲碁織'.toUTF8().length"),
+    { njs_str("(new TextEncoder()).encode('囲碁織').length"),
       njs_str("9") },
 
     { njs_str("var a = 'abc'; a.length"),
@@ -7997,75 +8086,11 @@ static njs_unit_test_t  njs_test[] =
                  "var a = 'abc'; a.concat('абв', s)"),
       njs_str("abcабв123") },
 
-    { njs_str("'\\u00CE\\u00B1'.toBytes() == 'α'"),
-      njs_str("true") },
-
-    { njs_str("'\\u00CE\\u00B1'.toBytes() === 'α'"),
-      njs_str("true") },
-
-    { njs_str("var b = '\\u00C2\\u00B6'.toBytes(), u = b.fromUTF8();"
-                 "b.length +' '+ b +' '+ u.length +' '+ u"),
-      njs_str("2 ¶ 1 ¶") },
-
-    { njs_str("'α'.toBytes()"),
-      njs_str("null") },
-
-    { njs_str("'α'.toUTF8()[0]"),
-      njs_str("\xCE") },
-
     { njs_str("var r = /^\\x80$/; r.source + r.source.length"),
       njs_str("^\\x80$6") },
 
     { njs_str("var r = /^\\\\x80$/; r.source + r.source.length"),
       njs_str("^\\\\x80$7") },
-
-    { njs_str("/^\\x80$/.test('\\x80'.toBytes())"),
-      njs_str("true") },
-
-    { njs_str("/^\\xC2\\x80$/.test('\\x80'.toUTF8())"),
-      njs_str("true") },
-
-    { njs_str("'α'.toUTF8().toBytes()"),
-      njs_str("α") },
-
-    { njs_str("var a = 'a'.toBytes() + 'α'; a + a.length"),
-      njs_str("aα3") },
-
-    { njs_str("var a = 'µ§±®'.toBytes(); a"),
-      njs_str("\xB5\xA7\xB1\xAE") },
-
-    { njs_str("var a = 'µ§±®'.toBytes(2); a"),
-      njs_str("\xB1\xAE") },
-
-    { njs_str("var a = 'µ§±®'.toBytes(1,3); a"),
-      njs_str("\xA7\xB1") },
-
-    { njs_str("var a = '\\xB5\\xA7\\xB1\\xAE'.toBytes(); a.fromBytes()"),
-      njs_str("µ§±®") },
-
-    { njs_str("var a = '\\xB5\\xA7\\xB1\\xAE'.toBytes(); a.fromBytes(2)"),
-      njs_str("±®") },
-
-    { njs_str("var a = '\\xB5\\xA7\\xB1\\xAE'.toBytes(); a.fromBytes(1, 3)"),
-      njs_str("§±") },
-
-    { njs_str("'A'.repeat(8).toBytes() === 'A'.repeat(8)"),
-      njs_str("true") },
-
-    { njs_str("'A'.repeat(16).toBytes() === 'A'.repeat(16)"),
-      njs_str("true") },
-
-    { njs_str("'A'.repeat(38).toBytes(-5) === 'AAAAA'"),
-      njs_str("true") },
-
-    { njs_str("('α' + 'A'.repeat(32)).toBytes()"),
-      njs_str("null") },
-
-    { njs_str("('α' + 'A'.repeat(32)).toBytes(1) === 'A'.repeat(32)"),
-      njs_str("true") },
-
-    { njs_str("('α' + 'A'.repeat(40)).toBytes(-3,-1)"),
-      njs_str("AA") },
 
     { njs_str("var s = 'x'.repeat(2**10).repeat(2**14);"
                  "var a = Array(200).fill(s);"
@@ -8160,9 +8185,6 @@ static njs_unit_test_t  njs_test[] =
       njs_str("Error: Oops") },
 
     { njs_str("String.prototype.slice(1, 5)"),
-      njs_str("") },
-
-    { njs_str("String.prototype.toBytes(1, 5)"),
       njs_str("") },
 
     { njs_str("'abc'.charAt(1 + 1)"),
@@ -8463,9 +8485,6 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("var r = new String('undefined').indexOf(x); var x; r"),
       njs_str("0") },
 
-    { njs_str("'a a'.toUTF8().indexOf('a', 1)"),
-      njs_str("2") },
-
     { njs_str("'aaa'.lastIndexOf()"),
       njs_str("-1") },
 
@@ -8659,9 +8678,6 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("'\x00абвгдеёжз'.toUpperCase().length"),
       njs_str("10") },
-
-    { njs_str("['ȿ', 'Ȿ', 'ȿ'.toUpperCase(), 'Ȿ'.toLowerCase()].map((v)=>v.toUTF8().length)"),
-      njs_str("2,3,3,2") },
 
 #if (!NJS_HAVE_MEMORY_SANITIZER) /* very long tests under MSAN */
     { njs_str("var a = [], code;"
@@ -8864,16 +8880,6 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("var r = 'αβγ'.replaceAll('', 'X'); [r, r.length]"),
       njs_str("XαXβXγX,7") },
-
-    { njs_str("var s = 'αz'.toUTF8();"
-              "var r = s.replace('z', 'β');"
-              "r.length"),
-      njs_str("4") },
-
-    { njs_str("var s = 'αzz'.toUTF8();"
-              "var r = s.replaceAll('z', 'β');"
-              "r.length"),
-      njs_str("3") },
 
     { njs_str("'abc'.replace('b', (m, o, s) => `|${s}|${o}|${m}|`)"),
       njs_str("a|abc|1|b|c") },
@@ -9650,10 +9656,6 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("('β' + 'α'.repeat(33) +'β').match(/α+/g)[0][32]"),
       njs_str("α") },
 
-    { njs_str("var a = '\\u00CE\\u00B1'.toBytes().match(/α/g)[0] + 'α';"
-                 "a +' '+ a.length"),
-      njs_str("αα 4") },
-
     { njs_str("'abc'.split()"),
       njs_str("abc") },
 
@@ -9917,92 +9919,8 @@ static njs_unit_test_t  njs_test[] =
       njs_str("TypeError: Cannot convert a Symbol value to a string") },
 
     { njs_str("[undefined, null, Symbol()]"
-              ".every(v=> { try {String.bytesFrom(v);} catch(e) {return e.name == 'TypeError'} })"),
+              ".every(v=> { try {$262.byteString(v);} catch(e) {return e.name == 'TypeError'} })"),
       njs_str("true") },
-
-    { njs_str("String.bytesFrom({}).length"),
-      njs_str("0") },
-
-    { njs_str("String.bytesFrom({length:5, 0:'A'.charCodeAt(0), 2:'X', 3:NaN,4:0xfd}).toString('hex')"),
-      njs_str("41000000fd") },
-
-    { njs_str("String.bytesFrom([1, 2, 0.23, '5', 'A']).toString('hex')"),
-      njs_str("0102000500") },
-
-    { njs_str("String.bytesFrom([NaN, Infinity]).toString('hex')"),
-      njs_str("0000") },
-
-    { njs_str("String.bytesFrom(new Uint8Array([0xff,0xde,0xba])).toString('hex')"),
-      njs_str("ffdeba") },
-
-    { njs_str("String.bytesFrom((new Uint8Array([0xff,0xde,0xba])).buffer).toString('hex')"),
-      njs_str("ffdeba") },
-
-    { njs_str("String.bytesFrom('', 'hex')"),
-      njs_str("") },
-
-    { njs_str("String.bytesFrom('00aabbcc', 'hex').toString('hex')"),
-      njs_str("00aabbcc") },
-
-    { njs_str("String.bytesFrom(new String('00aabbcc'), 'hex').toString('hex')"),
-      njs_str("00aabbcc") },
-
-    { njs_str("String.bytesFrom('deadBEEF##', 'hex').toString('hex')"),
-      njs_str("deadbeef") },
-
-    { njs_str("String.bytesFrom('aa0', 'hex').toString('hex')"),
-      njs_str("aa") },
-
-    { njs_str("String.bytesFrom('', 'base64')"),
-      njs_str("") },
-
-    { njs_str("String.bytesFrom('#', 'base64')"),
-      njs_str("") },
-
-    { njs_str("String.bytesFrom('QQ==', 'base64')"),
-      njs_str("A") },
-
-    { njs_str("String.bytesFrom('QQ=', 'base64')"),
-      njs_str("A") },
-
-    { njs_str("String.bytesFrom('QQ', 'base64')"),
-      njs_str("A") },
-
-    { njs_str("String.bytesFrom('Q', 'base64')"),
-      njs_str("") },
-
-    { njs_str("String.bytesFrom('QUI=', 'base64')"),
-      njs_str("AB") },
-
-    { njs_str("String.bytesFrom('QUI', 'base64')"),
-      njs_str("AB") },
-
-    { njs_str("String.bytesFrom('QUJD', 'base64')"),
-      njs_str("ABC") },
-
-    { njs_str("String.bytesFrom('QUJDRA==', 'base64')"),
-      njs_str("ABCD") },
-
-    { njs_str("String.bytesFrom('', 'base64url')"),
-      njs_str("") },
-
-    { njs_str("String.bytesFrom('QQ', 'base64url')"),
-      njs_str("A") },
-
-    { njs_str("String.bytesFrom('QUI', 'base64url')"),
-      njs_str("AB") },
-
-    { njs_str("String.bytesFrom('QUJD', 'base64url')"),
-      njs_str("ABC") },
-
-    { njs_str("String.bytesFrom('QUJDRA', 'base64url')"),
-      njs_str("ABCD") },
-
-    { njs_str("String.bytesFrom('QUJDRA#', 'base64url')"),
-      njs_str("ABCD") },
-
-    { njs_str("String.bytesFrom('QUJDRA#', 'base64lol')"),
-      njs_str("TypeError: Unknown encoding: \"base64lol\"") },
 
     { njs_str("encodeURI.name"),
       njs_str("encodeURI")},
@@ -10058,7 +9976,7 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("decodeURI('%D0%B0%D0%B1%D0%B2').length"),
       njs_str("3")},
 
-    { njs_str("decodeURI(String.bytesFrom([0x80,0x80]))"),
+    { njs_str("decodeURI($262.byteString([0x80,0x80]))"),
       njs_str("URIError: malformed URI")},
 
     { njs_str("["
@@ -10100,9 +10018,9 @@ static njs_unit_test_t  njs_test[] =
               " String.fromCodePoint(0x100),"
               " String.fromCodePoint(0x00, 0x100),"
               " String.fromCodePoint(0x00, 0x01, 0x100),"
-              " String.bytesFrom([0x80]),"
-              " String.bytesFrom([0x60, 0x80]),"
-              " String.bytesFrom([0x60, 0x60, 0x80]),"
+              " $262.byteString([0x80]),"
+              " $262.byteString([0x60, 0x80]),"
+              " $262.byteString([0x60, 0x60, 0x80]),"
               "].map(v => { try { return btoa(v); } catch (e) { return '#'} })"),
       njs_str("dW5kZWZpbmVk,,AA==,AAE=,AAEC,AP7/,#,#,#,#,#,#")},
 
@@ -11795,13 +11713,7 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("/\\x80/.test('\\u0080')"),
       njs_str("true") },
 
-    { njs_str("/\\x80/.test('\\u0080'.toBytes())"),
-      njs_str("true") },
-
     { njs_str("/α/.test('\\u03B1')"),
-      njs_str("true") },
-
-    { njs_str("/α/.test('\\u00CE\\u00B1'.toBytes())"),
       njs_str("true") },
 
     { njs_str("/[A-Za-z]/.test('S')"),
@@ -11840,11 +11752,7 @@ static njs_unit_test_t  njs_test[] =
       njs_str("3 БВ бв 2 /бв/gi") },
 #endif
 
-    { njs_str("var r = /\\x80/g; r.exec('\\u0081\\u0080'.toBytes());"
-              "r.lastIndex +' '+ r.source +' '+ r.source.length +' '+ r"),
-      njs_str("2 \\x80 4 /\\x80/g") },
-
-    { njs_str("var r = /_/g; var index = r.exec(String.bytesFrom([255,149,15,97,95])).index;"
+    { njs_str("var r = /_/g; var index = r.exec($262.byteString([255,149,15,97,95])).index;"
               "[index, r.lastIndex]"),
       njs_str("4,5") },
 
@@ -11966,6 +11874,38 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("var r = /./; r"),
       njs_str("/./") },
 
+    { njs_str("/[^]+|[^]+/.test('\\n| ')"),
+      njs_str("true") },
+
+    { njs_str("/[^]+|[^][^]/.test('|aa')"),
+      njs_str("true") },
+
+    { njs_str("/a[]/.test('a')"),
+      njs_str("false") },
+
+    { njs_str("/[]a/.test('a')"),
+      njs_str("false") },
+
+#ifdef NJS_HAVE_PCRE2
+    { njs_str("/[]*a/.test('a')"),
+      njs_str("true") },
+#endif
+
+    { njs_str("/Ca++BB/"),
+      njs_str("SyntaxError: Invalid regular expression \"Ca++BB\" nothing to repeat in 1") },
+
+    { njs_str("/a*+/"),
+      njs_str("SyntaxError: Invalid regular expression \"a*+\" nothing to repeat in 1") },
+
+    { njs_str("/a?+/"),
+      njs_str("SyntaxError: Invalid regular expression \"a?+\" nothing to repeat in 1") },
+
+    { njs_str(" /\\[[]++\\]/"),
+      njs_str("SyntaxError: Invalid regular expression \"\\[[]++\\]\" nothing to repeat in 1") },
+
+    { njs_str("/\\?+/"),
+      njs_str("/\\?+/") },
+
     { njs_str("var r = new RegExp(); r"),
       njs_str("/(?:)/") },
 
@@ -12025,6 +11965,15 @@ static njs_unit_test_t  njs_test[] =
 
     { njs_str("RegExp(new RegExp('expr'))"),
       njs_str("/expr/") },
+
+    { njs_str("RegExp(RegExp('[^]+|[^][^]')).test('| \\na')"),
+      njs_str("true") },
+
+    { njs_str("RegExp('a++')"),
+      njs_str("SyntaxError: Invalid regular expression \"a++\" nothing to repeat") },
+
+    { njs_str("RegExp('[a++]')"),
+      njs_str("/[a++]/") },
 
     { njs_str("RegExp(new RegExp('expr')).multiline"),
       njs_str("false") },
@@ -12110,10 +12059,10 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("Error('e').name + ': ' + Error('e').message"),
       njs_str("Error: e") },
 
-    { njs_str("Error(String.bytesFrom(Array(1).fill(0x9d))).toString().length"),
+    { njs_str("Error($262.byteString(Array(1).fill(0x9d))).toString().length"),
       njs_str("8") },
 
-    { njs_str("var e = Error('α'); e.name = String.bytesFrom(Array(1).fill(0x9d)); "
+    { njs_str("var e = Error('α'); e.name = $262.byteString(Array(1).fill(0x9d)); "
               "e.toString().length"),
       njs_str("5") },
 
@@ -13311,6 +13260,12 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("var b = new Boolean(1); b.__proto__ === Boolean.prototype"),
       njs_str("true") },
 
+    { njs_str("Boolean(1).toString() === 'true'"),
+      njs_str("true") },
+
+    { njs_str("Boolean(0).toString() === 'false'"),
+      njs_str("true") },
+
     { njs_str("Number()"),
       njs_str("0") },
 
@@ -13344,11 +13299,47 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("Number(false)"),
       njs_str("0") },
 
+    { njs_str("Number('0b111')"),
+      njs_str("7") },
+
+    { njs_str("Number('0B111')"),
+      njs_str("7") },
+
+    { njs_str("Number('0b1_11')"),
+      njs_str("NaN") },
+
+    { njs_str("Number('-0b111')"),
+      njs_str("NaN") },
+
     { njs_str("Number(123)"),
       njs_str("123") },
 
     { njs_str("Number('123')"),
       njs_str("123") },
+
+    { njs_str("Number('0o123')"),
+      njs_str("83") },
+
+    { njs_str("Number('0O123')"),
+      njs_str("83") },
+
+    { njs_str("Number('0o1_23')"),
+      njs_str("NaN") },
+
+    { njs_str("Number('-0o123')"),
+      njs_str("NaN") },
+
+    { njs_str("Number('0x123')"),
+      njs_str("291") },
+
+    { njs_str("Number('0X123')"),
+      njs_str("291") },
+
+    { njs_str("Number('0x1_23')"),
+      njs_str("NaN") },
+
+    { njs_str("Number('-0x123')"),
+      njs_str("NaN") },
 
     { njs_str("['1', ' 1 ', '1\\t', '1\\n', '1\\r\\n'].reduce((a, x) => a + Number(x), 0)"),
       njs_str("5") },
@@ -15428,7 +15419,7 @@ static njs_unit_test_t  njs_test[] =
       njs_str("length,name,prototype") },
 
     { njs_str("Object.getOwnPropertyNames(Array)"),
-      njs_str("name,length,prototype,isArray,of") },
+      njs_str("name,length,prototype,from,isArray,of") },
 
     { njs_str("Object.getOwnPropertyNames(Array.isArray)"),
       njs_str("name,length") },
@@ -16181,11 +16172,66 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("Date.parse('2011-06-24T06:01:02.625Z')"),
       njs_str("1308895262625") },
 
+    { njs_str("Date.parse('2011-06-24T06:01:02.625+00:00')"),
+      njs_str("1308895262625") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625+0000')"),
+      njs_str("1308895262625") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625+00:0')"),
+      njs_str("NaN") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625+00:')"),
+      njs_str("NaN") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625+00')"),
+      njs_str("NaN") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625+0')"),
+      njs_str("NaN") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625+')"),
+      njs_str("NaN") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625-01:15')"),
+      njs_str("1308899762625") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625-01:60')"),
+      njs_str("NaN") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625-25:59')"),
+      njs_str("NaN") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625+01:15')"),
+      njs_str("1308890762625") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625-23:59')"),
+      njs_str("1308981602625") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625+23:59')"),
+      njs_str("1308808922625") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.6255Z')"),
+      njs_str("1308895262625") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.62555Z')"),
+      njs_str("1308895262625") },
+
+    { njs_str("Date.parse('2011-06-24T06:01:02.625555Z')"),
+      njs_str("1308895262625") },
+
     { njs_str("Date.parse('2011-06-24T06:01:02.6255555Z')"),
       njs_str("1308895262625") },
 
     { njs_str("Date.parse('2011-06-24T06:01:02.625555Z5')"),
       njs_str("NaN") },
+
+    { njs_str("var tzoffzet = new Date(0).getTimezoneOffset() * 60000;"
+              "Date.parse('1970-01-01T00:00:00') == tzoffzet"),
+      njs_str("true") },
+
+    { njs_str("Date.parse('1970-01-01')"),
+      njs_str("0") },
 
     { njs_str("var d = new Date(); var str = d.toISOString();"
                  "var diff = Date.parse(str) - Date.parse(str.substring(0, str.length - 1));"
@@ -18460,9 +18506,7 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("JSON.stringify('абв'.repeat(100)).length"),
       njs_str("302") },
 
-    /* Byte strings. */
-
-    { njs_str("JSON.stringify('\\u00CE\\u00B1\\u00C2\\u00B6'.toBytes())"),
+    { njs_str("JSON.stringify($262.byteString([0xCE, 0xB1, 0xC2, 0xB6]))"),
       njs_str("\"α¶\"") },
 
     /* Optional arguments. */
@@ -18498,7 +18542,7 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("JSON.stringify([1], null, '!!βββββββββββββββββ').length"),
       njs_str("15") },
 
-    { njs_str("JSON.stringify([1], null, String.bytesFrom([0x9d])).length"),
+    { njs_str("JSON.stringify([1], null, $262.byteString([0x9d])).length"),
       njs_str("InternalError: space argument cannot be a byte string") },
 
     { njs_str("JSON.stringify([1], null, 11)"),
@@ -18920,11 +18964,17 @@ static njs_unit_test_t  njs_test[] =
 
     /* Module. */
 
-    { njs_str("import;"),
+    { njs_str("import * from y"),
+      njs_str("SyntaxError: Non-default import is not supported in 1") },
+
+    { njs_str("import 'x' from y"),
       njs_str("SyntaxError: Non-default import is not supported in 1") },
 
     { njs_str("import {x} from y"),
       njs_str("SyntaxError: Non-default import is not supported in 1") },
+
+    { njs_str("import switch from y"),
+      njs_str("SyntaxError: Unexpected token \"switch\" in 1") },
 
     { njs_str("import x from y"),
       njs_str("SyntaxError: Unexpected token \"y\" in 1") },
@@ -19241,15 +19291,15 @@ static njs_unit_test_t  njs_test[] =
     { njs_str("var en = new TextEncoder(); var res = en.encode('α1α'); res[2]"),
       njs_str("49") },
 
-    { njs_str("var en = new TextEncoder(); en.encode(String.bytesFrom([0xCE]))"),
+    { njs_str("var en = new TextEncoder(); en.encode($262.byteString([0xCE]))"),
       njs_str("239,191,189") },
 
     { njs_str("var en = new TextEncoder();"
-              "en.encode(String.bytesFrom([0xCE, 0xB1, 0xCE]))"),
+              "en.encode($262.byteString([0xCE, 0xB1, 0xCE]))"),
       njs_str("206,177,239,191,189") },
 
     { njs_str("var en = new TextEncoder();"
-              "en.encode(String.bytesFrom([0xCE, 0xCE, 0xB1]))"),
+              "en.encode($262.byteString([0xCE, 0xCE, 0xB1]))"),
       njs_str("239,191,189,206,177") },
 
     { njs_str("var en = new TextEncoder(); en.encoding"),
@@ -19273,27 +19323,27 @@ static njs_unit_test_t  njs_test[] =
               "en.encodeInto('ααααα', utf8.subarray(2)); utf8[0]"),
       njs_str("0") },
 
-    { njs_str("var str = String.bytesFrom([0xCE]);"
+    { njs_str("var str = $262.byteString([0xCE]);"
               "var en = new TextEncoder();"
               "var utf8 = new Uint8Array(3);"
               "var res = en.encodeInto(str, utf8); "
               "[njs.dump(res), utf8]"),
       njs_str("{read:1,written:3},239,191,189") },
 
-    { njs_str("var str = String.bytesFrom([0xCE]);"
+    { njs_str("var str = $262.byteString([0xCE]);"
               "var en = new TextEncoder();"
               "var utf8 = new Uint8Array(5);"
               "en.encodeInto(str, utf8); utf8"),
       njs_str("239,191,189,0,0") },
 
-    { njs_str("var str = String.bytesFrom([0xCE, 0xB1, 0xCE]);"
+    { njs_str("var str = $262.byteString([0xCE, 0xB1, 0xCE]);"
               "var en = new TextEncoder();"
               "var utf8 = new Uint8Array(5);"
               "var res = en.encodeInto(str, utf8);"
               "[njs.dump(res), utf8]"),
       njs_str("{read:2,written:5},206,177,239,191,189") },
 
-    { njs_str("var str = String.bytesFrom([0xCE, 0xCE, 0xB1]);"
+    { njs_str("var str = $262.byteString([0xCE, 0xCE, 0xB1]);"
               "var en = new TextEncoder();"
               "var utf8 = new Uint8Array(5);"
               "var res = en.encodeInto(str, utf8);"
@@ -19993,32 +20043,32 @@ static njs_unit_test_t  njs_fs_module_test[] =
 
     { njs_str("var fs = require('fs');"
               "fs.readFile()"),
-      njs_str("TypeError: \"path\" must be a string or Buffer") },
+      njs_str("Error: \"path\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "var path = Buffer.from('/broken'); path[3] = 0;"
               "fs.readFile(path)"),
-      njs_str("TypeError: \"path\" must be a Buffer without null bytes") },
+      njs_str("Error: \"path\" must be a Buffer without null bytes") },
 
     { njs_str("var fs = require('fs');"
               "fs.readFile('/njs_unknown_path')"),
-      njs_str("TypeError: \"callback\" must be a function") },
+      njs_str("Error: \"callback\" must be a function") },
 
     { njs_str("var fs = require('fs');"
               "fs.readFile('/njs_unknown_path', 'utf8')"),
-      njs_str("TypeError: \"callback\" must be a function") },
+      njs_str("Error: \"callback\" must be a function") },
 
     { njs_str("var fs = require('fs');"
               "fs.readFile('/njs_unknown_path', {flag:'xx'})"),
-      njs_str("TypeError: \"callback\" must be a function") },
+      njs_str("Error: \"callback\" must be a function") },
 
     { njs_str("var fs = require('fs');"
               "fs.readFile('/njs_unknown_path', {flag:'xx'}, 1)"),
-      njs_str("TypeError: \"callback\" must be a function") },
+      njs_str("Error: \"callback\" must be a function") },
 
     { njs_str("var fs = require('fs');"
               "fs.readFile('/njs_unknown_path', {flag:'xx'}, function () {})"),
-      njs_str("TypeError: Unknown file open flags: \"xx\"") },
+      njs_str("Error: Unknown file open flags: \"xx\"") },
 
     { njs_str("var fs = require('fs');"
               "fs.readFile('/njs_unknown_path', {encoding:'ascii'}, function () {})"),
@@ -20032,15 +20082,15 @@ static njs_unit_test_t  njs_fs_module_test[] =
 
     { njs_str("var fs = require('fs');"
               "fs.readFileSync()"),
-      njs_str("TypeError: \"path\" must be a string or Buffer") },
+      njs_str("Error: \"path\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "fs.readFileSync({})"),
-      njs_str("TypeError: \"path\" must be a string or Buffer") },
+      njs_str("Error: \"path\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "fs.readFileSync('/njs_unknown_path', {flag:'xx'})"),
-      njs_str("TypeError: Unknown file open flags: \"xx\"") },
+      njs_str("Error: Unknown file open flags: \"xx\"") },
 
     { njs_str("var fs = require('fs');"
               "fs.readFileSync(Buffer.from('/njs_unknown_path'), {encoding:'ascii'})"),
@@ -20052,38 +20102,38 @@ static njs_unit_test_t  njs_fs_module_test[] =
 
     { njs_str("var fs = require('fs');"
               "fs.readFileSync('/njs_unknown_path', true)"),
-      njs_str("TypeError: Unknown options type: \"boolean\" (a string or object required)") },
+      njs_str("Error: Unknown options type (a string or object required)") },
 
 
     /* require('fs').writeFile() */
 
     { njs_str("var fs = require('fs');"
               "fs.writeFile()"),
-      njs_str("TypeError: \"path\" must be a string or Buffer") },
+      njs_str("Error: \"path\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "fs.writeFile({}, '', function () {})"),
-      njs_str("TypeError: \"path\" must be a string or Buffer") },
+      njs_str("Error: \"path\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "fs.writeFile('/njs_unknown_path')"),
-      njs_str("TypeError: \"callback\" must be a function") },
+      njs_str("Error: \"callback\" must be a function") },
 
     { njs_str("var fs = require('fs');"
               "fs.writeFile('/njs_unknown_path', '')"),
-      njs_str("TypeError: \"callback\" must be a function") },
+      njs_str("Error: \"callback\" must be a function") },
 
     { njs_str("var fs = require('fs');"
               "fs.writeFile('/njs_unknown_path', '', undefined)"),
-      njs_str("TypeError: \"callback\" must be a function") },
+      njs_str("Error: \"callback\" must be a function") },
 
     { njs_str("var fs = require('fs');"
               "fs.writeFile('/njs_unknown_path', '', 'utf8')"),
-      njs_str("TypeError: \"callback\" must be a function") },
+      njs_str("Error: \"callback\" must be a function") },
 
     { njs_str("var fs = require('fs');"
               "fs.writeFile('/njs_unknown_path', '', {flag:'xx'}, function () {})"),
-      njs_str("TypeError: Unknown file open flags: \"xx\"") },
+      njs_str("Error: Unknown file open flags: \"xx\"") },
 
     { njs_str("var fs = require('fs');"
               "fs.writeFile('/njs_unknown_path', '', {encoding:'ascii'}, function () {})"),
@@ -20095,21 +20145,21 @@ static njs_unit_test_t  njs_fs_module_test[] =
 
     { njs_str("var fs = require('fs');"
               "fs.writeFile('/njs_unknown_path', '', true, function () {})"),
-      njs_str("TypeError: Unknown options type: \"boolean\" (a string or object required)") },
+      njs_str("Error: Unknown options type (a string or object required)") },
 
     /* require('fs').writeFileSync() */
 
     { njs_str("var fs = require('fs');"
               "fs.writeFileSync()"),
-      njs_str("TypeError: \"path\" must be a string or Buffer") },
+      njs_str("Error: \"path\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "fs.writeFileSync({}, '')"),
-      njs_str("TypeError: \"path\" must be a string or Buffer") },
+      njs_str("Error: \"path\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "fs.writeFileSync('/njs_unknown_path', '', {flag:'xx'})"),
-      njs_str("TypeError: Unknown file open flags: \"xx\"") },
+      njs_str("Error: Unknown file open flags: \"xx\"") },
 
     { njs_str("var fs = require('fs');"
               "fs.writeFileSync('/njs_unknown_path', '', {encoding:'ascii'})"),
@@ -20121,29 +20171,29 @@ static njs_unit_test_t  njs_fs_module_test[] =
 
     { njs_str("var fs = require('fs');"
               "fs.writeFileSync('/njs_unknown_path', '', true)"),
-      njs_str("TypeError: Unknown options type: \"boolean\" (a string or object required)") },
+      njs_str("Error: Unknown options type (a string or object required)") },
 
     /* require('fs').renameSync() */
 
     { njs_str("var fs = require('fs');"
               "fs.renameSync()"),
-      njs_str("TypeError: \"oldPath\" must be a string or Buffer") },
+      njs_str("Error: \"oldPath\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "fs.renameSync('/njs_unknown_path')"),
-      njs_str("TypeError: \"newPath\" must be a string or Buffer") },
+      njs_str("Error: \"newPath\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "[undefined, null, false, NaN, Symbol(), {}, Object('/njs_unknown_path')]"
               ".map((x) => { try { fs.renameSync(x, '/njs_unknown_path'); } "
-              "              catch (e) { return (e instanceof TypeError); } })"
+              "              catch (e) { return (e instanceof Error); } })"
               ".every((x) => x === true)"),
       njs_str("true")},
 
     { njs_str("var fs = require('fs');"
               "[undefined, null, false, NaN, Symbol(), {}, Object('/njs_unknown_path')]"
               ".map((x) => { try { fs.renameSync('/njs_unknown_path', x); } "
-              "              catch (e) { return (e instanceof TypeError); } })"
+              "              catch (e) { return (e instanceof Error); } })"
               ".every((x) => x === true)"),
       njs_str("true")},
 
@@ -20151,29 +20201,29 @@ static njs_unit_test_t  njs_fs_module_test[] =
 
     { njs_str("var fs = require('fs');"
               "fs.access()"),
-      njs_str("TypeError: \"path\" must be a string or Buffer") },
+      njs_str("Error: \"path\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "fs.access('/njs_unknown_path')"),
-      njs_str("TypeError: \"callback\" must be a function") },
+      njs_str("Error: \"callback\" must be a function") },
 
     { njs_str("var fs = require('fs');"
               "fs.access('/njs_unknown_path', fs.constants.F_OK)"),
-      njs_str("TypeError: \"callback\" must be a function") },
+      njs_str("Error: \"callback\" must be a function") },
 
     { njs_str("var fs = require('fs');"
               "fs.access('/njs_unknown_path', 'fail', function () {})"),
-      njs_str("TypeError: \"mode\" must be a number") },
+      njs_str("Error: \"mode\" must be a number") },
 
     /* require('fs').accessSync() */
 
     { njs_str("var fs = require('fs');"
               "fs.accessSync()"),
-      njs_str("TypeError: \"path\" must be a string or Buffer") },
+      njs_str("Error: \"path\" must be a string or Buffer") },
 
     { njs_str("var fs = require('fs');"
               "fs.accessSync('/njs_unknown_path', 'fail')"),
-      njs_str("TypeError: \"mode\" must be a number") },
+      njs_str("Error: \"mode\" must be a number") },
 
     { njs_str("var "
               "fs = require('fs'),"
@@ -20204,7 +20254,7 @@ static njs_unit_test_t  njs_fs_module_test[] =
               "test = (fname) =>"
                 "[undefined, null, false, NaN, Symbol(), {}, Object('/njs_unknown_path')]"
                 ".map((x) => { try { fs[fname](x); } "
-                "              catch (e) { return (e instanceof TypeError); } })"
+                "              catch (e) { return (e instanceof Error); } })"
                 ".every((x) => x === true);"
               "func.map(test).every((x) => x)"),
       njs_str("true")},
@@ -20258,7 +20308,7 @@ static njs_unit_test_t  njs_fs_module_test[] =
 
     { njs_str("var fs = require('fs');"
               "fs.Dirent('file', 123)"),
-      njs_str("TypeError: the Dirent constructor must be called with new") },
+      njs_str("Error: the Dirent constructor must be called with new") },
 
     { njs_str("var fs = require('fs');"
               "var e = new fs.Dirent('file', 123); [e.name, e.type]"),
@@ -20394,25 +20444,25 @@ static njs_unit_test_t  njs_crypto_module_test[] =
               "'d9f5aeb06abebb3be3f38adec9a2e3b94228d52193be923eb4e24c9b56ee0930']]") },
 
     { njs_str("var h = require('crypto').createHash()"),
-      njs_str("TypeError: algorithm must be a string") },
+      njs_str("Error: algorithm must be a string") },
 
     { njs_str("var h = require('crypto').createHash([])"),
-      njs_str("TypeError: algorithm must be a string") },
+      njs_str("Error: algorithm must be a string") },
 
     { njs_str("var h = require('crypto').createHash('sha512')"),
-      njs_str("TypeError: not supported algorithm: \"sha512\"") },
+      njs_str("Error: not supported algorithm: \"sha512\"") },
 
     { njs_str("var h = require('crypto').createHash('sha1');"
               "h.update()"),
-      njs_str("TypeError: data argument \"undefined\" is not a string or Buffer-like object") },
+      njs_str("Error: data is not a string or Buffer-like object") },
 
     { njs_str("var h = require('crypto').createHash('sha1');"
               "h.update({})"),
-      njs_str("TypeError: data argument \"object\" is not a string or Buffer-like object") },
+      njs_str("Error: data is not a string or Buffer-like object") },
 
     { njs_str("var h = require('crypto').createHash('sha1');"
               "h.update('A').digest('latin1')"),
-      njs_str("TypeError: Unknown digest encoding: \"latin1\"") },
+      njs_str("Error: Unknown digest encoding: \"latin1\"") },
 
     { njs_str("require('crypto').createHash('sha1').digest() instanceof Buffer"),
       njs_str("true") },
@@ -20512,16 +20562,16 @@ static njs_unit_test_t  njs_crypto_module_test[] =
       njs_str("5647b6c429701ff512f0f18232b4507065d2376ca8899a816a0a6e721bf8ddcc") },
 
     { njs_str("var h = require('crypto').createHmac()"),
-      njs_str("TypeError: algorithm must be a string") },
+      njs_str("Error: algorithm must be a string") },
 
     { njs_str("var h = require('crypto').createHmac([])"),
-      njs_str("TypeError: algorithm must be a string") },
+      njs_str("Error: algorithm must be a string") },
 
     { njs_str("var h = require('crypto').createHmac('sha512', '')"),
-      njs_str("TypeError: not supported algorithm: \"sha512\"") },
+      njs_str("Error: not supported algorithm: \"sha512\"") },
 
     { njs_str("var h = require('crypto').createHmac('sha1', [])"),
-      njs_str("TypeError: key argument \"array\" is not a string or Buffer-like object") },
+      njs_str("Error: key is not a string or Buffer-like object") },
 
     { njs_str("var h = require('crypto').createHmac('sha1', 'secret key');"
               "h.update('A').digest('hex'); h.digest('hex')"),
@@ -20536,7 +20586,7 @@ static njs_unit_test_t  njs_crypto_module_test[] =
 
     { njs_str("var cr = require('crypto'); var h = cr.createHash('sha1');"
               "h.update.call(cr.createHmac('sha1', 's'), '')"),
-      njs_str("TypeError: \"this\" is not a hash object") },
+      njs_str("Error: \"this\" is not a hash object") },
 };
 
 static njs_unit_test_t  njs_querystring_module_test[] =
@@ -20673,12 +20723,12 @@ static njs_unit_test_t  njs_querystring_module_test[] =
 
     { njs_str("var qs = require('querystring');"
               "qs.parse('baz=fuz&muz=tax', null, null, {decodeURIComponent: 123});"),
-      njs_str("TypeError: option decodeURIComponent is not a function") },
+      njs_str("Error: option decodeURIComponent is not a function") },
 
     { njs_str("var qs = require('querystring');"
               "qs.unescape = 123;"
               "qs.parse('baz=fuz&muz=tax');"),
-    njs_str("TypeError: QueryString.unescape is not a function") },
+    njs_str("Error: QueryString.unescape is not a function") },
 
     { njs_str("var qs = require('querystring'); var out = [];"
               "qs.unescape = (key) => {out.push(key)};"
@@ -20757,11 +20807,6 @@ static njs_unit_test_t  njs_querystring_module_test[] =
       njs_str("66,1,α") },
 
     { njs_str("var qs = require('querystring');"
-              "var s = qs.parse('X='+String.bytesFrom(Array(16).fill(0x9d))).X;"
-              "[s.length, s.toUTF8().length, s[15]]"),
-      njs_str("16,48,�") },
-
-    { njs_str("var qs = require('querystring');"
               "qs.stringify({'baz': 'fuz'})"),
       njs_str("baz=fuz") },
 
@@ -20790,18 +20835,18 @@ static njs_unit_test_t  njs_querystring_module_test[] =
 
     { njs_str("var qs = require('querystring'); "
               "qs.stringify({a: 'b'}, null, null, "
-              "             {encodeURIComponent: () => String.bytesFrom([0x9d])})"),
-      njs_str("TypeError: got non-UTF8 string from encoder") },
+              "             {encodeURIComponent: () => $262.byteString([0x9d])})"),
+      njs_str("InternalError: invalid UTF-8 string") },
 
     { njs_str("var qs = require('querystring');"
               "qs.stringify({'baz': 'fuz', 'muz': 'tax'}, null, null, {encodeURIComponent: 123});"
               "out.join('; ')"),
-      njs_str("TypeError: option encodeURIComponent is not a function") },
+      njs_str("Error: option encodeURIComponent is not a function") },
 
     { njs_str("var qs = require('querystring');"
               "qs.escape = 123;"
               "qs.stringify({'baz': 'fuz', 'muz': 'tax'})"),
-      njs_str("TypeError: QueryString.escape is not a function") },
+      njs_str("Error: QueryString.escape is not a function") },
 
     { njs_str("var qs = require('querystring'); var out = [];"
               "qs.escape = (key) => {out.push(key)};"
@@ -20843,7 +20888,7 @@ static njs_unit_test_t  njs_querystring_module_test[] =
       njs_str("") },
 
     { njs_str("var qs = require('querystring');"
-              "qs.stringify({X: String.bytesFrom(Array(4).fill(0x9d))})"),
+              "qs.stringify({X: $262.byteString(Array(4).fill(0x9d))})"),
       njs_str("X=%9D%9D%9D%9D") },
 
     { njs_str("var qs = require('querystring');"
@@ -20984,8 +21029,68 @@ static njs_unit_test_t  njs_buffer_module_test[] =
              "].every(args => Buffer.byteLength(args[0], args[1])  == args[2])"),
       njs_str("true") },
 
-    { njs_str("Buffer.from([])"),
-      njs_str("") },
+    { njs_str("Buffer.from({length:5, 0:'A'.charCodeAt(0), 2:'X', 3:NaN,4:0xfd}).toString('hex')"),
+      njs_str("41000000fd") },
+
+    { njs_str("Buffer.from([1, 2, 0.23, '5', 'A']).toString('hex')"),
+      njs_str("0102000500") },
+
+    { njs_str("Buffer.from([NaN, Infinity]).toString('hex')"),
+      njs_str("0000") },
+
+    { njs_str("Buffer.from(new Uint8Array([0xff,0xde,0xba])).toString('hex')"),
+      njs_str("ffdeba") },
+
+    { njs_str("Buffer.from((new Uint8Array([0xff,0xde,0xba])).buffer).toString('hex')"),
+      njs_str("ffdeba") },
+
+    { njs_str("["
+             " ['', ''],"
+             " ['aa0', 'aa'],"
+             " ['00aabbcc', '00aabbcc'],"
+             " [new String('00aabbcc'), '00aabbcc'],"
+             " ['deadBEEF##', 'deadbeef'],"
+             "].every(args => { "
+             "    if (Buffer.from(args[0], 'hex').toString('hex') != args[1]) {"
+             "        throw `Buffer.from(\"${args[0]}\", 'hex').toString('hex') != \"${args[1]}\"`;"
+             "    }"
+             "    return true;"
+             "})"),
+      njs_str("true") },
+
+    { njs_str("["
+             " ['', ''],"
+             " ['#', ''],"
+             " ['Q', ''],"
+             " ['QQ', 'A'],"
+             " ['QQ=', 'A'],"
+             " ['QQ==', 'A'],"
+             " ['QUI=', 'AB'],"
+             " ['QUI', 'AB'],"
+             " ['QUJD', 'ABC'],"
+             " ['QUJDRA==', 'ABCD'],"
+             "].every(args => { "
+             "    if (Buffer.from(args[0], 'base64') != args[1]) {"
+             "        throw `Buffer.from(\"${args[0]}\", 'base64') != \"${args[1]}\"`;"
+             "    }"
+             "    return true;"
+             "})"),
+      njs_str("true") },
+
+    { njs_str("["
+             " ['', ''],"
+             " ['QQ', 'A'],"
+             " ['QUI', 'AB'],"
+             " ['QUJD', 'ABC'],"
+             " ['QUJDRA', 'ABCD'],"
+             " ['QUJDRA#', 'ABCD'],"
+             "].every(args => { "
+             "    if (Buffer.from(args[0], 'base64url') != args[1]) {"
+             "        throw `Buffer.from(\"${args[0]}\", 'base64url') != \"${args[1]}\"`;"
+             "    }"
+             "    return true;"
+             "})"),
+      njs_str("true") },
 
     { njs_str("Buffer.from([0x62, 0x75, 0x66, 0x66, 0x65, 0x72])"),
       njs_str("buffer") },
@@ -21125,7 +21230,7 @@ static njs_unit_test_t  njs_buffer_module_test[] =
              "].every(args => Buffer.from(args[0], args[1]) == 'evil')"),
       njs_str("true") },
 
-    { njs_str("var buf = Buffer.from(String.bytesFrom([0xF3])); buf"),
+    { njs_str("var buf = Buffer.from($262.byteString([0xF3])); buf"),
       njs_str("�") },
 
     { njs_str("Buffer.from('', 'utf-128')"),
@@ -21881,6 +21986,10 @@ static njs_unit_test_t  njs_webcrypto_test[] =
               "let condition = bits1 > (mean - 10 * stddev) && bits1 < (mean + 10 * stddev);"
               "condition ? true : [buf, nbits, bits1, mean, stddev]"),
       njs_str("true") },
+
+    { njs_str("let buf = new Uint32Array(4);"
+              "buf === crypto.getRandomValues(buf)"),
+      njs_str("true") },
 };
 
 
@@ -22153,6 +22262,74 @@ static njs_unit_test_t  njs_xml_test[] =
 };
 
 
+static njs_unit_test_t  njs_zlib_test[] =
+{
+    { njs_str("const zlib = require('zlib');"
+              "['C3f0dgQA', 'O7fx3KZzmwE=']"
+              ".map(v => zlib.inflateRawSync(Buffer.from(v, 'base64')).toString())"),
+      njs_str("WAKA,αβγ") },
+
+    { njs_str("const zlib = require('zlib');"
+              "['eJwLd/R2BAAC+gEl', 'eJw7t/HcpnObAQ/sBIE=']"
+              ".map(v => zlib.inflateSync(Buffer.from(v, 'base64')).toString())"),
+      njs_str("WAKA,αβγ") },
+
+    { njs_str("const zlib = require('zlib');"
+              "['WAKA', 'αβγ']"
+              ".map(v => zlib.deflateRawSync(v).toString('base64'))"),
+      njs_str("C3f0dgQA,O7fx3KZzmwE=") },
+
+    { njs_str("const zlib = require('zlib');"
+              "['WAKA', 'αβγ']"
+              ".map(v => zlib.deflateRawSync(v, {dictionary: Buffer.from('WAKA')}).toString('base64'))"),
+      njs_str("CwdiAA==,O7fx3KZzmwE=") },
+
+    { njs_str("const zlib = require('zlib');"
+              "['WAKA', 'αβγ']"
+              ".map(v => zlib.deflateRawSync(v, {level: zlib.constants.Z_NO_COMPRESSION}).toString('base64'))"),
+      njs_str("AQQA+/9XQUtB,AQYA+f/Osc6yzrM=") },
+
+    { njs_str("const zlib = require('zlib');"
+              "[zlib.constants.Z_FIXED,  zlib.constants.Z_RLE]"
+              ".map(v => zlib.deflateRawSync('WAKA'.repeat(10), {strategy: v}).toString('base64'))"),
+      njs_str("C3f0dgwnAgMA,BcExAQAAAMKgbNwLYP8mwmQymUwmk8lkcg==") },
+
+    { njs_str("const zlib = require('zlib');"
+              "[1, 8]"
+              ".map(v => zlib.deflateRawSync('WAKA'.repeat(35),"
+              "                              {strategy: zlib.constants.Z_RLE, memLevel: v})"
+              "          .toString('base64'))"),
+      njs_str("BMExAQAAAMKgbNwLYP8mwmQymUwmk8lkMplMJpPJZDKZTCaTyWQymUwmk+lzDHf0dgx39HYMd/R2BAA=,"
+              "BcExAQAAAMKgbNwLYP8mwmQymUwmk8lkMplMJpPJZDKZTCaTyWQymUwmk8lkMjk=") },
+
+    { njs_str("const zlib = require('zlib');"
+              "['WAKA', 'αβγ']"
+              ".map(v => zlib.deflateSync(v).toString('base64'))"),
+      njs_str("eJwLd/R2BAAC+gEl,eJw7t/HcpnObAQ/sBIE=") },
+
+    { njs_str("const zlib = require('zlib');"
+              "['WAKA'.repeat(1024), 'αβγ'.repeat(1024)]"
+              ".map(v => [v, zlib.deflateRawSync(v).toString('base64')])"
+              ".every(pair => pair[0] == zlib.inflateRawSync(Buffer.from(pair[1], 'base64')).toString())"),
+      njs_str("true") },
+
+    { njs_str("const zlib = require('zlib');"
+              "['WAKA'.repeat(1024), 'αβγ'.repeat(1024)]"
+              ".map(v => [v, zlib.deflateRawSync(v, {chunkSize:64}).toString('base64')])"
+              ".every(pair => pair[0] == zlib.inflateRawSync(Buffer.from(pair[1], 'base64'),"
+              "                                              {chunkSize:64}).toString())"),
+      njs_str("true") },
+
+    { njs_str("const zlib = require('zlib');"
+              "['WAKA', 'αβγ']"
+              ".map(v => [v, zlib.deflateRawSync(v, {dictionary: Buffer.from('WAKA')}).toString('base64')])"
+              ".every(pair => pair[0] == zlib.inflateRawSync(Buffer.from(pair[1], 'base64'),"
+              "                                              {dictionary: Buffer.from('WAKA')}).toString())"),
+      njs_str("true") },
+
+};
+
+
 static njs_unit_test_t  njs_module_test[] =
 {
     { njs_str("function f(){return 2}; var f; f()"),
@@ -22181,20 +22358,11 @@ static njs_unit_test_t  njs_externals_test[] =
     { njs_str("typeof $r"),
       njs_str("object") },
 
-    { njs_str("var a = $r.uri, s = a.fromUTF8(); s.length +' '+ s"),
-      njs_str("3 АБВ") },
-
     { njs_str("var a = $r.uri, b = $r2.uri, c = $r3.uri; a+b+c"),
       njs_str("АБВαβγabc") },
 
     { njs_str("var a = $r.uri; $r.uri = $r2.uri; $r2.uri = a; $r2.uri+$r.uri"),
       njs_str("АБВαβγ") },
-
-    { njs_str("var a = $r.uri, s = a.fromUTF8(2); s.length +' '+ s"),
-      njs_str("2 БВ") },
-
-    { njs_str("var a = $r.uri, s = a.fromUTF8(2, 4); s.length +' '+ s"),
-      njs_str("1 Б") },
 
     { njs_str("var a = $r.uri; a +' '+ a.length +' '+ a"),
       njs_str("АБВ 6 АБВ") },
@@ -22405,12 +22573,6 @@ static njs_unit_test_t  njs_externals_test[] =
     { njs_str("$r2.uri == 'αβγ' && $r2.uri === 'αβγ'"),
       njs_str("true") },
 
-#if (NJS_TEST262)
-#define N262 "$262,"
-#else
-#define N262 ""
-#endif
-
 #if (NJS_HAVE_OPENSSL)
 #define NCRYPTO "crypto,"
 #else
@@ -22418,7 +22580,7 @@ static njs_unit_test_t  njs_externals_test[] =
 #endif
 
     { njs_str("Object.keys(this).sort()"),
-      njs_str(N262 "$r,$r2,$r3,$shared,ExternalConstructor," NCRYPTO "global,njs,process") },
+      njs_str("$262,$r,$r2,$r3,$shared,ExternalConstructor," NCRYPTO "global,njs,process") },
 
     { njs_str("Object.getOwnPropertySymbols($r2)[0] == Symbol.toStringTag"),
       njs_str("true") },
@@ -22686,12 +22848,12 @@ static njs_unit_test_t  njs_shared_test[] =
       njs_str("37") },
 
     { njs_str("var fs = require('fs'); fs.readFileSync()"),
-      njs_str("TypeError: \"path\" must be a string or Buffer\n"
+      njs_str("Error: \"path\" must be a string or Buffer\n"
               "    at fs.readFileSync (native)\n"
               "    at main (:1)\n") },
 
     { njs_str("import fs from 'fs'; fs.readFileSync()"),
-      njs_str("TypeError: \"path\" must be a string or Buffer\n"
+      njs_str("Error: \"path\" must be a string or Buffer\n"
               "    at fs.readFileSync (native)\n"
               "    at main (:1)\n") },
 
@@ -23081,14 +23243,12 @@ static njs_unit_test_t  njs_backtraces_test[] =
               "    at Math.max (native)\n"
               "    at main (:1)\n") },
 
-#ifdef NJS_TEST262
     { njs_str("var ab = new ArrayBuffer(1);"
               "$262.detachArrayBuffer(ab);"
               "ab.byteLength"),
       njs_str("TypeError: detached buffer\n"
               "    at ArrayBuffer.prototype.byteLength (native)\n"
               "    at main (:1)\n") },
-#endif
 
     { njs_str("Object.prototype()"),
       njs_str("TypeError: (intermediate value)[\"prototype\"] is not a function\n"
@@ -23119,24 +23279,24 @@ static njs_unit_test_t  njs_backtraces_test[] =
               "    at main (:1)\n") },
 
     { njs_str("require('crypto').createHash('sha')"),
-      njs_str("TypeError: not supported algorithm: \"sha\"\n"
+      njs_str("Error: not supported algorithm: \"sha\"\n"
               "    at crypto.createHash (native)\n"
               "    at main (:1)\n") },
 
     { njs_str("var h = require('crypto').createHash('sha1');"
               "h.update([])"),
-      njs_str("TypeError: data argument \"array\" is not a string or Buffer-like object\n"
+      njs_str("Error: data is not a string or Buffer-like object\n"
               "    at Hash.update (native)\n"
               "    at main (:1)\n") },
 
     { njs_str("require('crypto').createHmac('sha1', [])"),
-      njs_str("TypeError: key argument \"array\" is not a string or Buffer-like object\n"
+      njs_str("Error: key is not a string or Buffer-like object\n"
               "    at crypto.createHmac (native)\n"
               "    at main (:1)\n") },
 
     { njs_str("var h = require('crypto').createHmac('sha1', 'secret');"
               "h.update([])"),
-      njs_str("TypeError: data argument \"array\" is not a string or Buffer-like object\n"
+      njs_str("Error: data is not a string or Buffer-like object\n"
               "    at Hmac.update (native)\n"
               "    at main (:1)\n") },
 
@@ -23262,6 +23422,8 @@ typedef struct {
 
 typedef struct {
     njs_vm_t            *vm;
+    njs_opaque_value_t  retval;
+
     njs_external_env_t  *env;
     njs_external_env_t  env0;
 
@@ -23334,13 +23496,17 @@ njs_external_state_init(njs_vm_t *vm, njs_external_state_t *s, njs_opts_t *opts)
 
 
 static njs_int_t
-njs_external_retval(njs_external_state_t *state, njs_str_t *s)
+njs_external_retval(njs_external_state_t *state, njs_int_t ret, njs_str_t *s)
 {
-    if (state->env != NULL && njs_value_is_valid(&state->env->retval)) {
-        return njs_vm_value_string(state->vm, s, &state->env->retval);
+    if (state->env != NULL
+        && ret == NJS_OK
+        && njs_value_is_valid(njs_value_arg(&state->env->retval)))
+    {
+        return njs_vm_value_string(state->vm, s,
+                                   njs_value_arg(&state->env->retval));
     }
 
-    return njs_vm_retval_string(state->vm, s);
+    return njs_vm_value_string(state->vm, s, njs_value_arg(&state->retval));
 }
 
 
@@ -23351,13 +23517,13 @@ njs_runtime_init(njs_vm_t *vm, njs_opts_t *opts)
     njs_uint_t     i;
     njs_runtime_t  *rt;
 
-    rt = njs_mp_alloc(vm->mem_pool, sizeof(njs_runtime_t));
+    rt = njs_mp_alloc(njs_vm_memory_pool(vm), sizeof(njs_runtime_t));
     if (rt == NULL) {
         return NULL;
     }
 
     rt->size = opts->repeat;
-    rt->states = njs_mp_alloc(vm->mem_pool,
+    rt->states = njs_mp_alloc(njs_vm_memory_pool(vm),
                               sizeof(njs_external_state_t) * rt->size);
     if (rt->states == NULL) {
         return NULL;
@@ -23418,19 +23584,21 @@ static njs_int_t
 njs_process_test(njs_external_state_t *state, njs_opts_t *opts,
     njs_unit_test_t *expected)
 {
-    njs_int_t    ret;
-    njs_str_t    s;
-    njs_bool_t   success;
-    njs_value_t  request;
+    njs_int_t           ret;
+    njs_str_t           s;
+    njs_bool_t          success;
+    njs_opaque_value_t  request;
 
     static const njs_str_t  handler_str = njs_str("main.handler");
     static const njs_str_t  request_str = njs_str("$r");
+
+    ret = NJS_OK;
 
     switch (state->state) {
     case sw_start:
         state->state = sw_handler;
 
-        ret = njs_vm_start(state->vm);
+        ret = njs_vm_start(state->vm, njs_value_arg(&state->retval));
         if (ret != NJS_OK) {
             goto done;
         }
@@ -23444,13 +23612,15 @@ njs_process_test(njs_external_state_t *state, njs_opts_t *opts,
         state->state = sw_loop;
 
         if (opts->handler) {
-            ret = njs_vm_value(state->vm, &request_str, &request);
+            ret = njs_vm_value(state->vm, &request_str,
+                               njs_value_arg(&request));
             if (ret != NJS_OK) {
                 njs_stderror("njs_vm_value(\"%V\") failed\n", &request_str);
                 return NJS_ERROR;
             }
 
-            ret = njs_external_call(state->vm, &handler_str, &request, 1);
+            ret = njs_external_call(state->vm, &handler_str,
+                                    njs_value_arg(&request), 1);
             if (ret == NJS_ERROR) {
                 goto done;
             }
@@ -23493,7 +23663,7 @@ done:
 
     state->state = sw_done;
 
-    if (njs_external_retval(state, &s) != NJS_OK) {
+    if (njs_external_retval(state, ret, &s) != NJS_OK) {
         njs_stderror("njs_external_retval() failed\n");
         return NJS_ERROR;
     }
@@ -23553,6 +23723,11 @@ njs_unit_test(njs_unit_test_t tests[], size_t num, njs_str_t *name,
             goto done;
         }
 
+        ret = njs_externals_262_init(vm);
+        if (ret != NJS_OK) {
+            goto done;
+        }
+
         if (opts->externals) {
             ret = njs_externals_shared_init(vm);
             if (ret != NJS_OK) {
@@ -23602,8 +23777,8 @@ njs_unit_test(njs_unit_test_t tests[], size_t num, njs_str_t *name,
 
         } else {
             if (ret != NJS_OK) {
-                if (njs_vm_retval_string(vm, &s) != NJS_OK) {
-                    njs_printf("njs_vm_retval_string() failed\n");
+                if (njs_vm_exception_string(vm, &s) != NJS_OK) {
+                    njs_printf("njs_vm_exception_string() failed\n");
                     goto done;
                 }
 
@@ -23653,14 +23828,15 @@ static njs_int_t
 njs_interactive_test(njs_unit_test_t tests[], size_t num, njs_str_t *name,
     njs_opts_t *opts, njs_stat_t *stat)
 {
-    u_char        *start, *last, *end;
-    njs_vm_t      *vm;
-    njs_int_t     ret;
-    njs_str_t     s;
-    njs_uint_t    i;
-    njs_stat_t    prev;
-    njs_bool_t    success;
-    njs_vm_opt_t  options;
+    u_char              *start, *last, *end;
+    njs_vm_t            *vm;
+    njs_int_t           ret;
+    njs_str_t           s;
+    njs_uint_t          i;
+    njs_stat_t          prev;
+    njs_bool_t          success;
+    njs_vm_opt_t        options;
+    njs_opaque_value_t  retval;
 
     vm = NULL;
 
@@ -23683,6 +23859,11 @@ njs_interactive_test(njs_unit_test_t tests[], size_t num, njs_str_t *name,
         vm = njs_vm_create(&options);
         if (vm == NULL) {
             njs_printf("njs_vm_create() failed\n");
+            goto done;
+        }
+
+        ret = njs_externals_262_init(vm);
+        if (ret != NJS_OK) {
             goto done;
         }
 
@@ -23716,12 +23897,12 @@ njs_interactive_test(njs_unit_test_t tests[], size_t num, njs_str_t *name,
                     njs_disassembler(vm);
                 }
 
-                ret = njs_vm_start(vm);
+                ret = njs_vm_start(vm, njs_value_arg(&retval));
             }
         }
 
-        if (njs_vm_retval_dump(vm, &s, 0) != NJS_OK) {
-            njs_printf("njs_vm_retval_dump() failed\n");
+        if (njs_vm_value_dump(vm, &s, njs_value_arg(&retval), 0, 1) != NJS_OK) {
+            njs_printf("njs_vm_value_dump() failed\n");
             goto done;
         }
 
@@ -23849,14 +24030,14 @@ static njs_int_t
 njs_vm_json_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
     njs_opts_t *opts, njs_stat_t *stat)
 {
-    njs_vm_t      *vm;
-    njs_int_t     ret;
-    njs_str_t     s, *script;
-    njs_uint_t    i;
-    njs_bool_t    success;
-    njs_stat_t    prev;
-    njs_value_t   args[3];
-    njs_vm_opt_t  options;
+    njs_vm_t            *vm;
+    njs_int_t           ret;
+    njs_str_t           s, *script;
+    njs_uint_t          i;
+    njs_bool_t          success;
+    njs_stat_t          prev;
+    njs_vm_opt_t        options;
+    njs_opaque_value_t  args[3], retval;
 
     static const njs_str_t fname = njs_str("replacer");
     static const njs_str_t iname = njs_str("indent");
@@ -23905,32 +24086,32 @@ njs_vm_json_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
             goto done;
         }
 
-        ret = njs_vm_start(vm);
+        ret = njs_vm_start(vm, njs_value_arg(&args[0]));
         if (ret != NJS_OK) {
-            njs_printf("njs_vm_run() failed\n");
+            njs_printf("njs_vm_start() failed\n");
             goto done;
         }
 
-        args[0] = *njs_vm_retval(vm);
-
-        ret = njs_vm_json_parse(vm, args, 1);
+        ret = njs_vm_json_parse(vm, njs_value_arg(args), 1,
+                                njs_value_arg(&retval));
         if (ret != NJS_OK) {
             njs_printf("njs_vm_json_parse() failed\n");
             goto done;
         }
 
-        args[0] = vm->retval;
-        njs_vm_value(vm, &fname, &args[1]);
-        njs_vm_value(vm, &iname, &args[2]);
+        njs_value_assign(&args[0], &retval);
+        njs_vm_value(vm, &fname, njs_value_arg(&args[1]));
+        njs_vm_value(vm, &iname, njs_value_arg(&args[2]));
 
-        ret = njs_vm_json_stringify(vm, args, 3);
+        ret = njs_vm_json_stringify(vm, njs_value_arg(args), 3,
+                                    njs_value_arg(&retval));
         if (ret != NJS_OK) {
             njs_printf("njs_vm_json_stringify() failed\n");
             goto done;
         }
 
-        if (njs_vm_retval_string(vm, &s) != NJS_OK) {
-            njs_printf("njs_vm_retval_string() failed\n");
+        if (njs_vm_value_string(vm, &s, njs_value_arg(&retval)) != NJS_OK) {
+            njs_printf("njs_vm_value_string() failed\n");
             goto done;
         }
 
@@ -23957,8 +24138,8 @@ njs_vm_json_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
 done:
 
     if (ret != NJS_OK) {
-        if (njs_vm_retval_string(vm, &s) != NJS_OK) {
-            njs_printf("njs_vm_retval_string() failed\n");
+        if (njs_vm_exception_string(vm, &s) != NJS_OK) {
+            njs_printf("njs_vm_exception_string() failed\n");
 
         } else {
             njs_printf("%V\n", &s);
@@ -23979,13 +24160,14 @@ static njs_int_t
 njs_vm_value_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
     njs_opts_t *opts, njs_stat_t *stat)
 {
-    njs_vm_t      *vm;
-    njs_int_t     ret;
-    njs_str_t     s, *script, path;
-    njs_uint_t    i;
-    njs_bool_t    success;
-    njs_stat_t    prev;
-    njs_vm_opt_t  options;
+    njs_vm_t            *vm;
+    njs_int_t           ret;
+    njs_str_t           s, *script, path;
+    njs_uint_t          i;
+    njs_bool_t          success;
+    njs_stat_t          prev;
+    njs_vm_opt_t        options;
+    njs_opaque_value_t  retval;
 
     static struct {
         njs_str_t   script;
@@ -24067,7 +24249,7 @@ njs_vm_value_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
             goto done;
         }
 
-        ret = njs_vm_start(vm);
+        ret = njs_vm_start(vm, njs_value_arg(&retval));
         if (ret != NJS_OK) {
             njs_printf("njs_vm_run() failed\n");
             goto done;
@@ -24075,7 +24257,7 @@ njs_vm_value_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
 
         path = tests[i].path;
 
-        path.start = njs_mp_alloc(vm->mem_pool, path.length);
+        path.start = njs_mp_alloc(njs_vm_memory_pool(vm), path.length);
         if (path.start == NULL) {
             njs_printf("njs_mp_alloc() failed\n");
             goto done;
@@ -24083,11 +24265,21 @@ njs_vm_value_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
 
         memcpy(path.start, tests[i].path.start, path.length);
 
-        ret = njs_vm_value(vm, &path, &vm->retval);
+        ret = njs_vm_value(vm, &path, njs_value_arg(&retval));
 
-        if (njs_vm_retval_string(vm, &s) != NJS_OK) {
-            njs_printf("njs_vm_retval_string() failed\n");
-            goto done;
+        if (ret == NJS_OK) {
+            if (njs_vm_value_string(vm, &s, njs_value_arg(&retval))
+                != NJS_OK)
+            {
+                njs_printf("njs_vm_value_string() failed\n");
+                goto done;
+            }
+
+        } else {
+            if (njs_vm_exception_string(vm, &s) != NJS_OK) {
+                njs_printf("njs_vm_exception_string() failed\n");
+                goto done;
+            }
         }
 
         success = njs_strstr_eq(&tests[i].ret, &s);
@@ -24113,8 +24305,8 @@ njs_vm_value_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
 done:
 
     if (ret != NJS_OK) {
-        if (njs_vm_retval_string(vm, &s) != NJS_OK) {
-            njs_printf("njs_vm_retval_string() failed\n");
+        if (njs_vm_exception_string(vm, &s) != NJS_OK) {
+            njs_printf("njs_vm_exception_string() failed\n");
 
         } else {
             njs_printf("%V\n", &s);
@@ -24134,32 +24326,37 @@ done:
 static njs_int_t
 njs_vm_object_alloc_test(njs_vm_t *vm, njs_opts_t *opts, njs_stat_t *stat)
 {
-    njs_int_t    ret;
-    njs_value_t  args[2], obj;
+    njs_int_t           ret;
+    njs_opaque_value_t  args[2], obj, num_key, bool_key;
 
-    static const njs_value_t num_key = njs_string("num");
-    static const njs_value_t bool_key = njs_string("bool");
+    njs_value_number_set(njs_value_arg(&args[0]), 1);
+    njs_value_boolean_set(njs_value_arg(&args[0]), 0);
 
-    njs_value_number_set(njs_argument(&args, 0), 1);
-    njs_value_boolean_set(njs_argument(&args, 1), 0);
+    (void) njs_vm_value_string_set(vm, njs_value_arg(&num_key),
+                                   (u_char *) "num", 3);
+    (void) njs_vm_value_string_set(vm, njs_value_arg(&bool_key),
+                                   (u_char *) "bool", 4);
 
-    ret = njs_vm_object_alloc(vm, &obj, NULL);
+    ret = njs_vm_object_alloc(vm, njs_value_arg(&obj), NULL);
     if (ret != NJS_OK) {
         return NJS_ERROR;
     }
 
-    ret = njs_vm_object_alloc(vm, &obj, &num_key, NULL);
+    ret = njs_vm_object_alloc(vm, njs_value_arg(&obj), njs_value_arg(&num_key),
+                              NULL);
     if (ret == NJS_OK) {
         return NJS_ERROR;
     }
 
-    ret = njs_vm_object_alloc(vm, &obj, &num_key, &args[0], NULL);
+    ret = njs_vm_object_alloc(vm, njs_value_arg(&obj), njs_value_arg(&num_key),
+                              njs_value_arg(&args[0]), NULL);
     if (ret != NJS_OK) {
         return NJS_ERROR;
     }
 
-    ret = njs_vm_object_alloc(vm, &obj, &num_key, &args[0], &bool_key,
-                              &args[1], NULL);
+    ret = njs_vm_object_alloc(vm, njs_value_arg(&obj), njs_value_arg(&num_key),
+                              njs_value_arg(&args[0]), njs_value_arg(&bool_key),
+                              njs_value_arg(&args[1]), NULL);
     if (ret != NJS_OK) {
         stat->failed++;
         return NJS_OK;
@@ -24274,7 +24471,7 @@ njs_chb_test(njs_vm_t *vm, njs_opts_t *opts, njs_stat_t *stat)
 
     static const njs_str_t  expected = njs_str("arg: \"XYZ\" -5");
 
-    njs_chb_init(&chain, vm->mem_pool);
+    njs_chb_init(&chain, njs_vm_memory_pool(vm));
 
     p = njs_chb_reserve(&chain, 513);
     if (p == NULL) {
@@ -24314,7 +24511,7 @@ njs_chb_test(njs_vm_t *vm, njs_opts_t *opts, njs_stat_t *stat)
         }
     }
 
-    njs_mp_free(vm->mem_pool, string.start);
+    njs_mp_free(njs_vm_memory_pool(vm), string.start);
 
     for (i = 0; i < 222; i++) {;
         njs_chb_drain(&chain, 3);
@@ -24393,7 +24590,7 @@ njs_chb_test(njs_vm_t *vm, njs_opts_t *opts, njs_stat_t *stat)
     }
 
     njs_chb_destroy(&chain);
-    njs_mp_free(vm->mem_pool, string.start);
+    njs_mp_free(njs_vm_memory_pool(vm), string.start);
 
 done:
 
@@ -24539,140 +24736,64 @@ failed:
 static njs_int_t
 njs_string_to_index_test(njs_vm_t *vm, njs_opts_t *opts, njs_stat_t *stat)
 {
-    njs_str_t   s, string;
-    njs_int_t   ret;
-    njs_bool_t  success, is_integer_index;
-    njs_uint_t  i;
+    double              num;
+    njs_str_t           s;
+    njs_int_t           ret;
+    njs_bool_t          success;
+    njs_uint_t          i;
+    njs_opaque_value_t  value, input;
 
     static const struct {
-        njs_value_t  value;
+        njs_str_t    value;
         njs_str_t    expected;
-        njs_bool_t   is_integer_index;
     } tests[] = {
-        { njs_string(" 1"), njs_str("NaN"), 0 },
-        { njs_string(""), njs_str("NaN"), 0 },
-        { njs_string("+0"), njs_str("NaN"), 0 },
-        { njs_string("-"), njs_str("NaN"), 0 },
-
-        { njs_string("-0"), njs_str("-0"), 0 },
-        { njs_value(NJS_NUMBER, 0, -0.0), njs_str("-0"), 1 },
-
-        { njs_string("-1"), njs_str("-1"), 0 },
-        { njs_string("0"), njs_str("0"), 1 },
-        { njs_string("0."), njs_str("NaN"), 0 },
-        { njs_string("0.0"), njs_str("NaN"), 0 },
-        { njs_string("0x1"), njs_str("NaN"), 0 },
-        { njs_string("1 "), njs_str("NaN"), 0 },
-        { njs_string("1"), njs_str("1"), 1 },
-        { njs_string("1."), njs_str("NaN"), 0 },
-        { njs_string("1.1"), njs_str("1.1"), 0 },
-        { njs_string("100"), njs_str("100"), 1 },
-        { njs_string("1a"), njs_str("NaN"), 0 },
-        { njs_string("1e+19"), njs_str("NaN"), 0 },
-        { njs_string("1e+22"), njs_str("1e+22"), 0 },
-        { njs_string("1e22"), njs_str("NaN"), 0 },
-        { njs_string("4294967296"), njs_str("4294967296"), 0 },
+        { njs_str(" 1"), njs_str("NaN") },
+        { njs_str(""), njs_str("NaN") },
+        { njs_str("+0"), njs_str("NaN") },
+        { njs_str("-"), njs_str("NaN") },
+        { njs_str("-0"), njs_str("-0") },
+        { njs_str("-1"), njs_str("-1") },
+        { njs_str("0"), njs_str("0") },
+        { njs_str("0."), njs_str("NaN") },
+        { njs_str("0.0"), njs_str("NaN") },
+        { njs_str("0x1"), njs_str("NaN") },
+        { njs_str("1 "), njs_str("NaN") },
+        { njs_str("1"), njs_str("1") },
+        { njs_str("1."), njs_str("NaN") },
+        { njs_str("1.1"), njs_str("1.1") },
+        { njs_str("100"), njs_str("100") },
+        { njs_str("1a"), njs_str("NaN") },
+        { njs_str("1e+19"), njs_str("NaN") },
+        { njs_str("1e+22"), njs_str("1e+22") },
+        { njs_str("1e22"), njs_str("NaN") },
+        { njs_str("4294967296"), njs_str("4294967296") },
     };
 
     for (i = 0; i < njs_nitems(tests); i++) {
-        if (njs_is_string(&tests[i].value)) {
-            njs_set_number(&vm->retval, njs_string_to_index(&tests[i].value));
+            (void) njs_vm_value_string_set(vm, njs_value_arg(&input),
+                                           tests[i].value.start,
+                                           tests[i].value.length);
 
-            ret = njs_vm_retval_dump(vm, &s, 0);
+            num = njs_string_to_index(njs_value_arg(&input));
+            njs_value_number_set(njs_value_arg(&value), num);
+
+            ret = njs_vm_value_dump(vm, &s, njs_value_arg(&value), 0, 0);
             if (ret != NJS_OK) {
                 njs_printf("njs_string_to_index_test: "
-                           "njs_vm_retval_dump() failed\n");
+                           "njs_vm_value_dump() failed\n");
                 return NJS_ERROR;
             }
 
             success = njs_strstr_eq(&tests[i].expected, &s);
 
             if (!success) {
-                njs_string_get(&tests[i].value, &string);
                 njs_printf("njs_string_to_index_test(\"%V\"):\n"
                            "expected: \"%V\"\n     got: \"%V\"\n",
-                           &string, &tests[i].expected, &s);
+                           &tests[i].value, &tests[i].expected, &s);
 
                 stat->failed++;
                 continue;
             }
-        }
-
-        is_integer_index = njs_key_is_integer_index(njs_number(&vm->retval),
-                                                    &tests[i].value);
-
-        if (tests[i].is_integer_index != is_integer_index) {
-            njs_string_get(&tests[i].value, &string);
-            njs_printf("njs_string_to_index_test2(\"%V\"):\n"
-                       "expected: %b\n     got: %b\n",
-                       &string, tests[i].is_integer_index, is_integer_index);
-
-            stat->failed++;
-            continue;
-        }
-
-        stat->passed++;
-    }
-
-    return NJS_OK;
-}
-
-
-static njs_int_t
-njs_to_int32_test(njs_vm_t *vm, njs_opts_t *opts, njs_stat_t *stat)
-{
-    int32_t     i32, second;
-    njs_uint_t  i;
-
-    static const struct {
-        double       value;
-        int32_t      expected;
-    } tests[] = {
-        { -1.0, -1 },
-        { 0.0, 0 },
-        { 0.001, 0 },
-        { 1.0, 1 },
-        { 2147483647.0, 2147483647 },
-        { 2147483648.0, -2147483648 },
-        { 2147483649.0, -2147483647 },
-        { -1844674406941458432.0, -2147483648 },
-        { 4.835703278458518e+24 /* 2**(53+29) + 2**30 */, 1073741824 },
-        { 9.671406556917036e+24 /* 2**(53+30) + 2**31 */, -2147483648 },
-    };
-
-    for (i = 0; i < njs_nitems(tests); i++) {
-        i32 = njs_number_to_int32(tests[i].value);
-
-        if (i32 != tests[i].expected) {
-            njs_printf("njs_to_int32_test(%f):\n"
-                       "expected: %D\n     got: %D\n",
-                       tests[i].value, tests[i].expected, i32);
-
-            stat->failed++;
-            continue;
-        }
-
-        second = njs_number_to_int32(i32);
-
-        if (i32 != second) {
-            njs_printf("njs_to_int32_test(%f): not idempodent\n"
-                       "expected: %D\n     got: %D\n",
-                       tests[i].value, i32, second);
-
-            stat->failed++;
-            continue;
-        }
-
-        second = njs_number_to_int32(njs_number_to_uint32(tests[i].value));
-
-        if (i32 != second) {
-            njs_printf("ToInt32(%f) != ToInt32(ToUint32(%f))\n"
-                       "left: %D\n     right: %D\n",
-                       tests[i].value, tests[i].value, i32, second);
-
-            stat->failed++;
-            continue;
-        }
 
         stat->passed++;
     }
@@ -24694,7 +24815,7 @@ njs_addr2line_test(njs_vm_t *vm, njs_opts_t *opts, njs_stat_t *stat)
         const char   *name;
     } tests[] = {
         { njs_addr2line_test, njs_stringify(njs_addr2line_test) },
-        { njs_to_int32_test, njs_stringify(njs_to_int32_test) },
+        { njs_string_to_index_test, njs_stringify(njs_string_to_index_test) },
     };
 
     for (i = 0; i < njs_nitems(tests); i++) {
@@ -24744,8 +24865,6 @@ njs_vm_internal_api_test(njs_unit_test_t unused[], size_t num, njs_str_t *name,
           njs_str("njs_sort_test") },
         { njs_string_to_index_test,
           njs_str("njs_string_to_index_test") },
-        { njs_to_int32_test,
-          njs_str("njs_to_int32_test") },
 #ifdef NJS_HAVE_ADDR2LINE
         { njs_addr2line_test,
           njs_str("njs_addr2line_test") },
@@ -24821,7 +24940,7 @@ njs_options_parse(njs_opts_t *opts, int argc, char **argv)
         switch (*p) {
         case '?':
         case 'h':
-            (void) write(STDOUT_FILENO, help, njs_length(help));
+            njs_printf("%*s", njs_length(help), help);
             return NJS_DONE;
 
         case 'd':
@@ -24994,6 +25113,17 @@ static njs_test_suite_t  njs_suites[] =
       njs_nitems(njs_xml_test),
       njs_unit_test },
 
+    {
+#if (NJS_HAVE_ZLIB && !NJS_HAVE_MEMORY_SANITIZER)
+        njs_str("zlib"),
+#else
+        njs_str(""),
+#endif
+      { .externals = 1, .repeat = 1, .unsafe = 1 },
+      njs_zlib_test,
+      njs_nitems(njs_zlib_test),
+      njs_unit_test },
+
     { njs_str("module"),
       { .repeat = 1, .module = 1, .unsafe = 1 },
       njs_module_test,
@@ -25086,6 +25216,14 @@ static njs_test_suite_t  njs_suites[] =
 };
 
 
+static const char  *restricted_environ[] = {
+    "TZ=UTC",
+    "DUP=bar",
+    "dup=foo",
+    NULL,
+};
+
+
 int njs_cdecl
 main(int argc, char **argv)
 {
@@ -25102,13 +25240,9 @@ main(int argc, char **argv)
         return (ret == NJS_DONE) ? EXIT_SUCCESS: EXIT_FAILURE;
     }
 
-    environ = NULL;
+    environ = (char **) restricted_environ;
 
-    (void) putenv((char *) "TZ=UTC");
     tzset();
-
-    (void) putenv((char *) "DUP=bar");
-    (void) putenv((char *) "dup=foo");
 
     njs_mm_denormals(1);
 
