@@ -379,6 +379,7 @@ lua release ngx.ctx at ref 1
     }
 --- config
     lua_ssl_trusted_certificate ../../cert/test.crt;
+    lua_ssl_protocols TLSv1.2;
 
     location /t {
         content_by_lua_block {
@@ -481,6 +482,7 @@ lua release ngx.ctx at ref 1
     }
 --- config
     lua_ssl_trusted_certificate ../../cert/test.crt;
+    lua_ssl_protocols TLSv1.2;
 
     location /t {
         content_by_lua_block {
@@ -535,6 +537,7 @@ lua release ngx.ctx at ref 1
         ssl_session_tickets off;
         ssl_certificate ../../cert/test.crt;
         ssl_certificate_key ../../cert/test.key;
+        ssl_protocols TLSv1.2;
 
         server_tokens off;
         location /foo {
@@ -608,8 +611,10 @@ GET /t
 --- grep_error_log eval
 qr/(received: \w+|lua release ngx.ctx at ref \d+)/
 --- grep_error_log_out eval
-["",
-"lua release ngx.ctx at ref 2
+["lua release ngx.ctx at ref 1
+",
+"lua release ngx.ctx at ref 1
+lua release ngx.ctx at ref 2
 received: 42
 received: 1
 lua release ngx.ctx at ref 2
@@ -634,6 +639,7 @@ lua release ngx.ctx at ref 1
         ssl_session_tickets off;
         ssl_certificate ../../cert/test.crt;
         ssl_certificate_key ../../cert/test.key;
+        ssl_protocols TLSv1.2;
 
         server_tokens off;
         location /foo {
@@ -674,8 +680,10 @@ closed
 --- grep_error_log eval
 qr/lua release ngx.ctx at ref \d+/
 --- grep_error_log_out eval
-["",
+["lua release ngx.ctx at ref 1
+",
 "lua release ngx.ctx at ref 1
+lua release ngx.ctx at ref 1
 "]
 --- no_error_log
 [error]
@@ -698,6 +706,7 @@ qr/lua release ngx.ctx at ref \d+/
         ssl_session_tickets off;
         ssl_certificate ../../cert/test.crt;
         ssl_certificate_key ../../cert/test.key;
+        ssl_protocols TLSv1.2;
 
         ssl_certificate_by_lua_block {
             ngx.ctx.count = ngx.ctx.count and (ngx.ctx.count + 100) or 100
@@ -772,15 +781,15 @@ GET /t
 qr/(received: \w+|lua release ngx.ctx at ref \d+)/
 --- grep_error_log_out eval
 ["lua release ngx.ctx at ref 2
-received: 102
+received: 112
 lua release ngx.ctx at ref 2
-received: 102
+received: 112
 lua release ngx.ctx at ref 1
 ",
 "lua release ngx.ctx at ref 2
-received: 102
+received: 112
 lua release ngx.ctx at ref 2
-received: 102
+received: 112
 lua release ngx.ctx at ref 1
 lua release ngx.ctx at ref 2
 received: 112
