@@ -16,7 +16,7 @@ Origin: https://raw.githubusercontent.com/openresty/openresty/dbccee1418ddb24a2a
 
 --- a/src/event/ngx_event_openssl.c
 +++ b/src/event/ngx_event_openssl.c
-@@ -1877,6 +1877,23 @@
+@@ -1914,6 +1914,23 @@
          return NGX_AGAIN;
      }
  
