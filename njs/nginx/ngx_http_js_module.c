@@ -125,6 +125,12 @@ static njs_int_t ngx_http_js_content_length122(njs_vm_t *vm,
 static njs_int_t ngx_http_js_content_type122(njs_vm_t *vm,
     ngx_http_request_t *r, ngx_list_t *headers, njs_str_t *name,
     njs_value_t *setval, njs_value_t *retval);
+static njs_int_t ngx_http_js_date122(njs_vm_t *vm, ngx_http_request_t *r,
+    ngx_list_t *headers, njs_str_t *name, njs_value_t *setval,
+    njs_value_t *retval);
+static njs_int_t ngx_http_js_last_modified122(njs_vm_t *vm,
+    ngx_http_request_t *r, ngx_list_t *headers, njs_str_t *name,
+    njs_value_t *setval, njs_value_t *retval);
 static njs_int_t ngx_http_js_location122(njs_vm_t *vm, ngx_http_request_t *r,
     ngx_list_t *headers, njs_str_t *name, njs_value_t *setval,
     njs_value_t *retval);
@@ -222,6 +228,12 @@ static njs_int_t ngx_http_js_content_length(njs_vm_t *vm, ngx_http_request_t *r,
 static njs_int_t ngx_http_js_content_type(njs_vm_t *vm, ngx_http_request_t *r,
     unsigned flags, njs_str_t *name, njs_value_t *setval,
     njs_value_t *retval);
+static njs_int_t ngx_http_js_date(njs_vm_t *vm, ngx_http_request_t *r,
+    unsigned flags, njs_str_t *name, njs_value_t *setval,
+    njs_value_t *retval);
+static njs_int_t ngx_http_js_last_modified(njs_vm_t *vm, ngx_http_request_t *r,
+    unsigned flags, njs_str_t *name, njs_value_t *setval,
+    njs_value_t *retval);
 static njs_int_t ngx_http_js_location(njs_vm_t *vm, ngx_http_request_t *r,
     unsigned flags, njs_str_t *name, njs_value_t *setval,
     njs_value_t *retval);
@@ -246,15 +258,19 @@ static void ngx_http_js_handle_vm_event(ngx_http_request_t *r,
 static void ngx_http_js_handle_event(ngx_http_request_t *r,
     njs_vm_event_t vm_event, njs_value_t *args, njs_uint_t nargs);
 
+static njs_int_t ngx_js_http_init(njs_vm_t *vm);
 static ngx_int_t ngx_http_js_init(ngx_conf_t *cf);
 static char *ngx_http_js_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static char *ngx_http_js_var(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static char *ngx_http_js_content(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
+static char *ngx_http_js_shared_dict_zone(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf);
 static char *ngx_http_js_body_filter_set(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static ngx_int_t ngx_http_js_init_conf_vm(ngx_conf_t *cf,
     ngx_js_loc_conf_t *conf);
+static void *ngx_http_js_create_main_conf(ngx_conf_t *cf);
 static void *ngx_http_js_create_loc_conf(ngx_conf_t *cf);
 static char *ngx_http_js_merge_loc_conf(ngx_conf_t *cf, void *parent,
     void *child);
@@ -392,6 +408,13 @@ static ngx_command_t  ngx_http_js_commands[] = {
 
 #endif
 
+    { ngx_string("js_shared_dict_zone"),
+      NGX_HTTP_MAIN_CONF|NGX_CONF_1MORE,
+      ngx_http_js_shared_dict_zone,
+      0,
+      0,
+      NULL },
+
       ngx_null_command
 };
 
@@ -400,7 +423,7 @@ static ngx_http_module_t  ngx_http_js_module_ctx = {
     NULL,                          /* preconfiguration */
     ngx_http_js_init,              /* postconfiguration */
 
-    NULL,                          /* create main configuration */
+    ngx_http_js_create_main_conf,  /* create main configuration */
     NULL,                          /* init main configuration */
 
     NULL,                          /* create server configuration */
@@ -774,12 +797,42 @@ static uintptr_t ngx_http_js_uptr[] = {
     (uintptr_t) ngx_http_js_fetch_timeout,
     (uintptr_t) ngx_http_js_buffer_size,
     (uintptr_t) ngx_http_js_max_response_buffer_size,
+    (uintptr_t) 0 /* main_conf ptr */,
 };
 
 
 static njs_vm_meta_t ngx_http_js_metas = {
     .size = njs_nitems(ngx_http_js_uptr),
     .values = ngx_http_js_uptr
+};
+
+
+njs_module_t  ngx_js_http_module = {
+    .name = njs_str("http"),
+    .preinit = NULL,
+    .init = ngx_js_http_init,
+};
+
+
+njs_module_t *njs_http_js_addon_modules[] = {
+    /*
+     * Shared addons should be in the same order and the same positions
+     * in all nginx modules.
+     */
+    &ngx_js_ngx_module,
+    &ngx_js_fetch_module,
+    &ngx_js_shared_dict_module,
+#ifdef NJS_HAVE_OPENSSL
+    &njs_webcrypto_module,
+#endif
+#ifdef NJS_HAVE_XML
+    &njs_xml_module,
+#endif
+#ifdef NJS_HAVE_ZLIB
+    &njs_zlib_module,
+#endif
+    &ngx_js_http_module,
+    NULL,
 };
 
 
@@ -1485,9 +1538,10 @@ ngx_http_js_ext_header_out(njs_vm_t *vm, njs_object_prop_t *prop,
         { njs_str("Content-Type"), ngx_http_js_content_type122 },
         { njs_str("Content-Length"), ngx_http_js_content_length122 },
         { njs_str("Content-Encoding"), ngx_http_js_content_encoding122 },
+        { njs_str("Date"), ngx_http_js_date122 },
         { njs_str("Etag"), ngx_http_js_header_single },
         { njs_str("Expires"), ngx_http_js_header_single },
-        { njs_str("Last-Modified"), ngx_http_js_header_single },
+        { njs_str("Last-Modified"), ngx_http_js_last_modified122 },
         { njs_str("Location"), ngx_http_js_location122 },
         { njs_str("Set-Cookie"), ngx_http_js_header_array },
         { njs_str("Retry-After"), ngx_http_js_header_single },
@@ -1497,9 +1551,10 @@ ngx_http_js_ext_header_out(njs_vm_t *vm, njs_object_prop_t *prop,
         { njs_str("Content-Encoding"), 0, ngx_http_js_content_encoding },
         { njs_str("Content-Length"), 0, ngx_http_js_content_length },
         { njs_str("Content-Type"), 0, ngx_http_js_content_type },
+        { njs_str("Date"), 0, ngx_http_js_date },
         { njs_str("Etag"), NJS_HEADER_SINGLE, ngx_http_js_header_out },
         { njs_str("Expires"), NJS_HEADER_SINGLE, ngx_http_js_header_out },
-        { njs_str("Last-Modified"), NJS_HEADER_SINGLE, ngx_http_js_header_out },
+        { njs_str("Last-Modified"), 0, ngx_http_js_last_modified },
         { njs_str("Location"), 0, ngx_http_js_location },
         { njs_str("Set-Cookie"), NJS_HEADER_ARRAY, ngx_http_js_header_out },
         { njs_str("Retry-After"), NJS_HEADER_SINGLE, ngx_http_js_header_out },
@@ -1910,6 +1965,22 @@ ngx_http_js_content_type122(njs_vm_t *vm, ngx_http_request_t *r,
     ngx_list_t *headers, njs_str_t *v, njs_value_t *setval, njs_value_t *retval)
 {
     return ngx_http_js_content_type(vm, r, 0, v, setval, retval);
+}
+
+
+static njs_int_t
+ngx_http_js_date122(njs_vm_t *vm, ngx_http_request_t *r,
+    ngx_list_t *headers, njs_str_t *v, njs_value_t *setval, njs_value_t *retval)
+{
+    return ngx_http_js_date(vm, r, 0, v, setval, retval);
+}
+
+
+static njs_int_t
+ngx_http_js_last_modified122(njs_vm_t *vm, ngx_http_request_t *r,
+    ngx_list_t *headers, njs_str_t *v, njs_value_t *setval, njs_value_t *retval)
+{
+    return ngx_http_js_last_modified(vm, r, 0, v, setval, retval);
 }
 
 
@@ -3920,6 +3991,46 @@ ngx_http_js_content_type(njs_vm_t *vm, ngx_http_request_t *r,
 
 
 static njs_int_t
+ngx_http_js_date(njs_vm_t *vm, ngx_http_request_t *r, unsigned flags,
+    njs_str_t *v, njs_value_t *setval, njs_value_t *retval)
+{
+    njs_int_t         rc;
+    ngx_table_elt_t  *h;
+
+    rc = ngx_http_js_header_out_special(vm, r, v, setval, retval, &h);
+    if (rc == NJS_ERROR) {
+        return NJS_ERROR;
+    }
+
+    if (setval != NULL || retval == NULL) {
+        r->headers_out.date = h;
+    }
+
+    return NJS_OK;
+}
+
+
+static njs_int_t
+ngx_http_js_last_modified(njs_vm_t *vm, ngx_http_request_t *r, unsigned flags,
+    njs_str_t *v, njs_value_t *setval, njs_value_t *retval)
+{
+    njs_int_t         rc;
+    ngx_table_elt_t  *h;
+
+    rc = ngx_http_js_header_out_special(vm, r, v, setval, retval, &h);
+    if (rc == NJS_ERROR) {
+        return NJS_ERROR;
+    }
+
+    if (setval != NULL || retval == NULL) {
+        r->headers_out.last_modified = h;
+    }
+
+    return NJS_OK;
+}
+
+
+static njs_int_t
 ngx_http_js_location(njs_vm_t *vm, ngx_http_request_t *r, unsigned flags,
     njs_str_t *v, njs_value_t *setval, njs_value_t *retval)
 {
@@ -4103,40 +4214,40 @@ ngx_http_js_handle_event(ngx_http_request_t *r, njs_vm_event_t vm_event,
 }
 
 
-static ngx_int_t
-ngx_http_js_externals_init(ngx_conf_t *cf, ngx_js_loc_conf_t *conf_in)
+static njs_int_t
+ngx_js_http_init(njs_vm_t *vm)
 {
-    ngx_http_js_loc_conf_t        *conf = (ngx_http_js_loc_conf_t *) conf_in;
-
-    ngx_http_js_request_proto_id = njs_vm_external_prototype(conf->vm,
+    ngx_http_js_request_proto_id = njs_vm_external_prototype(vm,
                                            ngx_http_js_ext_request,
                                            njs_nitems(ngx_http_js_ext_request));
     if (ngx_http_js_request_proto_id < 0) {
-        ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
-                      "failed to add js request proto");
-        return NGX_ERROR;
+        return NJS_ERROR;
     }
 
-    return NGX_OK;
+    return NJS_OK;
 }
 
 
 static ngx_int_t
 ngx_http_js_init_conf_vm(ngx_conf_t *cf, ngx_js_loc_conf_t *conf)
 {
-    njs_vm_opt_t  options;
+    njs_vm_opt_t         options;
+    ngx_js_main_conf_t  *jmcf;
 
     njs_vm_opt_init(&options);
+
+    jmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_js_module);
+    ngx_http_js_uptr[NGX_JS_MAIN_CONF_INDEX] = (uintptr_t) jmcf;
 
     options.backtrace = 1;
     options.unhandled_rejection = NJS_VM_OPT_UNHANDLED_REJECTION_THROW;
     options.ops = &ngx_http_js_ops;
     options.metas = &ngx_http_js_metas;
-    options.addons = njs_js_addon_modules;
+    options.addons = njs_http_js_addon_modules;
     options.argv = ngx_argv;
     options.argc = ngx_argc;
 
-    return ngx_js_init_conf_vm(cf, conf, &options, ngx_http_js_externals_init);
+    return ngx_js_init_conf_vm(cf, conf, &options);
 }
 
 
@@ -4268,6 +4379,14 @@ ngx_http_js_content(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
 static char *
+ngx_http_js_shared_dict_zone(ngx_conf_t *cf, ngx_command_t *cmd,
+    void *conf)
+{
+    return ngx_js_shared_dict_zone(cf, cmd, conf, &ngx_http_js_module);
+}
+
+
+static char *
 ngx_http_js_body_filter_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_js_loc_conf_t *jlcf = conf;
@@ -4302,6 +4421,26 @@ ngx_http_js_body_filter_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     return NGX_CONF_OK;
+}
+
+
+static void *
+ngx_http_js_create_main_conf(ngx_conf_t *cf)
+{
+    ngx_js_main_conf_t  *jmcf;
+
+    jmcf = ngx_pcalloc(cf->pool, sizeof(ngx_js_main_conf_t));
+    if (jmcf == NULL) {
+        return NULL;
+    }
+
+    /*
+     * set by ngx_pcalloc():
+     *
+     *     jmcf->dicts = NULL;
+     */
+
+    return jmcf;
 }
 
 

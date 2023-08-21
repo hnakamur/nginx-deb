@@ -360,6 +360,8 @@ union ngx_http_lua_srv_conf_u {
 typedef struct {
 #if (NGX_HTTP_SSL)
     ngx_ssl_t              *ssl;  /* shared by SSL cosockets */
+    ngx_array_t            *ssl_certificates;
+    ngx_array_t            *ssl_certificate_keys;
     ngx_uint_t              ssl_protocols;
     ngx_str_t               ssl_ciphers;
     ngx_uint_t              ssl_verify_depth;
@@ -587,7 +589,7 @@ typedef struct ngx_http_lua_ctx_s {
     ngx_chain_t             *filter_in_bufs;  /* for the body filter */
     ngx_chain_t             *filter_busy_bufs;  /* for the body filter */
 
-    ngx_http_cleanup_pt     *cleanup;
+    ngx_pool_cleanup_pt     *cleanup;
 
     ngx_http_cleanup_t      *free_cleanup; /* free list of cleanup records */
 

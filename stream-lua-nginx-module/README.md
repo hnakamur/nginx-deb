@@ -41,8 +41,8 @@ Version
 =======
 
 This document describes ngx_stream_lua
-[v0.0.8](https://github.com/openresty/stream-lua-nginx-module/tags), which was released
-on 2 July, 2020.
+[v0.0.13](https://github.com/openresty/stream-lua-nginx-module/tags), which was released
+on 21 May, 2023.
 
 Synopsis
 ========
@@ -160,6 +160,8 @@ behavior.
 * [lua_ssl_ciphers](https://github.com/openresty/lua-nginx-module#lua_ssl_ciphers)
 * [lua_ssl_crl](https://github.com/openresty/lua-nginx-module#lua_ssl_crl)
 * [lua_ssl_protocols](https://github.com/openresty/lua-nginx-module#lua_ssl_protocols)
+* [lua_ssl_certificate](https://github.com/openresty/lua-nginx-module#lua_ssl_certificate)
+* [lua_ssl_certificate_key](https://github.com/openresty/lua-nginx-module#lua_ssl_certificate_key)
 * [lua_ssl_trusted_certificate](https://github.com/openresty/lua-nginx-module#lua_ssl_trusted_certificate)
 * [lua_ssl_verify_depth](https://github.com/openresty/lua-nginx-module#lua_ssl_verify_depth)
 * [lua_ssl_conf_command](https://github.com/openresty/lua-nginx-module#lua_ssl_conf_command)
