@@ -1,3 +1,10 @@
+nginx (1.25.2+mod.1-1ppa2~ubuntu18.04) bionic; urgency=medium
+
+  * Add/update OpenResty pathes for SSL
+  * Update OpenResty SSL patches for nginx 1.25.2
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Fri, 15 Sep 2023 15:40:43 +0900
+
 nginx (1.25.2+mod.1-1ppa1~ubuntu18.04) bionic; urgency=medium
 
   * New upstream version 1.25.2
