@@ -609,9 +609,9 @@ njs_array_of(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
 
 static const njs_object_prop_t  njs_array_constructor_properties[] =
 {
-    NJS_DECLARE_PROP_NAME("Array"),
-
     NJS_DECLARE_PROP_LENGTH(1),
+
+    NJS_DECLARE_PROP_NAME("Array"),
 
     NJS_DECLARE_PROP_HANDLER("prototype", njs_object_prototype_create, 0, 0, 0),
 
@@ -1828,6 +1828,47 @@ njs_array_indices_handler(const void *first, const void *second, void *ctx)
 }
 
 
+int
+njs_array_indices_handler_nums(const void *first, const void *second, void *ctx)
+{
+    double             num1, num2;
+    int64_t            diff;
+    const njs_value_t  *val1, *val2;
+
+    val1 = first;
+    val2 = second;
+
+    num1 = njs_string_to_index(val1);
+    num2 = njs_string_to_index(val2);
+
+    if (!isnan(num1) || !isnan(num2)) {
+        if (isnan(num1)) {
+            if (!isnan(num2)) {
+                return 1;
+
+            } else {
+
+                return 0;
+            }
+        }
+
+        if (isnan(num2)) {
+            return -1;
+        }
+
+        diff = (int64_t) (num1 - num2);
+
+        if (diff < 0) {
+            return -1;
+        }
+
+        return diff != 0;
+    }
+
+    return 0;
+}
+
+
 njs_array_t *
 njs_array_keys(njs_vm_t *vm, njs_value_t *object, njs_bool_t all)
 {
@@ -2741,6 +2782,8 @@ njs_sort_indexed_properties(njs_vm_t *vm, njs_value_t *obj, int64_t length,
     njs_array_sort_ctx_t   ctx;
     njs_array_sort_slot_t  *p, *end, *slots, *newslots;
 
+    njs_assert(length != 0);
+
     slots = NULL;
     keys = NULL;
     ctx.vm = vm;
@@ -2952,6 +2995,15 @@ njs_array_prototype_sort(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
         return ret;
     }
 
+    slots = NULL;
+
+    if (length == 0) {
+        goto done;
+    }
+
+    /* Satisfy gcc -O3 */
+    nslots = 0;
+
     slots = njs_sort_indexed_properties(vm, this, length, compare, 1, &nslots,
                                         &nunds);
     if (njs_slow_path(slots == NULL)) {
@@ -2982,6 +3034,8 @@ njs_array_prototype_sort(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
             goto exception;
         }
     }
+
+done:
 
     njs_value_assign(retval, this);
 
@@ -3039,11 +3093,19 @@ njs_array_prototype_to_sorted(njs_vm_t *vm, njs_value_t *args, njs_uint_t nargs,
         return NJS_ERROR;
     }
 
-    slots = njs_sort_indexed_properties(vm, this, length, compare, 0, &nslots,
-                                        &nunds);
-    if (njs_slow_path(slots == NULL)) {
-        ret = NJS_ERROR;
-        goto exception;
+    if (length != 0) {
+        slots = njs_sort_indexed_properties(vm, this, length, compare, 0,
+                                            &nslots, &nunds);
+        if (njs_slow_path(slots == NULL)) {
+            ret = NJS_ERROR;
+            goto exception;
+        }
+
+    } else {
+        slots = NULL;
+        length = 0;
+        nslots = 0;
+        nunds = 0;
     }
 
     njs_assert(length == (nslots + nunds));
