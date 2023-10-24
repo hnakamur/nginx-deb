@@ -466,6 +466,15 @@ njs_value_function_set(njs_value_t *value, njs_function_t *function)
 }
 
 
+void
+njs_value_external_set(njs_value_t *value, njs_external_ptr_t external)
+{
+    njs_assert(njs_value_is_external(value, NJS_PROTO_ID_ANY));
+
+    njs_object_data(value) = external;
+}
+
+
 uint8_t
 njs_value_bool(const njs_value_t *value)
 {
@@ -501,6 +510,15 @@ njs_value_native_function(const njs_value_t *value)
     }
 
     return NULL;
+}
+
+
+njs_external_ptr_t
+njs_value_external(const njs_value_t *value)
+{
+    njs_assert(njs_value_is_external(value, NJS_PROTO_ID_ANY));
+
+    return njs_object_data(value);
 }
 
 
@@ -573,6 +591,13 @@ njs_int_t
 njs_value_is_error(const njs_value_t *value)
 {
     return njs_is_error(value);
+}
+
+
+njs_int_t
+njs_value_is_external(const njs_value_t *value, njs_int_t proto_id)
+{
+    return njs_is_object_data(value, njs_make_tag(proto_id));
 }
 
 
@@ -799,7 +824,7 @@ njs_object_property_query(njs_vm_t *vm, njs_property_query_t *pq,
             }
 
             if (pq->own) {
-                pq->own_whiteout = prop;
+                pq->own_whiteout = &proto->hash;
             }
 
         } else {
@@ -895,7 +920,7 @@ njs_array_property_query(njs_vm_t *vm, njs_property_query_t *pq,
             }
 
             if (pq->own) {
-                pq->own_whiteout = prop;
+                pq->own_whiteout = &array->object.hash;
             }
 
             return NJS_DECLINED;
@@ -1221,8 +1246,10 @@ njs_value_property_set(njs_vm_t *vm, njs_value_t *value, njs_value_t *key,
     njs_int_t             ret;
     njs_array_t           *array;
     njs_value_t           retval;
+    njs_flathsh_elt_t     *elt;
     njs_object_prop_t     *prop;
     njs_typed_array_t     *tarray;
+    njs_flathsh_descr_t   *h;
     njs_property_query_t  pq;
 
     static const njs_str_t  length_key = njs_str("length");
@@ -1352,12 +1379,44 @@ slow_path:
 
     case NJS_DECLINED:
         if (njs_slow_path(pq.own_whiteout != NULL)) {
-            /* Previously deleted property. */
+
+            /*
+             * Previously deleted property.
+             *
+             * delete it, and then
+             * insert it again as new one to preserve insertion order.
+             */
+
             if (!njs_object(value)->extensible) {
                 goto fail;
             }
 
-            prop = pq.own_whiteout;
+            pq.lhq.pool = vm->mem_pool;
+
+            int rc = njs_lvlhsh_delete(pq.own_whiteout, &pq.lhq);
+            if (rc != NJS_OK) {
+                return NJS_ERROR;
+            }
+
+            h = pq.own_whiteout->slot;
+
+            if (h == NULL) {
+                h = njs_flathsh_new(&pq.lhq);
+                if (njs_slow_path(h == NULL)) {
+                    return NJS_ERROR;
+                }
+
+                pq.own_whiteout->slot = h;
+            }
+
+            elt = njs_flathsh_add_elt(pq.own_whiteout, &pq.lhq);
+            if (njs_slow_path(elt == NULL)) {
+                return NJS_ERROR;
+            }
+
+            elt->value = (&pq.lhq)->value;
+
+            prop = (njs_object_prop_t *) elt->value;
 
             prop->type = NJS_PROPERTY;
             prop->enumerable = 1;
@@ -1529,6 +1588,7 @@ slow_path:
     }
 
     prop->type = NJS_WHITEOUT;
+    prop->enum_in_object_hash = 1;
 
     return NJS_OK;
 }

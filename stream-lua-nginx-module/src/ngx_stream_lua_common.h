@@ -35,7 +35,7 @@
 #include "ngx_stream_lua_request.h"
 
 
-#if (NGX_PCRE)
+#if defined(NGX_PCRE) && !defined(NGX_PCRE2)
 
 #include <pcre.h>
 
@@ -45,6 +45,10 @@
 #   define LUA_HAVE_PCRE_JIT 0
 #endif
 
+#endif
+
+#if (NGX_PCRE2)
+#   define LUA_HAVE_PCRE_JIT 1
 #endif
 
 
@@ -189,15 +193,16 @@ struct ngx_stream_lua_main_conf_s {
 
     ngx_connection_t    *watcher;  /* for watching the process exit event */
 
-#if (NGX_PCRE)
+#if (NGX_PCRE || NGX_PCRE2)
     ngx_int_t            regex_cache_entries;
     ngx_int_t            regex_cache_max_entries;
     ngx_int_t            regex_match_limit;
 
-#if (LUA_HAVE_PCRE_JIT)
+#if (NGX_PCRE2)
+    pcre2_jit_stack     *jit_stack;
+#elif (LUA_HAVE_PCRE_JIT)
     pcre_jit_stack      *jit_stack;
-#endif
-
+#   endif
 #endif
 
     ngx_array_t         *shm_zones;  /* of ngx_shm_zone_t* */

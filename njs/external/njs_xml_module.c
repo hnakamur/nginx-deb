@@ -527,6 +527,11 @@ njs_xml_doc_ext_root(njs_vm_t *vm, njs_object_prop_t *prop, njs_value_t *value,
             njs_value_undefined_set(retval);
             return NJS_DECLINED;
         }
+
+    } else {
+        /* To suppress warning. */
+        name.length = 0;
+        name.start = NULL;
     }
 
     for (node = xmlDocGetRootElement(tree->doc);
@@ -2000,7 +2005,7 @@ njs_xml_error(njs_vm_t *vm, njs_xml_doc_t *current, const char *fmt, ...)
                         err->int2);
     }
 
-    njs_vm_error(vm, "%s", p - errstr, errstr);
+    njs_vm_error(vm, "%*s", p - errstr, errstr);
 }
 
 

@@ -282,6 +282,8 @@ false : module 'hello' not found.*
 
 
 === TEST 10: the number of Lua VM exceeds the pool size
+--- no_http2
+--- quic_max_idle_timeout: 5
 --- main_config
     thread_pool testpool threads=100;
 --- http_config eval: $::HttpConfig
@@ -359,6 +361,8 @@ GET /t
 
 
 === TEST 11: kill uthread before worker thread callback
+--- no_http2
+--- quic_max_idle_timeout: 10
 --- main_config
     thread_pool testpool threads=100;
 --- http_config eval: $::HttpConfig

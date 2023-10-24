@@ -46,6 +46,10 @@ http {
         listen       127.0.0.1:8080;
         server_name  localhost;
 
+        location /njs {
+            js_content test.njs;
+        }
+
         location /add {
             js_content test.add;
         }
@@ -82,6 +86,10 @@ http {
             js_content test.incr;
         }
 
+        location /items {
+            js_content test.items;
+        }
+
         location /keys {
             js_content test.keys;
         }
@@ -115,6 +123,10 @@ http {
 EOF
 
 $t->write_file('test.js', <<'EOF');
+    function test_njs(r) {
+        r.return(200, njs.version);
+    }
+
     function convertToValue(dict, v) {
         if (dict.type == 'number') {
             return parseInt(v);
@@ -182,8 +194,8 @@ $t->write_file('test.js', <<'EOF');
 
     function incr(r) {
         var dict = ngx.shared[r.args.dict];
-        var val = dict.incr(r.args.key, parseInt(r.args.by),
-                            parseInt(r.args.def));
+        var def = r.args.def ? parseInt(r.args.def) : 0;
+        var val = dict.incr(r.args.key, parseInt(r.args.by), def);
         r.return(200, val);
     }
 
@@ -197,7 +209,20 @@ $t->write_file('test.js', <<'EOF');
             ks = ngx.shared[r.args.dict].keys();
         }
 
-        r.return(200, ks.toSorted());
+        r.return(200, `[${ks.toSorted()}]`);
+    }
+
+    function items(r) {
+        var kvs;
+
+        if (r.args.max) {
+            kvs = ngx.shared[r.args.dict].items(parseInt(r.args.max));
+
+        } else {
+            kvs = ngx.shared[r.args.dict].items();
+        }
+
+        r.return(200, njs.dump(kvs.toSorted()));
     }
 
     function name(r) {
@@ -239,10 +264,11 @@ $t->write_file('test.js', <<'EOF');
     }
 
     export default { add, capacity, chain, clear, del, free_space, get, has,
-                     incr, keys, name, pop, replace, set, size, zones };
+                     incr, items, keys, name, njs: test_njs, pop, replace, set,
+                     size, zones };
 EOF
 
-$t->try_run('no js_shared_dict_zone')->plan(38);
+$t->try_run('no js_shared_dict_zone')->plan(43);
 
 ###############################################################################
 
@@ -263,9 +289,10 @@ like(http_get('/set?dict=waka&key=FOO&value=42'), qr/true/, 'set waka.FOO');
 like(http_get('/chain?dict=bar&key=FOO2&value=aaa'), qr/aaa/, 'chain bar.FOO2');
 
 like(http_get('/incr?dict=waka&key=FOO&by=5'), qr/47/, 'incr waka.FOO');
-like(http_get('/incr?dict=waka&key=FOO2&by=1'), qr/1/, 'incr waka.FOO2');
-like(http_get('/incr?dict=waka&key=FOO2&by=2'), qr/3/, 'incr waka.FOO2');
-like(http_get('/incr?dict=waka&key=FOO3&by=3&def=5'), qr/8/, 'incr waka.FOO3');
+like(http_get('/incr?dict=waka&key=FOO2&by=7777'), qr/7777/, 'incr waka.FOO2');
+like(http_get('/incr?dict=waka&key=FOO2&by=2'), qr/7779/, 'incr waka.FOO2');
+like(http_get('/incr?dict=waka&key=FOO3&by=3333&def=5'), qr/3338/,
+	'incr waka.FOO3');
 
 like(http_get('/has?dict=foo&key=FOO'), qr/true/, 'has foo.FOO');
 like(http_get('/has?dict=foo&key=NOT_EXISTING'), qr/false/,
@@ -274,8 +301,9 @@ like(http_get('/has?dict=waka&key=FOO'), qr/true/, 'has waka.FOO');
 
 $t->reload();
 
-like(http_get('/keys?dict=foo'), qr/FOO\,FOO2\,FOO3/, 'foo keys');
-like(http_get('/keys?dict=foo&max=2'), qr/FOO\,FOO3/, 'foo keys max 2');
+like(http_get('/keys?dict=foo'), qr/\[FOO\,FOO2\,FOO3]/, 'foo keys');
+like(http_get('/keys?dict=foo&max=2'), qr/\[FOO\,FOO3]/, 'foo keys max 2');
+like(http_get('/size?dict=foo'), qr/size: 3/, 'no of items in foo');
 like(http_get('/get?dict=foo&key=FOO2'), qr/yyy/, 'get foo.FOO2');
 like(http_get('/get?dict=bar&key=FOO'), qr/zzz/, 'get bar.FOO');
 like(http_get('/get?dict=foo&key=FOO'), qr/xxx/, 'get foo.FOO');
@@ -292,8 +320,44 @@ select undef, undef, undef, 2.1;
 
 like(http_get('/get?dict=foo&key=FOO'), qr/undefined/, 'get expired foo.FOO');
 like(http_get('/pop?dict=foo&key=FOO'), qr/undefined/, 'pop expired foo.FOO');
-like(http_get('/size?dict=foo'), qr/size: 2/, 'no of items in foo');
+
+TODO: {
+local $TODO = 'not yet' unless has_version('0.8.1');
+
+like(http_get('/keys?dict=foo'), qr/\[]/, 'foo keys after expire');
+like(http_get('/keys?dict=bar'), qr/\[FOO\,FOO2]/, 'bar keys after a delay');
+like(http_get('/size?dict=foo'), qr/size: 0/,
+	'no of items in foo after expire');
+like(http_get('/items?dict=bar'), qr/\[\['FOO','zzz'],\['FOO2','aaa']]/,
+	'bar items');
+like(http_get('/items?dict=waka'),
+	qr/\[\['FOO',47],\['FOO2',7779],\['FOO3',3338]]/, 'waka items');
+
+}
+
 like(http_get('/pop?dict=bar&key=FOO'), qr/zzz/, 'pop bar.FOO');
 like(http_get('/pop?dict=bar&key=FOO'), qr/undefined/, 'pop deleted bar.FOO');
+http_get('/set?dict=foo&key=BAR&value=xxx');
 like(http_get('/clear?dict=foo'), qr/undefined/, 'clear foo');
 like(http_get('/size?dict=foo'), qr/size: 0/, 'no of items in foo after clear');
+
+###############################################################################
+
+sub has_version {
+	my $need = shift;
+
+	http_get('/njs') =~ /^([.0-9]+)$/m;
+
+	my @v = split(/\./, $1);
+	my ($n, $v);
+
+	for $n (split(/\./, $need)) {
+		$v = shift @v || 0;
+		return 0 if $n > $v;
+		return 1 if $v > $n;
+	}
+
+	return 1;
+}
+
+###############################################################################
